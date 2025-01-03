@@ -13,12 +13,8 @@ With support for both traditional and modern authentication methods, the package
 
 - **JWT Authentication:** Login, logout (with blacklist support), and token refresh for secure and efficient user sessions.
 - **Google SSO Integration:** Validate Google tokens from the frontend and issue custom JWTs from the backend.  
-- **Laravel Sanctum Support:** API token-based authentication with logout functionality.  
-- **Two-Factor Authentication:** Optional 2FA setup with QR code generation for apps like Google Authenticator.  
-- **One-Time Passwords (OTP):** Add an extra layer of security with OTP-based authentication.  
-- **Role and Permission Management:** Built-in structures and examples for implementing roles and permissions to standardize access control across projects.  
 
-This package is built with flexibility in mind, allowing developers to enable or disable features based on the project’s requirements. Whether you’re starting a new application or enhancing an existing one, Lightit Auth Laravel provides a powerful foundation for managing user authentication & authorization.
+This package is built with flexibility in mind, allowing developers to enable or disable features based on the project’s requirements. Whether you’re starting a new application or enhancing an existing one, Lightit Auth Laravel provides a powerful foundation for managing user authentication.
 
 ## Installation
 
