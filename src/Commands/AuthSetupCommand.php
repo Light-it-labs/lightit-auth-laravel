@@ -5,70 +5,59 @@ declare(strict_types=1);
 namespace Lightit\Commands;
 
 use Illuminate\Console\Command;
+use Lightit\Enums\AuthDriver;
 
 class AuthSetupCommand extends Command
 {
     protected $signature = 'auth:setup';
 
-    protected $description = 'Setup authentication structure with selected options (JWT, Sanctum, 2FA, etc.)';
+    protected $description = 'Setup authentication structure based on the selected options (JWT, Sanctum, 2FA, etc.)';
 
     public function handle(): int
     {
         $this->info('Welcome to Auth Setup!');
 
-        $options = [
-            'JWT',
-            'Sanctum',
-            'Google SSO',
-            '2FA',
-            'Roles and Permissions',
-        ];
-
-        $selectedOptions = $this->choice(
-            'Please select the features you want to include (use comma to separate)',
-            $options,
+        $selectedDrivers = $this->choice(
+            'Select authentication drivers (comma-separated for multiple)',
+            array_column(AuthDriver::cases(), 'value'),
             null,
             null,
             true
         );
 
-        $invalidOptions = array_diff((array) $selectedOptions, $options);
-        if (! empty($invalidOptions)) {
-            $this->error('Invalid options selected: '.implode(', ', $invalidOptions));
+        if (empty($selectedDrivers)) {
+            $this->error('At least one authentication driver must be selected.');
 
-            return 1;
+            return self::FAILURE;
         }
 
-        foreach ((array) $selectedOptions as $option) {
-            $this->setupFeature($option);
+        $enable2FA = $this->confirm('Would you like to enable Two-Factor Authentication?', false);
+        $enableRolesAndPermissions = $this->confirm('Would you like to enable Roles and Permissions?', false);
+
+        foreach ($selectedDrivers as $driver) {
+            $this->setupAuthDriver(AuthDriver::from($driver));
+        }
+
+        if ($enable2FA) {
+            $this->setup2FA();
+        }
+
+        if ($enableRolesAndPermissions) {
+            $this->setupRolesAndPermissions();
         }
 
         $this->info('Authentication setup completed!');
 
-        return 0;
+        return self::SUCCESS;
     }
 
-    protected function setupFeature(string $feature): void
+    protected function setupAuthDriver(AuthDriver $driver): void
     {
-        switch ($feature) {
-            case 'JWT':
-                $this->setupJWT();
-                break;
-            case 'Sanctum':
-                $this->setupSanctum();
-                break;
-            case 'Google SSO':
-                $this->setupGoogleSSO();
-                break;
-            case '2FA':
-                $this->setup2FA();
-                break;
-            case 'Roles and Permissions':
-                $this->setupRolesAndPermissions();
-                break;
-            default:
-                $this->error("Unknown feature: {$feature}");
-        }
+        match ($driver) {
+            AuthDriver::JWT => $this->setupJWT(),
+            AuthDriver::SANCTUM => $this->setupSanctum(),
+            AuthDriver::GOOGLE_SSO => $this->setupGoogleSSO(),
+        };
     }
 
     protected function setupJWT(): void
