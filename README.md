@@ -52,7 +52,7 @@ php artisan vendor:publish --tag="lightit-auth-laravel-views"
 ## Usage
 
 ```php
-$lightit = new Lightit();
+$lightit = new Lightit\Lightit();
 echo $lightit->echoPhrase('Hello, Lightit!');
 ```
 
