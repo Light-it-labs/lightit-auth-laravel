@@ -12,6 +12,21 @@
         {
             "name": "Sergio Ojeda",
             "email": "sergio@lightit.io",
+            "role": "Tech Leader"
+        },
+        {
+            "name": "Gianfranco Rocco",
+            "email": "gianfranco.rocco@lightit.io",
+            "role": "Lead Developer"
+        },
+        {
+            "name": "Tomás Sueldo",
+            "email": "tomas.sueldo@lightit.io",
+            "role": "Developer"
+        },
+        {
+            "name": "Martín Silva",
+            "email": "martin.s@lightit.io",
             "role": "Developer"
         }
     ],
