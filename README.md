@@ -85,6 +85,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 - [Gianfranco Rocco](https://github.com/gianfranco-rocco)
 - [Tomás Sueldo](https://github.com/tomisueldo)
 - [Marín Silva](https://github.com/Tincho44)
+- [All Contributors](../../contributors)
 
 ## License
 
