@@ -3,18 +3,22 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/light-it-labs/lightit-auth-laravel.svg?style=flat-square)](https://packagist.org/packages/light-it-labs/lightit-auth-laravel)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/light-it-labs/lightit-auth-laravel/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/light-it-labs/lightit-auth-laravel/actions?query=workflow%3Arun-tests+branch%3Amain)
 [![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/light-it-labs/lightit-auth-laravel/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/light-it-labs/lightit-auth-laravel/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/light-it-labs/lightit-auth-laravel.svg?style=flat-square)](https://packagist.org/packages/light-it-labs/lightit-auth-laravel)  
+[![Total Downloads](https://img.shields.io/packagist/dt/light-it-labs/lightit-auth-laravel.svg?style=flat-square)](https://packagist.org/packages/light-it-labs/lightit-auth-laravel)
 
-This package is an all-in-one authentication package designed to enhance the flexibility and security of Laravel projects. This package offers a standardized approach to implementing essential and advanced authentication features, minimizing development time while ensuring best practices.  
-
-With support for both traditional and modern authentication methods, the package simplifies tasks such as email-password login, Google Single Sign-On (SSO), token-based authentication, Two-Factor Authentication (2FA), and managing roles and permissions.  
+Lightit Auth Laravel simplifies authentication for Laravel applications by providing built-in support for JWT-based authentication and Google Single Sign-On (SSO). This package focuses on delivering secure and efficient authentication workflows while minimizing development time.  
 
 ## Key Features
 
-- **JWT Authentication:** Login, logout (with blacklist support), and token refresh for secure and efficient user sessions.
-- **Google SSO Integration:** Validate Google tokens from the frontend and issue custom JWTs from the backend.  
+- **JWT Authentication:**  
+  - Secure login using email and password.  
+  - Token refresh mechanism to extend user sessions seamlessly.  
+  - Logout functionality with optional token blacklisting, configurable based on project needs.  
 
-This package is built with flexibility in mind, allowing developers to enable or disable features based on the project’s requirements. Whether you’re starting a new application or enhancing an existing one, Lightit Auth Laravel provides a powerful foundation for managing user authentication.
+- **Google SSO Integration:**  
+  - Enable Single Sign-On (SSO) via Google for a smoother user experience.  
+  - Validate Google-issued tokens on the backend and issue your application's JWT tokens for secure session management.  
+
+With these features, Lightit Auth Laravel is the perfect starting point for projects that require robust authentication solutions while maintaining flexibility and simplicity.  
 
 ## Installation
 
