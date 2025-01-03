@@ -1,9 +1,9 @@
 <?php
 
-namespace Lightit\Lightit;
+namespace Lightit;
 
-use Lightit\Lightit\Commands\AuthSetupCommand;
-use Lightit\Lightit\Commands\LightitCommand;
+use Lightit\Commands\AuthSetupCommand;
+use Lightit\Commands\LightitCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
