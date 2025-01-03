@@ -12,9 +12,6 @@ class AuthSetupCommand extends Command
 
     protected $description = 'Setup authentication structure with selected options (JWT, Sanctum, 2FA, etc.)';
 
-    /**
-     * @return int
-     */
     public function handle(): int
     {
         $this->info('Welcome to Auth Setup!');
@@ -35,23 +32,22 @@ class AuthSetupCommand extends Command
             true
         );
 
-        $invalidOptions = array_diff((array)$selectedOptions, $options);
-        if (!empty($invalidOptions)) {
-            $this->error('Invalid options selected: ' . implode(', ', $invalidOptions));
+        $invalidOptions = array_diff((array) $selectedOptions, $options);
+        if (! empty($invalidOptions)) {
+            $this->error('Invalid options selected: '.implode(', ', $invalidOptions));
+
             return 1;
         }
 
-        foreach ((array)$selectedOptions as $option) {
+        foreach ((array) $selectedOptions as $option) {
             $this->setupFeature($option);
         }
 
         $this->info('Authentication setup completed!');
+
         return 0;
     }
 
-    /**
-     * @param string $feature
-     */
     protected function setupFeature(string $feature): void
     {
         switch ($feature) {
