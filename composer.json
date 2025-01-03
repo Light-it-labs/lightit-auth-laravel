@@ -3,8 +3,19 @@
     "description": "This is my package lightit-auth-laravel",
     "keywords": [
         "Light-it Labs",
+        "php",
+        "lightit",
         "laravel",
-        "lightit-auth-laravel"
+        "auth",
+        "laravel auth",
+        "laravel authentication",
+        "jwt",
+        "sanctum",
+        "google sso",
+        "2fa",
+        "two factor auth",
+        "otp",
+        "roles and permissions"
     ],
     "homepage": "https://github.com/light-it-labs/lightit-auth-laravel",
     "license": "MIT",
