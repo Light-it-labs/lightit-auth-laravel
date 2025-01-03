@@ -1,6 +1,6 @@
 {
     "name": "light-it-labs/lightit-auth-laravel",
-    "description": "This is my package lightit-auth-laravel",
+    "description": "A comprehensive authentication package for Laravel projects, designed to streamline the implementation of various authentication strategies. This package supports JWT-based authentication, Google SSO, Laravel Sanctum, 2FA, OTP, and role-permission systems with standardized examples for seamless integration into your projects.",
     "keywords": [
         "Light-it Labs",
         "php",
