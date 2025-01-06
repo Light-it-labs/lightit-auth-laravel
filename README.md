@@ -22,11 +22,13 @@ With these features, Lightit Auth Laravel is the perfect starting point for proj
 
 ## Installation
 
-You can install the package via composer:
+To get started, install the package through Composer:
 
 ```bash
 composer require light-it-labs/lightit-auth-laravel
 ```
+
+After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
 
 You can publish and run the migrations with:
 
@@ -46,12 +48,6 @@ This is the contents of the published config file:
 ```php
 return [
 ];
-```
-
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="lightit-auth-laravel-views"
 ```
 
 ## Usage
