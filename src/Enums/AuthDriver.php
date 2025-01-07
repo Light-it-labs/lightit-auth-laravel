@@ -6,7 +6,7 @@ namespace Lightit\Enums;
 
 enum AuthDriver: string
 {
-    case JWT = 'JWT';
-    case SANCTUM = 'Sanctum';
-    case GOOGLE_SSO = 'Google SSO';
+    case Jwt = 'JWT';
+    case Sanctum = 'Sanctum';
+    case GoogleSso = 'Google SSO';
 }
