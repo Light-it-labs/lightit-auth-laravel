@@ -43,7 +43,7 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<string> $drivers
+     * @param  array<string>  $drivers
      */
     protected function setupDrivers(array $drivers): void
     {
