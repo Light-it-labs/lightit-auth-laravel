@@ -1,0 +1,122 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Auth\Installers;
+
+use Illuminate\Console\Command;
+
+final class JWTInstaller
+{
+    private const AUTH_DIRECTORIES = [
+        'Http/Controllers/Auth/Domain',
+        'Http/Requests/Auth/Domain',
+        'Actions/Auth/Domain',
+    ];
+
+    public function __construct(
+        private readonly Command $command,
+        private readonly Installer $installer
+    ) {}
+
+    public function install(): void
+    {
+        $this->command->info('Installing JWT authentication...');
+
+        if (!$this->installer->requireComposerPackages(['php-open-source-saver/jwt-auth:^2.0'])) {
+            $this->command->error('Failed to install jwt-auth package');
+            return;
+        }
+
+        $this->addServiceProvider();
+        $this->publishConfiguration();
+        $this->generateSecret();
+        $this->configureUserModel();
+        $this->createAuthFiles();
+
+        $this->command->info('JWT authentication installed successfully!');
+    }
+
+    private function addServiceProvider(): void
+    {
+        $this->command->info('Step 1/5: Adding service provider...');
+
+        $this->installer->replaceInFile(
+            "'providers' => [",
+            "'providers' => [" . PHP_EOL . "        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
+            config_path('app.php')
+        );
+    }
+
+    private function publishConfiguration(): void
+    {
+        $this->command->info('Step 2/5: Publishing configuration...');
+
+        $this->command->call('vendor:publish', [
+            '--provider' => 'PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider'
+        ]);
+
+        $this->copyConfigFiles();
+    }
+
+    private function copyConfigFiles(): void
+    {
+        if (!is_dir(config_path())) {
+            mkdir(config_path(), 0755, true);
+        }
+
+        copy(
+            __DIR__ . '/../../Stubs/jwt/config/auth.stub',
+            config_path('auth.php')
+        );
+
+        copy(
+            __DIR__ . '/../../Stubs/jwt/config/jwt.stub',
+            config_path('jwt.php')
+        );
+    }
+
+    private function generateSecret(): void
+    {
+        $this->command->info('Step 3/5: Generating JWT secret...');
+        $this->command->call('jwt:secret');
+    }
+
+    private function configureUserModel(): void
+    {
+        $this->command->info('Step 4/5: Setting up authentication model...');
+
+        $this->command->info('JWTAuthenticatable is available at Lightit\Models\JWTAuthenticatable');
+    }
+
+    private function createAuthFiles(): void
+    {
+        $this->command->info('Step 5/5: Creating authentication files...');
+
+        foreach (self::AUTH_DIRECTORIES as $directory) {
+            if (!is_dir($path = app_path($directory))) {
+                mkdir($path, 0755, true);
+            }
+        }
+
+        $stubsPath = __DIR__ . '/../../Stubs/jwt/Auth';
+
+        $this->copyAuthFiles($stubsPath);
+    }
+
+    private function copyAuthFiles(string $stubsPath): void
+    {
+        $files = [
+            '/Controllers/LoginController.stub' => 'Http/Controllers/Auth/Domain/LoginController.php',
+            '/Requests/LoginRequest.stub' => 'Http/Requests/Auth/Domain/LoginRequest.php',
+            '/Actions/LoginAction.stub' => 'Actions/Auth/Domain/LoginAction.php'
+        ];
+
+        foreach ($files as $stub => $destination) {
+            copy(
+                $stubsPath . $stub,
+                app_path($destination)
+            );
+        }
+    }
+}
