@@ -12,7 +12,7 @@ final class Installer
     public function __construct(protected Command $command) {}
 
     /**
-     * @param array<string> $packages
+     * @param  array<string>  $packages
      */
     public function requireComposerPackages(array $packages): bool
     {
@@ -38,6 +38,7 @@ final class Installer
 
         if ($content === false) {
             $this->command->error("Failed to read file: $path");
+
             return;
         }
 
@@ -53,6 +54,7 @@ final class Installer
 
         if ($fileContent === false) {
             $this->command->error("Failed to read file: $path");
+
             return;
         }
 
