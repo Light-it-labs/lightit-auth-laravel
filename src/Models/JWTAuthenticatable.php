@@ -9,11 +9,14 @@ use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 abstract class JWTAuthenticatable extends Authenticatable implements JWTSubject
 {
-    public function getJWTIdentifier()
+    public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getJWTCustomClaims()
     {
         return [];
