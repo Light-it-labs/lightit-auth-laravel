@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Lightranet\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Lightranet\Authentication\App\Requests\LoginRequest;
+use Lightit\Lightranet\Authentication\Domain\Actions\LoginAction;
+
+class LoginController
+{
+    public function __invoke(LoginRequest $request, LoginAction $loginAction): JsonResponse
+    {
+        $credentials = $request->only([$request::EMAIL, $request::PASSWORD]);
+
+        $response = $loginAction->execute($credentials);
+
+        return responder()
+            ->success($response)
+            ->respond();
+    }
+}

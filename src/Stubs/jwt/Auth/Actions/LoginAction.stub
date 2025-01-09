@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Lightranet\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Lightit\Lightranet\Users\Domain\User;
+use Lightit\Shared\App\Exceptions\Authentication\UnauthorizedException;
+use Tymon\JWTAuth\Factory as JWTAuth;
+use Tymon\JWTAuth\JWTGuard;
+
+class LoginAction
+{
+    public function __construct(
+        private readonly AuthFactory $factory,
+        private readonly JWTAuth $jwtAuth,
+    ) {
+    }
+
+    /** @throws UnauthorizedException */
+    public function execute(array $credentials): array
+    {
+        /** @var JWTGuard $guard */
+        $guard = $this->factory->guard();
+        if (! $token = $guard->attempt($credentials)) {
+            throw new UnauthorizedException();
+        }
+
+        User::whereEmail($credentials['email'])
+            ->first()
+            ?->clearTwoFactorAuthenticationCredentials();
+
+        return [
+            'accessToken' => $token,
+            'tokenType' => 'bearer',
+            'expiresIn' => $this->jwtAuth->getTTL() * 60,
+        ];
+    }
+}
