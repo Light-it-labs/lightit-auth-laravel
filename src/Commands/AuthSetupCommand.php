@@ -47,12 +47,15 @@ class AuthSetupCommand extends Command
      */
     protected function setupDrivers(array $drivers): void
     {
+        $setup = [
+            AuthDriver::Jwt->value => fn() => $this->setupJWT(),
+            AuthDriver::Sanctum->value => fn() => $this->setupSanctum(),
+            AuthDriver::GoogleSso->value => fn() => $this->setupGoogleSSO(),
+        ];
+
         foreach ($drivers as $driver) {
-            match (AuthDriver::from($driver)) {
-                AuthDriver::Jwt => $this->setupJWT(),
-                AuthDriver::Sanctum => $this->setupSanctum(),
-                AuthDriver::GoogleSso => $this->setupGoogleSSO(),
-            };
+            $key = AuthDriver::from($driver)->value;
+            $setup[$key]();
         }
     }
 
