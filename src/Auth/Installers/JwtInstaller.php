@@ -23,8 +23,9 @@ final class JWTInstaller
     {
         $this->command->info('Installing JWT authentication...');
 
-        if (!$this->installer->requireComposerPackages(['php-open-source-saver/jwt-auth:^2.0'])) {
+        if (! $this->installer->requireComposerPackages(['php-open-source-saver/jwt-auth:^2.0'])) {
             $this->command->error('Failed to install jwt-auth package');
+
             return;
         }
 
@@ -43,7 +44,7 @@ final class JWTInstaller
 
         $this->installer->replaceInFile(
             "'providers' => [",
-            "'providers' => [" . PHP_EOL . "        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
+            "'providers' => [".PHP_EOL."        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')
         );
     }
@@ -53,7 +54,7 @@ final class JWTInstaller
         $this->command->info('Step 2/5: Publishing configuration...');
 
         $this->command->call('vendor:publish', [
-            '--provider' => 'PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider'
+            '--provider' => 'PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
         ]);
 
         $this->copyConfigFiles();
@@ -61,17 +62,17 @@ final class JWTInstaller
 
     private function copyConfigFiles(): void
     {
-        if (!is_dir(config_path())) {
+        if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
         }
 
         copy(
-            __DIR__ . '/../../Stubs/jwt/config/auth.stub',
+            __DIR__.'/../../Stubs/jwt/config/auth.stub',
             config_path('auth.php')
         );
 
         copy(
-            __DIR__ . '/../../Stubs/jwt/config/jwt.stub',
+            __DIR__.'/../../Stubs/jwt/config/jwt.stub',
             config_path('jwt.php')
         );
     }
@@ -94,12 +95,12 @@ final class JWTInstaller
         $this->command->info('Step 5/5: Creating authentication files...');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
-            if (!is_dir($path = app_path($directory))) {
+            if (! is_dir($path = app_path($directory))) {
                 mkdir($path, 0755, true);
             }
         }
 
-        $stubsPath = __DIR__ . '/../../Stubs/jwt/Auth';
+        $stubsPath = __DIR__.'/../../Stubs/jwt/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -109,12 +110,12 @@ final class JWTInstaller
         $files = [
             '/Controllers/LoginController.stub' => 'Http/Controllers/Auth/Domain/LoginController.php',
             '/Requests/LoginRequest.stub' => 'Http/Requests/Auth/Domain/LoginRequest.php',
-            '/Actions/LoginAction.stub' => 'Actions/Auth/Domain/LoginAction.php'
+            '/Actions/LoginAction.stub' => 'Actions/Auth/Domain/LoginAction.php',
         ];
 
         foreach ($files as $stub => $destination) {
             copy(
-                $stubsPath . $stub,
+                $stubsPath.$stub,
                 app_path($destination)
             );
         }

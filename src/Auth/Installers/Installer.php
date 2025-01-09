@@ -13,7 +13,7 @@ final class Installer
     public function __construct(protected Command $command) {}
 
     /**
-     * @param array<string> $packages
+     * @param  array<string>  $packages
      */
     public function requireComposerPackages(array $packages): bool
     {
@@ -22,10 +22,10 @@ final class Installer
         $process = new Process($command, base_path(), ['COMPOSER_MEMORY_LIMIT' => '-1']);
         $process->setTimeout(null);
 
-        $this->command->info("Running: " . implode(' ', $command));
+        $this->command->info('Running: '.implode(' ', $command));
 
         return $process->run(function ($type, $buffer) {
-            if (Process::ERR === $type) {
+            if ($type === Process::ERR) {
                 $this->command->error($buffer);
             } else {
                 $this->command->info($buffer);
@@ -55,7 +55,7 @@ final class Installer
 
         file_put_contents(
             $path,
-            preg_replace('/}$/', $content . PHP_EOL . '}', $fileContent)
+            preg_replace('/}$/', $content.PHP_EOL.'}', $fileContent)
         );
     }
 }
