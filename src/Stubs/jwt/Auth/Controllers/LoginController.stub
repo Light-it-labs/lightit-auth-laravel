@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Lightranet\Authentication\App\Controllers;
+namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Lightit\Lightranet\Authentication\App\Requests\LoginRequest;
-use Lightit\Lightranet\Authentication\Domain\Actions\LoginAction;
+use Lightit\Authentication\App\Requests\LoginRequest;
+use Lightit\Authentication\Domain\Actions\LoginAction;
 
 class LoginController
 {

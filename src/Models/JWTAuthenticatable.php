@@ -17,7 +17,7 @@ abstract class JWTAuthenticatable extends Authenticatable implements JWTSubject
     /**
      * @return array<string, mixed>
      */
-    public function getJWTCustomClaims()
+    public function getJWTCustomClaims(): array
     {
         return [];
     }

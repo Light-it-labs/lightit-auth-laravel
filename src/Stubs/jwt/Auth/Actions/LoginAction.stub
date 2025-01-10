@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Lightranet\Authentication\Domain\Actions;
+namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Lightit\Lightranet\Users\Domain\User;
+use Lightit\Users\Domain\User;
 use Lightit\Shared\App\Exceptions\Authentication\UnauthorizedException;
 use Tymon\JWTAuth\Factory as JWTAuth;
 use Tymon\JWTAuth\JWTGuard;
@@ -19,17 +19,13 @@ class LoginAction
     }
 
     /** @throws UnauthorizedException */
-    public function execute(array $credentials): array
+    public function execute(array $credentials): LoginDto
     {
         /** @var JWTGuard $guard */
         $guard = $this->factory->guard();
         if (! $token = $guard->attempt($credentials)) {
             throw new UnauthorizedException();
         }
-
-        User::whereEmail($credentials['email'])
-            ->first()
-            ?->clearTwoFactorAuthenticationCredentials();
 
         return [
             'accessToken' => $token,

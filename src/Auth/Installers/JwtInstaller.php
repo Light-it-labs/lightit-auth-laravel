@@ -35,7 +35,6 @@ final class JWTInstaller implements AuthInstallerInterface
         $this->addServiceProvider();
         $this->publishConfiguration();
         $this->generateSecret();
-        $this->configureUserModel();
         $this->createAuthFiles();
 
         $this->command->info('JWT authentication installed successfully!');
@@ -47,7 +46,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
-            "'providers' => [".PHP_EOL."        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
+            "'providers' => [".PHP_EOL."        \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')
         );
     }
@@ -57,7 +56,7 @@ final class JWTInstaller implements AuthInstallerInterface
         $this->command->info('Step 2/5: Publishing configuration...');
 
         $this->command->call('vendor:publish', [
-            '--provider' => 'PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
+            '--provider' => '\PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
         ]);
 
         $this->copyConfigFiles();
@@ -84,13 +83,6 @@ final class JWTInstaller implements AuthInstallerInterface
     {
         $this->command->info('Step 3/5: Generating JWT secret...');
         $this->command->call('jwt:secret');
-    }
-
-    private function configureUserModel(): void
-    {
-        $this->command->info('Step 4/5: Setting up authentication model...');
-
-        $this->command->info('JWTAuthenticatable is available at Lightit\Models\JWTAuthenticatable');
     }
 
     private function createAuthFiles(): void
@@ -122,7 +114,7 @@ final class JWTInstaller implements AuthInstallerInterface
         foreach ($files as $stub => $destination) {
             copy(
                 $stubsPath.$stub,
-                app_path($destination)
+                base_path("src/Authentication/{$destination}")
             );
         }
     }
