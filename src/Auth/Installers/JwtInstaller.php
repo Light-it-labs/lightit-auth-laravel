@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Lightit\Auth\Installers;
 
 use Illuminate\Console\Command;
+use Lightit\Contracts\AuthInstallerInterface;
+use Lightit\Tools\FileManipulator;
 
-final class JWTInstaller
+final class JWTInstaller implements AuthInstallerInterface
 {
     private const AUTH_DIRECTORIES = [
         'App/Controllers',
@@ -16,7 +18,8 @@ final class JWTInstaller
 
     public function __construct(
         private readonly Command $command,
-        private readonly ComposerInstaller $composerInstaller
+        private readonly ComposerInstaller $composerInstaller,
+        private readonly FileManipulator $fileManipulator
     ) {}
 
     public function install(): void
@@ -24,7 +27,7 @@ final class JWTInstaller
         $this->command->info('Installing JWT authentication...');
 
         if (! $this->composerInstaller->requirePackages(['php-open-source-saver/jwt-auth:^2.0'])) {
-            $this->command->error('Failed to install jwt-auth package');
+            $this->command->error('Failed to install php-open-source-saver/jwt-auth');
 
             return;
         }
@@ -42,7 +45,7 @@ final class JWTInstaller
     {
         $this->command->info('Step 1/5: Adding service provider...');
 
-        $this->composerInstaller->replaceInFile(
+        $this->fileManipulator->replaceInFile(
             "'providers' => [",
             "'providers' => [".PHP_EOL."        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')

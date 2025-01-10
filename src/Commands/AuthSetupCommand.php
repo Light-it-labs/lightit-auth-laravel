@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Lightit\Auth\Installers\ComposerInstaller;
 use Lightit\Auth\Installers\JWTInstaller;
 use Lightit\Enums\AuthDriver;
+use Lightit\Tools\FileManipulator;
 
 class AuthSetupCommand extends Command
 {
@@ -63,7 +64,8 @@ class AuthSetupCommand extends Command
         $this->info('Setting up JWT...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $jwtInstaller = new JWTInstaller($this, $composerInstaller);
+        $fileManipulator = new FileManipulator($this);
+        $jwtInstaller = new JWTInstaller($this, $composerInstaller, $fileManipulator);
         $jwtInstaller->install();
     }
 

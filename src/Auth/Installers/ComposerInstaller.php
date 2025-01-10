@@ -31,36 +31,4 @@ final class ComposerInstaller
             }
         }) === 0;
     }
-
-    public function replaceInFile(string $search, string $replace, string $path): void
-    {
-        $content = file_get_contents($path);
-
-        if ($content === false) {
-            $this->command->error("Failed to read file: $path");
-
-            return;
-        }
-
-        file_put_contents(
-            $path,
-            str_replace($search, $replace, $content)
-        );
-    }
-
-    public function appendToFile(string $path, string $content): void
-    {
-        $fileContent = file_get_contents($path);
-
-        if ($fileContent === false) {
-            $this->command->error("Failed to read file: $path");
-
-            return;
-        }
-
-        file_put_contents(
-            $path,
-            preg_replace('/}$/', $content.PHP_EOL.'}', $fileContent)
-        );
-    }
 }
