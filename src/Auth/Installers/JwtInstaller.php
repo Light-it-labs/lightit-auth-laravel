@@ -9,21 +9,21 @@ use Illuminate\Console\Command;
 final class JWTInstaller
 {
     private const AUTH_DIRECTORIES = [
-        'Http/Controllers/Auth/Domain',
-        'Http/Requests/Auth/Domain',
-        'Actions/Auth/Domain',
+        'App/Controllers',
+        'App/Requests',
+        'Domain/Actions',
     ];
 
     public function __construct(
         private readonly Command $command,
-        private readonly Installer $installer
+        private readonly ComposerInstaller $composerInstaller
     ) {}
 
     public function install(): void
     {
         $this->command->info('Installing JWT authentication...');
 
-        if (! $this->installer->requireComposerPackages(['php-open-source-saver/jwt-auth:^2.0'])) {
+        if (! $this->composerInstaller->requirePackages(['php-open-source-saver/jwt-auth:^2.0'])) {
             $this->command->error('Failed to install jwt-auth package');
 
             return;
@@ -42,7 +42,7 @@ final class JWTInstaller
     {
         $this->command->info('Step 1/5: Adding service provider...');
 
-        $this->installer->replaceInFile(
+        $this->composerInstaller->replaceInFile(
             "'providers' => [",
             "'providers' => [".PHP_EOL."        PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')
@@ -108,9 +108,12 @@ final class JWTInstaller
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Controllers/LoginController.stub' => 'Http/Controllers/Auth/Domain/LoginController.php',
-            '/Requests/LoginRequest.stub' => 'Http/Requests/Auth/Domain/LoginRequest.php',
-            '/Actions/LoginAction.stub' => 'Actions/Auth/Domain/LoginAction.php',
+            '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
+            '/Requests/LoginRequest.stub' => 'App/Requests/LoginRequest.php',
+            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
+            '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
+            '/Requests/LogoutRequest.stub' => 'App/Requests/LogoutRequest.php',
+            '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',
         ];
 
         foreach ($files as $stub => $destination) {

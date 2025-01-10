@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Stubs\jwt\Auth\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Lightit\Lightranet\Authentication\Domain\Actions\LogoutAction;
+use Lightit\Lightranet\Users\Domain\User;
+use Lightit\Shared\App\Exceptions\Authentication\UnauthorizedException;
+
+class LogoutController
+{
+    public function __invoke(Request $request, LogoutAction $logoutAction): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            throw new UnauthorizedException();
+        }
+
+        $logoutAction->execute($user);
+
+        return responder()
+            ->success(['message' => 'Successfully logged out'])
+            ->respond();
+    }
+}

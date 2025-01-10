@@ -7,14 +7,14 @@ namespace Lightit\Auth\Installers;
 use Illuminate\Console\Command;
 use Symfony\Component\Process\Process;
 
-final class Installer
+final class ComposerInstaller
 {
     public function __construct(protected Command $command) {}
 
     /**
      * @param  array<string>  $packages
      */
-    public function requireComposerPackages(array $packages): bool
+    public function requirePackages(array $packages): bool
     {
         $command = array_merge(['composer', 'require'], $packages);
 

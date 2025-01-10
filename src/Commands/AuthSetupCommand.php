@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Commands;
 
 use Illuminate\Console\Command;
-use Lightit\Auth\Installers\Installer;
+use Lightit\Auth\Installers\ComposerInstaller;
 use Lightit\Auth\Installers\JWTInstaller;
 use Lightit\Enums\AuthDriver;
 
@@ -62,8 +62,8 @@ class AuthSetupCommand extends Command
     {
         $this->info('Setting up JWT...');
 
-        $installer = new Installer($this);
-        $jwtInstaller = new JWTInstaller($this, $installer);
+        $composerInstaller = new ComposerInstaller($this);
+        $jwtInstaller = new JWTInstaller($this, $composerInstaller);
         $jwtInstaller->install();
     }
 
