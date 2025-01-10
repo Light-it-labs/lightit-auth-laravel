@@ -11,9 +11,9 @@ use Lightit\Tools\FileManipulator;
 final class JWTInstaller implements AuthInstallerInterface
 {
     private const AUTH_DIRECTORIES = [
-        'App/Controllers',
-        'App/Requests',
-        'Domain/Actions',
+        'Authentication/App/Controllers',
+        'Authentication/App/Requests',
+        'Authentication/Domain/Actions',
     ];
 
     public function __construct(
@@ -42,7 +42,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function addServiceProvider(): void
     {
-        $this->command->info('Step 1/5: Adding service provider...');
+        $this->command->info('Step 1/4: Adding service provider...');
 
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
@@ -53,7 +53,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function publishConfiguration(): void
     {
-        $this->command->info('Step 2/5: Publishing configuration...');
+        $this->command->info('Step 2/4: Publishing configuration...');
 
         $this->command->call('vendor:publish', [
             '--provider' => '\PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
@@ -81,16 +81,16 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function generateSecret(): void
     {
-        $this->command->info('Step 3/5: Generating JWT secret...');
+        $this->command->info('Step 3/4: Generating JWT secret...');
         $this->command->call('jwt:secret');
     }
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 5/5: Creating authentication files...');
+        $this->command->info('Step 4/4: Creating authentication files...');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
-            if (! is_dir($path = app_path($directory))) {
+            if (! is_dir($path = base_path("src/{$directory}"))) {
                 mkdir($path, 0755, true);
             }
         }
@@ -107,7 +107,6 @@ final class JWTInstaller implements AuthInstallerInterface
             '/Requests/LoginRequest.stub' => 'App/Requests/LoginRequest.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
-            '/Requests/LogoutRequest.stub' => 'App/Requests/LogoutRequest.php',
             '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',
         ];
 
@@ -118,4 +117,5 @@ final class JWTInstaller implements AuthInstallerInterface
             );
         }
     }
+
 }
