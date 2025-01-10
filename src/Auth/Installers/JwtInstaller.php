@@ -117,5 +117,4 @@ final class JWTInstaller implements AuthInstallerInterface
             );
         }
     }
-
 }

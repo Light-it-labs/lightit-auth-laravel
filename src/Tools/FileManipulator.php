@@ -14,12 +14,14 @@ final class FileManipulator
     {
         if (! file_exists($path)) {
             $this->command->error("File not found: $path");
+
             return;
         }
 
         $content = file_get_contents($path);
         if ($content === false) {
             $this->command->error("Failed to read file: $path");
+
             return;
         }
 
