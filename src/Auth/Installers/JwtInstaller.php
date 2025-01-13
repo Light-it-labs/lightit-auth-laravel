@@ -71,11 +71,6 @@ final class JWTInstaller implements AuthInstallerInterface
         }
 
         copy(
-            __DIR__.'/../../Stubs/jwt/config/auth.stub',
-            config_path('auth.php')
-        );
-
-        copy(
             __DIR__.'/../../Stubs/jwt/config/jwt.stub',
             config_path('jwt.php')
         );
