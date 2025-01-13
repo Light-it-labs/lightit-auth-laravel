@@ -17,7 +17,7 @@ class LoginController
         $response = $loginAction->execute($credentials);
 
         return responder()
-            ->success($response)
+            ->success($response, LoginTransformer::class)
             ->respond();
     }
 }

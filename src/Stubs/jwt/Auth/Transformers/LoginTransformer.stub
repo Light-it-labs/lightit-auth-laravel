@@ -7,7 +7,7 @@ namespace Lightit\Authentication\App\Transformers;
 use Flugg\Responder\Transformers\Transformer;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 
-class LoginDtoTransformer extends Transformer
+class LoginTransformer extends Transformer
 {
     public function transform(LoginDto $loginDto): array
     {

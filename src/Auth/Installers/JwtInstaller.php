@@ -13,6 +13,7 @@ final class JWTInstaller implements AuthInstallerInterface
     private const AUTH_DIRECTORIES = [
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
+        'Authentication/App/Transformers',
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
     ];
@@ -108,6 +109,7 @@ final class JWTInstaller implements AuthInstallerInterface
         $files = [
             '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
             '/Requests/LoginRequest.stub' => 'App/Requests/LoginRequest.php',
+            '/Transformers/LoginTransformer.stub' => 'App/Transformers/LoginTransformer.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
             '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',

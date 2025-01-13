@@ -6,10 +6,9 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-
+use Illuminate\Validation\UnauthorizedException;
 use Lightit\Authentication\Domain\Actions\LogoutAction;
 use Lightit\Models\JWTAuthenticatable;
-use Illuminate\Validation\UnauthorizedException;
 
 class LogoutController
 {
