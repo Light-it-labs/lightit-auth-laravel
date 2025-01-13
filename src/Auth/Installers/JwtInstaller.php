@@ -86,7 +86,7 @@ final class JWTInstaller implements AuthInstallerInterface
     private function generateCerts(): void
     {
         $this->command->info('Step 4/5: Generating Certificate...');
-        $this->command->call('jwt:generate-certs');
+        $this->command->call('jwt:generate-certs --algo=rsa --bits=4096 --sha=512');
     }
 
     private function createAuthFiles(): void

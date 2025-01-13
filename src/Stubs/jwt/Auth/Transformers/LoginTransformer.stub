@@ -12,9 +12,9 @@ class LoginTransformer extends Transformer
     public function transform(LoginDto $loginDto): array
     {
         return [
-            'access_token' => $loginDto->accessToken,
-            'token_type' => $loginDto->tokenType,
-            'expires_in' => $loginDto->expiresIn,
+            'accessToken' => $loginDto->accessToken,
+            'tokenType' => $loginDto->tokenType,
+            'expiresIn' => $loginDto->expiresIn,
         ];
     }
 }
