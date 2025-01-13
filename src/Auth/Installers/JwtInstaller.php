@@ -14,6 +14,7 @@ final class JWTInstaller implements AuthInstallerInterface
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
+        'Authentication/Domain/DataTransferObjects',
     ];
 
     public function __construct(
@@ -35,6 +36,7 @@ final class JWTInstaller implements AuthInstallerInterface
         $this->addServiceProvider();
         $this->publishConfiguration();
         $this->generateSecret();
+        $this->generateCerts();
         $this->createAuthFiles();
 
         $this->command->info('JWT authentication installed successfully!');
@@ -42,7 +44,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function addServiceProvider(): void
     {
-        $this->command->info('Step 1/4: Adding service provider...');
+        $this->command->info('Step 1/5: Adding service provider...');
 
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
@@ -53,7 +55,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function publishConfiguration(): void
     {
-        $this->command->info('Step 2/4: Publishing configuration...');
+        $this->command->info('Step 2/5: Publishing configuration...');
 
         $this->command->call('vendor:publish', [
             '--provider' => '\PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
@@ -81,13 +83,19 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function generateSecret(): void
     {
-        $this->command->info('Step 3/4: Generating JWT secret...');
+        $this->command->info('Step 3/5: Generating JWT secret...');
         $this->command->call('jwt:secret');
+    }
+
+    private function generateCerts(): void
+    {
+        $this->command->info('Step 4/5: Generating Certificate...');
+        $this->command->call('jwt:generate-certs');
     }
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 4/4: Creating authentication files...');
+        $this->command->info('Step 5/5: Creating authentication files...');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -108,6 +116,7 @@ final class JWTInstaller implements AuthInstallerInterface
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
             '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',
+            '/DataTransferObjects/LoginDto.stub' => 'Domain/DataTransferObjects/LoginDto.php',
         ];
 
         foreach ($files as $stub => $destination) {

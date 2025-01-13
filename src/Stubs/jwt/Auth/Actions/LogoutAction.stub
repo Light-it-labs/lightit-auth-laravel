@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Stubs\jwt\Auth\Actions;
+namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Lightit\Lightranet\Users\Domain\User;
-use Tymon\JWTAuth\JWTGuard;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+use Lightit\Models\JWTAuthenticatable;
 
 class LogoutAction
 {
@@ -15,12 +15,10 @@ class LogoutAction
     ) {
     }
 
-    public function execute(User $user): void
+    public function execute(JWTAuthenticatable $user): void
     {
         /** @var JWTGuard $guard */
         $guard = $this->factory->guard();
         $guard->logout();
-
-        $user->clearTwoFactorAuthenticationCredentials();
     }
 }

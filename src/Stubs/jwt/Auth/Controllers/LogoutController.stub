@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Stubs\jwt\Auth\Controllers;
+namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Lightit\Lightranet\Authentication\Domain\Actions\LogoutAction;
-use Lightit\Lightranet\Users\Domain\User;
-use Lightit\Shared\App\Exceptions\Authentication\UnauthorizedException;
+
+use Lightit\Authentication\Domain\Actions\LogoutAction;
+use Lightit\Models\JWTAuthenticatable;
+use Illuminate\Validation\UnauthorizedException;
 
 class LogoutController
 {
     public function __invoke(Request $request, LogoutAction $logoutAction): JsonResponse
     {
-        /** @var User|null $user */
+            /** @var JWTAuthenticatable|null $user */
         $user = $request->user();
 
         if (! $user) {
@@ -24,7 +25,7 @@ class LogoutController
         $logoutAction->execute($user);
 
         return responder()
-            ->success(['message' => 'Successfully logged out'])
-            ->respond();
+            ->success()
+            ->respond(Response::HTTP_NO_CONTENT);
     }
 }

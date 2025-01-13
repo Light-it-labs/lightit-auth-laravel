@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Lightit\Users\Domain\User;
-use Lightit\Shared\App\Exceptions\Authentication\UnauthorizedException;
-use Tymon\JWTAuth\Factory as JWTAuth;
-use Tymon\JWTAuth\JWTGuard;
+use Illuminate\Validation\UnauthorizedException;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 
 class LoginAction
 {
@@ -27,10 +27,11 @@ class LoginAction
             throw new UnauthorizedException();
         }
 
-        return [
-            'accessToken' => $token,
-            'tokenType' => 'bearer',
-            'expiresIn' => $this->jwtAuth->getTTL() * 60,
-        ];
+        /** @var string $token */
+       return new LoginDto(
+            $token,
+            'bearer',
+            $this->jwtAuth->getTTL() * 60,
+        );
     }
 }
