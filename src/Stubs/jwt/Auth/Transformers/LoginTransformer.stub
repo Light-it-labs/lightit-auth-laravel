@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Transformers;
+
+use Flugg\Responder\Transformers\Transformer;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+
+class LoginTransformer extends Transformer
+{
+    public function transform(LoginDto $loginDto): array
+    {
+        return [
+            'accessToken' => $loginDto->accessToken,
+            'tokenType' => $loginDto->tokenType,
+            'expiresIn' => $loginDto->expiresIn,
+        ];
+    }
+}
