@@ -14,7 +14,7 @@ class LogoutController
 {
     public function __invoke(Request $request, LogoutAction $logoutAction): JsonResponse
     {
-            /** @var JWTAuthenticatable|null $user */
+        /** @var JWTAuthenticatable|null $user */
         $user = $request->user();
 
         if (! $user) {

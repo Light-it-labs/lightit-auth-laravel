@@ -6,9 +6,8 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\LoginRequest;
-use Lightit\Authentication\Domain\Actions\LoginAction;
 use Lightit\Authentication\App\Transformers\LoginTransformer;
-
+use Lightit\Authentication\Domain\Actions\LoginAction;
 
 class LoginController
 {

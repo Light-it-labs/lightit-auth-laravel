@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 use Lightit\Models\JWTAuthenticatable;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 
 class LogoutAction
 {
