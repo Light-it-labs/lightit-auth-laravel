@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use PHPOpenSourceSaver\JWTAuth\Facades\JWTFactory as JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\JWT;
+
+class RefreshController
+{
+    public function __invoke(JWTAuth $jwtAuth, JWT $jwt): JsonResponse
+    {
+        return responder()
+            ->success([
+                'refresh_token' => $jwt->refresh(),
+                'token_type' => 'bearer',
+                'expires_in' => $jwtAuth->getTTL() * 60,
+            ])
+            ->respond();
+    }
+}
