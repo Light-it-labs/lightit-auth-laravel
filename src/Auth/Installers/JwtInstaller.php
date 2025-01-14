@@ -107,13 +107,14 @@ final class JWTInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
             '/Requests/LoginRequest.stub' => 'App/Requests/LoginRequest.php',
-            '/Transformers/LoginTransformer.stub' => 'App/Transformers/LoginTransformer.php',
-            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
+            '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
+            '/Controllers/RefreshController.stub' => 'App/Controllers/RefreshController.php',
+            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',
             '/DataTransferObjects/LoginDto.stub' => 'Domain/DataTransferObjects/LoginDto.php',
+            '/Transformers/LoginTransformer.stub' => 'App/Transformers/LoginTransformer.php',
         ];
 
         foreach ($files as $stub => $destination) {
