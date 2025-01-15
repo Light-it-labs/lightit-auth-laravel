@@ -28,7 +28,7 @@ class LightitServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->publishes([
-            __DIR__.'/Models' => app_path('Models'),
+            __DIR__ . '/Models' => app_path('Models'),
         ], 'lightit-auth-models');
     }
 }

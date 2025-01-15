@@ -21,8 +21,9 @@ final class JWTInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-        private readonly FileManipulator $fileManipulator
-    ) {}
+        private readonly FileManipulator $fileManipulator,
+    ) {
+    }
 
     public function install(): void
     {
@@ -49,7 +50,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
-            "'providers' => [".PHP_EOL."        \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
+            "'providers' => [" . PHP_EOL . "        \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')
         );
     }
@@ -72,7 +73,7 @@ final class JWTInstaller implements AuthInstallerInterface
         }
 
         copy(
-            __DIR__.'/../../Stubs/jwt/config/jwt.stub',
+            __DIR__ . '/../../Stubs/jwt/config/jwt.stub',
             config_path('jwt.php')
         );
     }
@@ -104,7 +105,7 @@ final class JWTInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__.'/../../Stubs/jwt/Auth';
+        $stubsPath = __DIR__ . '/../../Stubs/jwt/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -124,7 +125,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $destination) {
             copy(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
         }
