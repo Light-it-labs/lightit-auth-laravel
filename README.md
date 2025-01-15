@@ -50,6 +50,74 @@ return [
 ];
 ```
 
+## Installing Considerations
+    
+- ### Installation in New Projects
+    You have to update your User Model and implements the JWTSubject Contract and implements two methods: ```getJWTIdentifier()``` and ```getJWTCustomClaims() ```
+```php
+<?php
+
+namespace App;
+
+declare(strict_types=1);
+
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+
+class User extends Authenticatable implements JWTSubject
+{
+    /**
+     * Get the identifier that will be stored in the subject claim of the JWT.
+     *
+     * @return mixed
+     */
+    public function getJWTIdentifier()
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key value array, containing any custom claims to be added to the JWT.
+     *
+     * @return array
+     */
+    public function getJWTCustomClaims()
+    {
+        return [];
+    }
+}
+```
+---
+After this you have to create the routes for the methods developed on the package 
+```php
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\LoginController;
+use Lightit\Authentication\App\Controllers\LogoutController;
+use Lightit\Authentication\App\Controllers\RefreshController;
+
+Route::prefix('auth')->group(static function () {
+    Route::post('login', LoginController::class);
+    Route::post('loogut', LogoutController::class);
+    Route::post('google', RefreshController::class);
+});
+```
+
+---
+Now you should:
+ - Define ```AUTH_GUARD=api``` and ```AUTH_PASSWORD_BROKER=users``` on the .env file
+ - Add the following code in the guard's array in the config/auth.php file 
+
+
+```php
+'api' => [
+    'driver' => 'jwt',
+    'provider' => 'users',
+],
+```
 ## Usage
 
 ```php
