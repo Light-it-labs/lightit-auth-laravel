@@ -1,6 +1,6 @@
 <?php
 
-namespace Lightit\Lightit\Commands;
+namespace Lightit\Commands;
 
 use Illuminate\Console\Command;
 

@@ -1,9 +1,9 @@
 <?php
 
-namespace Lightit\Lightit\Tests;
+namespace Lightit\Tests;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Lightit\Lightit\LightitServiceProvider;
+use Lightit\LightitServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra

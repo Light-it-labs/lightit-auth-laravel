@@ -1,8 +1,9 @@
 <?php
 
-namespace Lightit\Lightit;
+namespace Lightit;
 
-use Lightit\Lightit\Commands\LightitCommand;
+use Lightit\Commands\AuthSetupCommand;
+use Lightit\Commands\LightitCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -20,6 +21,14 @@ class LightitServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasViews()
             ->hasMigration('create_lightit_auth_laravel_table')
-            ->hasCommand(LightitCommand::class);
+            ->hasCommand(LightitCommand::class)
+            ->hasCommand(AuthSetupCommand::class);
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->publishes([
+            __DIR__.'/Models' => app_path('Models'),
+        ], 'lightit-auth-models');
     }
 }
