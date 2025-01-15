@@ -1,5 +1,5 @@
 <?php
 
-namespace Lightit\Lightit;
+namespace Lightit;
 
 class Lightit {}

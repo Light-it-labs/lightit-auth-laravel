@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\UnauthorizedException;
+use Lightit\Authentication\Domain\Actions\LogoutAction;
+use Lightit\Models\JWTAuthenticatable;
+
+class LogoutController
+{
+    public function __invoke(Request $request, LogoutAction $logoutAction): JsonResponse
+    {
+        /** @var JWTAuthenticatable|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            throw new UnauthorizedException();
+        }
+
+        $logoutAction->execute($user);
+
+        return responder()
+            ->success()
+            ->respond(Response::HTTP_NO_CONTENT);
+    }
+}
