@@ -33,6 +33,8 @@ After Composer has installed the Lightit Auth Laravel package, you should run th
 
 ## Installing Considerations
 
+##### The following steps should be completed after running the `auth:setup` Artisan command.
+
 ### Installation in New Projects
 
 1. Update your `User` model to implement the `JWTSubject` contract and define two methods: `getJWTIdentifier()` and `getJWTCustomClaims()`.
@@ -54,7 +56,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @return mixed
      */
-    public function getJWTIdentifier()
+    public function getJWTIdentifier(): mixed
     {
         return $this->getKey();
     }
@@ -64,7 +66,7 @@ class User extends Authenticatable implements JWTSubject
      *
      * @return array
      */
-    public function getJWTCustomClaims()
+    public function getJWTCustomClaims(): array
     {
         return [];
     }
@@ -102,7 +104,14 @@ Route::prefix('auth')->group(static function () {
         'provider' => 'users',
     ],
     ```
+### Installation in Projects with Existing Authentication (tymon/jwt-auth)
 
+1. Remove the `tymon/jwt-auth` package by running the following command:
+   ```bash
+   composer remove tymon/jwt-auth
+    ```
+   
+2. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
 
 ## Autoload Configuration
 To properly use this package, you need to configure the autoloading in your composer.json file. Add the following to the "autoload" section:
