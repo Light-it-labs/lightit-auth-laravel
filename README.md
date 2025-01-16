@@ -25,35 +25,18 @@ With these features, Lightit Auth Laravel is the perfect starting point for proj
 To get started, install the package through Composer:
 
 ```bash
-composer require light-it-labs/lightit-auth-laravel
+ composer require light-it-labs/lightit-auth-laravel
 ```
 
 After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
 
-You can publish and run the migrations with:
-
-```bash
-php artisan vendor:publish --tag="lightit-auth-laravel-migrations"
-php artisan migrate
-```
-
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag="lightit-auth-laravel-config"
-```
-
-This is the contents of the published config file:
-
-```php
-return [
-];
-```
 
 ## Installing Considerations
-    
-- ### Installation in New Projects
-    You have to update your User Model and implements the JWTSubject Contract and implements two methods: ```getJWTIdentifier()``` and ```getJWTCustomClaims() ```
+
+### Installation in New Projects
+
+1. Update your `User` model to implement the `JWTSubject` contract and define two methods: `getJWTIdentifier()` and `getJWTCustomClaims()`.
+
 ```php
 <?php
 
@@ -77,7 +60,7 @@ class User extends Authenticatable implements JWTSubject
     }
 
     /**
-     * Return a key value array, containing any custom claims to be added to the JWT.
+     * Return a key-value array containing any custom claims to be added to the JWT.
      *
      * @return array
      */
@@ -86,9 +69,9 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 }
-```
----
-After this you have to create the routes for the methods developed on the package 
+````
+2. Create the routes for the methods provided by the package.
+
 ```php
 <?php
 
@@ -101,35 +84,44 @@ use Lightit\Authentication\App\Controllers\RefreshController;
 
 Route::prefix('auth')->group(static function () {
     Route::post('login', LoginController::class);
-    Route::post('loogut', LogoutController::class);
-    Route::post('google', RefreshController::class);
+    Route::post('logout', LogoutController::class);
+    Route::post('refresh', RefreshController::class);
 });
 ```
+3. Update your environment configuration:
 
----
-Now you should:
- - Define ```AUTH_GUARD=api``` and ```AUTH_PASSWORD_BROKER=users``` on the .env file
- - Add the following code in the guard's array in the config/auth.php file 
+    - Add the following variables to your .env file:
+    ```dotenv
+    AUTH_GUARD=api
+    AUTH_PASSWORD_BROKER=users
+    ```
+   - Update the guards array in the config/auth.php file to include the following configuration:
+    ```php
+    'api' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
+    ```
 
 
-```php
-'api' => [
-    'driver' => 'jwt',
-    'provider' => 'users',
-],
+## Autoload Configuration
+To properly use this package, you need to configure the autoloading in your composer.json file. Add the following to the "autoload" section:
+
+```json
+{
+    "autoload": {
+        "psr-4": {
+            "Lightit\\": "src/"
+        }
+    }
+}
 ```
-## Usage
-
-```php
-$lightit = new Lightit\Lightit();
-echo $lightit->echoPhrase('Hello, Lightit!');
-```
-
-## Testing
-
+Once you’ve added this configuration, run the following command to regenerate the Composer autoloader:
 ```bash
-composer test
+ composer dump-autoload
 ```
+This step ensures that all the namespaces used in the package, such as Lightit\Authentication\App\Controllers, are correctly recognized by your application.
+
 
 ## Changelog
 
