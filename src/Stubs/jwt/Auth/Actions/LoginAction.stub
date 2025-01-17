@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Illuminate\Validation\UnauthorizedException;
+use Lightit\Exceptions\UnauthorizedException;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
