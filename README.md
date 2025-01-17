@@ -72,6 +72,7 @@ class User extends Authenticatable implements JWTSubject
     }
 }
 ````
+
 2. Create the routes for the methods provided by the package.
 
 ```php
@@ -90,6 +91,18 @@ Route::prefix('auth')->group(static function () {
     Route::post('refresh', RefreshController::class);
 });
 ```
+- If you have also selected Google SSO, you need to add the following endpoint to validate the tokens from Google Authentication:
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\GoogleLoginController;
+
+Route::prefix('auth')->group(static function () {
+  Route::post('google', GoogleLoginController::class);
+});
+```
+
 3. Update your environment configuration:
 
     - Add the following variables to your .env file:
