@@ -58,7 +58,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         $files = [
             '/Requests/GoogleRequest.stub' => 'App/Requests/GoogleRequest.php',
             '/Controllers/GoogleLoginController.stub' => 'App/Controllers/GoogleLoginController.php',
-            '/Actions/GoogleLoginAction.stub' => 'Domain/Actions/GoogleLoginAction.stub',
+            '/Actions/GoogleLoginAction.stub' => 'Domain/Actions/GoogleLoginAction.php',
         ];
 
         foreach ($files as $stub => $destination) {
