@@ -12,5 +12,4 @@ class InvalidGoogleTokenException extends HttpException
     protected $status = JsonResponse::HTTP_BAD_REQUEST;
 
     protected $errorCode = 'Invalid_google_token';
-
 }

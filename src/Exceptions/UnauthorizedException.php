@@ -10,7 +10,6 @@ use Illuminate\Http\JsonResponse;
 class UnauthorizedException extends HttpException
 {
     protected $status = JsonResponse::HTTP_UNAUTHORIZED;
-    
-    protected $errorCode = 'unauthorized';
 
+    protected $errorCode = 'unauthorized';
 }
