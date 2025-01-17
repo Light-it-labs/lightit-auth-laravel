@@ -8,7 +8,9 @@ use Illuminate\Console\Command;
 
 final class FileManipulator
 {
-    public function __construct(private readonly Command $command) {}
+    public function __construct(private readonly Command $command)
+    {
+    }
 
     public function replaceInFile(string $search, string $replace, string $path): void
     {

@@ -1,10 +1,21 @@
 {
     "name": "light-it-labs/lightit-auth-laravel",
-    "description": "This is my package lightit-auth-laravel",
+    "description": "A comprehensive authentication package for Laravel projects, designed to streamline the implementation of various authentication strategies. This package supports JWT-based authentication, Google SSO, Laravel Sanctum, 2FA, OTP, and role-permission systems with standardized examples for seamless integration into your projects.",
     "keywords": [
         "Light-it Labs",
+        "php",
+        "lightit",
         "laravel",
-        "lightit-auth-laravel"
+        "auth",
+        "laravel auth",
+        "laravel authentication",
+        "jwt",
+        "sanctum",
+        "google sso",
+        "2fa",
+        "two factor auth",
+        "otp",
+        "roles and permissions"
     ],
     "homepage": "https://github.com/light-it-labs/lightit-auth-laravel",
     "license": "MIT",
@@ -12,6 +23,21 @@
         {
             "name": "Sergio Ojeda",
             "email": "sergio@lightit.io",
+            "role": "Tech Leader"
+        },
+        {
+            "name": "Gianfranco Rocco",
+            "email": "gianfranco.rocco@lightit.io",
+            "role": "Lead Developer"
+        },
+        {
+            "name": "Tomás Sueldo",
+            "email": "tomas.sueldo@lightit.io",
+            "role": "Developer"
+        },
+        {
+            "name": "Martín Silva",
+            "email": "martin.s@lightit.io",
             "role": "Developer"
         }
     ],

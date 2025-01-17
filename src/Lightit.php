@@ -2,4 +2,6 @@
 
 namespace Lightit;
 
-class Lightit {}
+class Lightit
+{
+}
