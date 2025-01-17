@@ -22,10 +22,23 @@ With these features, Lightit Auth Laravel is the perfect starting point for proj
 
 ## Installation
 
-To get started, install the package through Composer:
+To get started, you need to manually add the repository URL to your `composer.json` file to download the package. Add the following configuration:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:Light-it-labs/lightit-auth-laravel.git"
+        }
+    ]
+}
+
+```
+Once added, you can install the package via Composer using the following command:
 
 ```bash
- composer require light-it-labs/lightit-auth-laravel
+ composer require light-it-labs/lightit-auth-laravel:@dev
 ```
 
 After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
