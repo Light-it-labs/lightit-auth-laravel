@@ -80,6 +80,11 @@ class AuthSetupCommand extends Command
     protected function setupGoogleSSO(): void
     {
         $this->info('Setting up Google SSO...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $fileManipulator = new FileManipulator($this);
+        $jwtInstaller = new JWTInstaller($this, $composerInstaller, $fileManipulator);
+        $jwtInstaller->install();
     }
 
     protected function setup2FA(): void

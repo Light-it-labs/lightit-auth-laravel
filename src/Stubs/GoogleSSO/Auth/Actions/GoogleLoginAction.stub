@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Google\Client as GoogleClient;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Lightit\Models\JWTAuthenticatable;
+use Lightit\Exceptions\InvalidGoogleTokenException;
+use Lightit\Exceptions\UnauthorizedException;
+use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+
+class GoogleLoginAction
+{
+    public function __construct(
+        private readonly AuthFactory $factory,
+        private readonly JWTAuth $jwtAuth,
+        private readonly GoogleClient $googleClient,
+    ) {
+    }
+
+    public function execute(string $googleIdToken): array
+    {
+        $payload = $this->googleClient->verifyIdToken($googleIdToken);
+
+        if ($payload) {
+            /** @var JWTGuard $guard */
+            $guard = $this->factory->guard();
+            $user = JWTAuthenticatable::firstOrNew(['email' => $payload['email']]);
+
+            if (! $user->exists) {
+                $user->name = $payload['name'];
+                $user->password = Hash::make(Str::random(10));
+                $user->save();
+            }
+
+            if (! $token = $guard->login($user)) {
+                throw new UnauthorizedException();
+            }
+
+            return [
+                'accessToken' => $token,
+                'tokenType' => 'bearer',
+                'expiresIn' => $this->jwtAuth->getTTL() * 60,
+            ];
+        }
+
+        throw new InvalidGoogleTokenException('The Google Token is not valid');
+    }
+}
