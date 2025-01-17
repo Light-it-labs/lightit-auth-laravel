@@ -30,6 +30,8 @@ To get started, install the package through Composer:
 
 After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
 
+> **Note:** For existing projects, please refer to the section below to make necessary adjustments before running the `php artisan auth:setup` command.
+
 
 ## Installing Considerations
 
@@ -119,12 +121,19 @@ Route::prefix('auth')->group(static function () {
     ```
 ### Installation in Projects with Existing Authentication (tymon/jwt-auth)
 
-1. Remove the `tymon/jwt-auth` package by running the following command:
-   ```bash
-   composer remove tymon/jwt-auth
-    ```
+> **Note:** Complete the following steps before running the `php artisan auth:setup` command.
+
+1. Remove the `config/jwt.php` file:
+```bash
+   rm config/jwt.php
+```
+
+2. Remove the `tymon/jwt-auth` package by running the following command:
+```bash
+composer remove tymon/jwt-auth
+```
    
-2. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
+3. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
 
 ## Autoload Configuration
 To properly use this package, you need to configure the autoloading in your composer.json file. Add the following to the "autoload" section:
