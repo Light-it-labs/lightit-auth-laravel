@@ -84,7 +84,7 @@ class AuthSetupCommand extends Command
 
         $composerInstaller = new ComposerInstaller($this);
         $fileManipulator = new FileManipulator($this);
-        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller, $fileManipulator);
+        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
         $jwtInstaller->install();
     }
 
