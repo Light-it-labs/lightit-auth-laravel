@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Lightit\Models\JWTAuthenticatable;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 
 class LogoutAction
@@ -15,7 +14,7 @@ class LogoutAction
     ) {
     }
 
-    public function execute(JWTAuthenticatable $user): void
+    public function execute(): void
     {
         /** @var JWTGuard $guard */
         $guard = $this->factory->guard();
