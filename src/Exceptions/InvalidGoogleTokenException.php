@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions;
+namespace Lightit\Exceptions;
 
 use Flugg\Responder\Exceptions\Http\HttpException;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,5 +12,5 @@ class InvalidGoogleTokenException extends HttpException
 {
     protected $status = Response::HTTP_BAD_REQUEST;
     protected $errorCode = 'Invalid_google_token_exception';
-    
+
 }

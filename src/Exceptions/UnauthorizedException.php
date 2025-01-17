@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Exceptions;
+namespace Lightit\Exceptions;
 
 use Flugg\Responder\Exceptions\Http\HttpException;
 use Illuminate\Http\JsonResponse;
