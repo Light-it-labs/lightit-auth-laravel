@@ -24,7 +24,7 @@ class GoogleLoginAction
     ) {
     }
 
-    public function execute(string $googleIdToken): array
+    public function execute(string $googleIdToken): LoginDto
     {
         $payload = $this->googleClient->verifyIdToken($googleIdToken);
 

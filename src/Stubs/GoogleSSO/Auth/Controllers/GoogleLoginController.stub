@@ -9,7 +9,7 @@ use Lightit\Authentication\App\Requests\GoogleLoginRequest;
 use Lightit\Authentication\App\Transformers\LoginTransformer;
 use Lightit\Authentication\Domain\Actions\GoogleLoginAction;
 
-class GoogleUserController
+class GoogleLoginController
 {
     public function __invoke(GoogleLoginRequest $request, GoogleLoginAction $action): JsonResponse
     {
