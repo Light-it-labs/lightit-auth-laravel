@@ -113,9 +113,8 @@ Route::prefix('auth')->group(static function () {
 use Illuminate\Support\Facades\Route;
 use Lightit\Authentication\App\Controllers\GoogleLoginController;
 
-Route::prefix('auth')->group(static function () {
-  Route::post('google', GoogleLoginController::class);
-});
+Route::post('google', GoogleLoginController::class);
+
 ```
 
 3. Update your environment configuration:

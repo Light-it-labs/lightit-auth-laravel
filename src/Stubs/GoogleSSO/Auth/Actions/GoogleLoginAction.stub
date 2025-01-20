@@ -11,6 +11,7 @@ use Illuminate\Support\Str;
 use Lightit\Models\JWTAuthenticatable;
 use Lightit\Exceptions\InvalidGoogleTokenException;
 use Lightit\Exceptions\UnauthorizedException;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 
@@ -27,28 +28,28 @@ class GoogleLoginAction
     {
         $payload = $this->googleClient->verifyIdToken($googleIdToken);
 
-        if ($payload) {
-            /** @var JWTGuard $guard */
-            $guard = $this->factory->guard();
-            $user = JWTAuthenticatable::firstOrNew(['email' => $payload['email']]);
-
-            if (! $user->exists) {
-                $user->name = $payload['name'];
-                $user->password = Hash::make(Str::random(10));
-                $user->save();
-            }
-
-            if (! $token = $guard->login($user)) {
-                throw new UnauthorizedException();
-            }
-
-            return [
-                'accessToken' => $token,
-                'tokenType' => 'bearer',
-                'expiresIn' => $this->jwtAuth->getTTL() * 60,
-            ];
+        if (!$payload) {
+            throw new InvalidGoogleTokenException('The Google token is not valid');
         }
 
-        throw new InvalidGoogleTokenException('The Google Token is not valid');
+        /** @var JWTGuard $guard */
+         $guard = $this->factory->guard();
+         $user = JWTAuthenticatable::firstOrNew(['email' => $payload['email']]);
+
+         if (! $user->exists) {
+             $user->name = $payload['name'];
+             $user->password = Hash::make(Str::random(10));
+             $user->save();
+         }
+
+         if (! $token = $guard->login($user)) {
+             throw new UnauthorizedException();
+         }
+
+         return new LoginDto(
+             $token,
+             'bearer',
+             $this->jwtAuth->getTTL() * 60,
+         );
     }
 }

@@ -6,14 +6,14 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class GoogleRequest extends FormRequest
+class GoogleLoginRequest extends FormRequest
 {
-    public const GOOGLE_TOKEN = 'googleToken';
+    public const TOKEN = 'token';
 
     public function rules(): array
     {
         return [
-            self::GOOGLE_TOKEN => ['required'],
+            self::TOKEN => ['required'],
         ];
     }
 }

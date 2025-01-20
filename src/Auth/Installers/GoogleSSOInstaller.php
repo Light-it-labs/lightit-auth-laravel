@@ -56,7 +56,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Requests/GoogleRequest.stub' => 'App/Requests/GoogleRequest.php',
+            '/Requests/GoogleLoginRequest.stub' => 'App/Requests/GoogleLoginRequest.php',
             '/Controllers/GoogleLoginController.stub' => 'App/Controllers/GoogleLoginController.php',
             '/Actions/GoogleLoginAction.stub' => 'Domain/Actions/GoogleLoginAction.php',
         ];
