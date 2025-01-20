@@ -6,6 +6,7 @@ namespace Lightit\Commands;
 
 use Illuminate\Console\Command;
 use Lightit\Auth\Installers\ComposerInstaller;
+use Lightit\Auth\Installers\GoogleSSOInstaller;
 use Lightit\Auth\Installers\JWTInstaller;
 use Lightit\Enums\AuthDriver;
 use Lightit\Tools\FileManipulator;
@@ -80,6 +81,10 @@ class AuthSetupCommand extends Command
     protected function setupGoogleSSO(): void
     {
         $this->info('Setting up Google SSO...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
+        $jwtInstaller->install();
     }
 
     protected function setup2FA(): void

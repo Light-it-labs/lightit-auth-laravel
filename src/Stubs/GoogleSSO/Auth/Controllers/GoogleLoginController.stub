@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\GoogleLoginRequest;
+use Lightit\Authentication\App\Transformers\LoginTransformer;
+use Lightit\Authentication\Domain\Actions\GoogleLoginAction;
+
+class GoogleLoginController
+{
+    public function __invoke(GoogleLoginRequest $request, GoogleLoginAction $action): JsonResponse
+    {
+        $response = $action->execute($request->string($request::TOKEN)->toString());
+
+        return responder()
+            ->success($response, LoginTransformer::class)
+            ->respond();
+    }
+}

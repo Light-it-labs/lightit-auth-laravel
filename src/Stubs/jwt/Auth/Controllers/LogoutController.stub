@@ -21,10 +21,10 @@ class LogoutController
             throw new UnauthorizedException();
         }
 
-        $logoutAction->execute($user);
+        $logoutAction->execute();
 
         return responder()
             ->success()
-            ->respond(Response::HTTP_NO_CONTENT);
+            ->respond(JsonResponse::HTTP_NO_CONTENT);
     }
 }

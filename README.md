@@ -22,13 +22,28 @@ With these features, Lightit Auth Laravel is the perfect starting point for proj
 
 ## Installation
 
-To get started, install the package through Composer:
+To get started, you need to manually add the repository URL to your `composer.json` file to download the package. Add the following configuration:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "git@github.com:Light-it-labs/lightit-auth-laravel.git"
+        }
+    ]
+}
+
+```
+Once added, you can install the package via Composer using the following command:
 
 ```bash
- composer require light-it-labs/lightit-auth-laravel
+ composer require light-it-labs/lightit-auth-laravel:@dev
 ```
 
 After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
+
+> **Note:** For existing projects, please refer to the section below to make necessary adjustments before running the `php artisan auth:setup` command.
 
 
 ## Installing Considerations
@@ -72,6 +87,7 @@ class User extends Authenticatable implements JWTSubject
     }
 }
 ````
+
 2. Create the routes for the methods provided by the package.
 
 ```php
@@ -90,6 +106,17 @@ Route::prefix('auth')->group(static function () {
     Route::post('refresh', RefreshController::class);
 });
 ```
+- If you have also selected Google SSO, you need to add the following endpoint to validate the tokens from Google Authentication:
+```php
+<?php
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\GoogleLoginController;
+
+Route::post('google', GoogleLoginController::class);
+
+```
+
 3. Update your environment configuration:
 
     - Add the following variables to your .env file:
@@ -106,12 +133,19 @@ Route::prefix('auth')->group(static function () {
     ```
 ### Installation in Projects with Existing Authentication (tymon/jwt-auth)
 
-1. Remove the `tymon/jwt-auth` package by running the following command:
-   ```bash
-   composer remove tymon/jwt-auth
-    ```
+> **Note:** Complete the following steps before running the `php artisan auth:setup` command.
+
+1. Remove the `config/jwt.php` file:
+```bash
+   rm config/jwt.php
+```
+
+2. Remove the `tymon/jwt-auth` package by running the following command:
+```bash
+composer remove tymon/jwt-auth
+```
    
-2. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
+3. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
 
 ## Autoload Configuration
 To properly use this package, you need to configure the autoloading in your composer.json file. Add the following to the "autoload" section:
