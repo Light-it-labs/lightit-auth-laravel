@@ -1,0 +1,42 @@
+<?php
+declare(strict_types=1);
+
+namespace Lightit\Authentication;
+
+use Illuminate\Foundation\Auth\User as Authenticatable;
+
+class TwoFactorAuthenticatable extends Authenticatable
+{
+    protected $fillable = [
+        'two_factor_auth_secret',
+        'two_factor_auth_activated_at',
+    ];
+
+    public function hasTwoFactorAuthenticationEnabled(): bool
+    {
+        return (bool) $this->two_factor_auth_activated_at;
+    }
+
+    public function hasTwoFactorAuthenticationConfigured(): bool
+    {
+        return (bool) $this->two_factor_auth_secret
+            && $this->two_factor_auth_activated_at;
+    }
+
+    public function hasTwoFactorAuthenticationExpired(): bool
+    {
+        $isTwoFactorAuthenticationEternal = config('google2fa.lifetime') == 0;
+
+        return ! $isTwoFactorAuthenticationEternal
+            && $this->two_factor_auth_activated_at?->toImmutable()
+                ->addMinutes((int) config('google2fa.lifetime'))
+                ->lessThan(now());
+    }
+
+    public function clearTwoFactorAuthenticationCredentials(): void
+    {
+        $this->update([
+            'two_factor_auth_activated_at' => null,
+        ]);
+    }
+}

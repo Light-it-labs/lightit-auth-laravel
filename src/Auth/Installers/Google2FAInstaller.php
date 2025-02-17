@@ -36,7 +36,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->createAuthFiles();
+//        $this->createAuthFiles();
+        $this->copyBaseClass();
+        $this->copyMigration();
+        $this->copyMiddlewares();
 
         $this->command->info('Libraries for 2FA installed successfully!');
     }
@@ -71,5 +74,41 @@ final class Google2FAInstaller implements AuthInstallerInterface
                 base_path("src/Authentication/{$destination}")
             );
         }
+    }
+    private function copyMigration(): void
+    {
+        $this->command->info('Step 1/1: Copying migration files...');
+
+        $stub = '/../../../database/migrations/add_two_factor_authentication_columns.stub';
+        $destination = 'database/migrations/add_two_factor_authentication_columns.php';
+
+        copy(
+            $stub,
+            base_path($destination)
+        );
+    }
+
+    private function copyBaseClass(): void
+    {
+        $this->command->info('Step 1/1: Copying base class...');
+
+        $stub = '/../../Stubs/Google2FA/Auth/TwoFactorAuthenticatable.stub';
+        $destination = 'Domain/TwoFactorAuthenticatable.php';
+
+        copy(
+            $stub,
+            base_path($destination)
+        );
+    }
+
+    private function copyMiddlewares(): void
+    {
+//        $stub = '/../../../database/migrations/add_two_factor_authentication_columns.stub';
+//        $destination = 'database/migrations/add_two_factor_authentication_columns.php';
+//
+//        copy(
+//            $stub,
+//            base_path($destination)
+//        );
     }
 }
