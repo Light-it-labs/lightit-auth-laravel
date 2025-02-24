@@ -1,16 +1,12 @@
 <?php
 declare(strict_types=1);
 
-namespace Lightit\Authentication;
+namespace Lightit\Authentication\Domain;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class TwoFactorAuthenticatable extends Authenticatable
 {
-    protected $fillable = [
-        'two_factor_auth_secret',
-        'two_factor_auth_activated_at',
-    ];
 
     public function hasTwoFactorAuthenticationEnabled(): bool
     {

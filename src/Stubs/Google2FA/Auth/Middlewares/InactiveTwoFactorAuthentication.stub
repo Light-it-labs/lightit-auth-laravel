@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Shared\Support\Middlewares;
+namespace Lightit\Shared\App\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
 use Lightit\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
-class TwoFactorAuthenticationInactivated
+class InactiveTwoFactorAuthentication
 {
     /**
      * Handle an incoming request.
@@ -22,7 +22,7 @@ class TwoFactorAuthenticationInactivated
             return $next($request);
         }
 
-        /** @var User $user */
+        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
         $user = $request->user();
 
         if ($user->isTwoFactorAuthenticationConfigured() && ! $user->isTwoFactorAuthenticationExpired()) {

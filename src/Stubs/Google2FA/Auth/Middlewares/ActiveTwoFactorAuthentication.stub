@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Shared\Support\Middlewares;
+namespace Lightit\Shared\App\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
@@ -22,7 +22,7 @@ class ActiveTwoFactorAuthentication
             return $next($request);
         }
 
-        /** @var User $user */
+        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable  $user */
         $user = $request->user();
 
         if (config('google2fa.mandatory') || $user->isTwoFactorAuthenticationEnabled()) {
