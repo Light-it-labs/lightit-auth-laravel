@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Lightit\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
-class InactiveTwoFactorAuthentication
+class InactiveTwoFactorAuthenticationMiddleware
 {
     /**
      * Handle an incoming request.

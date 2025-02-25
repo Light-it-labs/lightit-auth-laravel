@@ -69,6 +69,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/VerifyTwoFactorAuthenticationAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationAction.php',
             '/Actions/VerifyTwoFactorAuthenticationOTPAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationOTPAction.php',
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
+
+            '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',
+            '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',
+            '/Controllers/VerifyTwoFactorAuthenticationController.stub' => 'App/Controllers/VerifyTwoFactorAuthenticationController.php',
+
+            '/Requests/TwoFactorAuthenticationCodeRequest.stub' => 'App/Requests/TwoFactorAuthenticationCodeRequest.php',
         ];
 
         foreach ($files as $stub => $destination) {

@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Lightit\Authentication\Domain\Actions\EnableTwoFactorAuthenticationAction;
+
+class EnableTwoFactorAuthenticationController
+{
+    public function __invoke(
+        Request $request,
+        EnableTwoFactorAuthenticationAction $enableTwoFactorAuthenticationAction,
+    ): JsonResponse {
+        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
+        $user = $request->user();
+
+        $qr = $enableTwoFactorAuthenticationAction->execute($user);
+
+        return responder()
+            ->success(['qr' => $qr])
+            ->respond();
+    }
+}
