@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Lightit\Exceptions\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
-class ActiveTwoFactorAuthentication
+class InactiveTwoFactorAuthentication
 {
     /**
      * Handle an incoming request.
@@ -22,17 +22,11 @@ class ActiveTwoFactorAuthentication
             return $next($request);
         }
 
-        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable  $user */
+        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
         $user = $request->user();
 
-        if (config('google2fa.mandatory') || $user->isTwoFactorAuthenticationEnabled()) {
-            if (! $user->isTwoFactorAuthenticationConfigured()) {
-                throw new UnauthorizedException('Two-factor authentication is not configured.');
-            }
-
-            if ($user->isTwoFactorAuthenticationExpired()) {
-                throw new UnauthorizedException('Two-factor authentication is expired.');
-            }
+        if ($user->hasTwoFactorAuthenticationConfigured() && ! $user->hasTwoFactorAuthenticationExpired()) {
+            throw new UnauthorizedException('Two-factor authentication is already configured.');
         }
 
         return $next($request);

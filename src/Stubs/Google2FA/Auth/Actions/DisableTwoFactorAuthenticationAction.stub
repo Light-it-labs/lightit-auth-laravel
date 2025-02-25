@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+
+class DisableTwoFactorAuthenticationAction
+{
+    public function __construct(
+        private readonly VerifyTwoFactorAuthenticationOTPAction $verifyTwoFactorAuthenticationOTPAction,
+    ) {
+    }
+
+    public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): void
+    {
+        $this->verifyTwoFactorAuthenticationOTPAction->execute($user->getTwoFactorAuthSecret(), $oneTimePassword);
+
+        $user->update([
+            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,
+            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
+        ]);
+    }
+}

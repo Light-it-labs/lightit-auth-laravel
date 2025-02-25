@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Lightit\Auth\Installers;
 
-use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Lightit\Contracts\AuthInstallerInterface;
-use Lightit\Tools\FileManipulator;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -37,11 +35,11 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
-//        $this->createAuthFiles();
+        $this->createAuthFiles();
         $this->publishConfiguration();
-        $this->copyBaseClass();
         $this->copyMigration();
         $this->copyMiddlewares();
+        $this->copyConfigFiles();
 
         $this->command->info('Libraries for 2FA installed successfully!');
     }
@@ -57,7 +55,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__ . '/../../Stubs/GoogleSSO/Auth';
+        $stubsPath = __DIR__ . '/../../Stubs/Google2FA/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -65,9 +63,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Requests/GoogleLoginRequest.stub' => 'App/Requests/GoogleLoginRequest.php',
-            '/Controllers/GoogleLoginController.stub' => 'App/Controllers/GoogleLoginController.php',
-            '/Actions/GoogleLoginAction.stub' => 'Domain/Actions/GoogleLoginAction.php',
+            '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
+            '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
+            '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
+            '/Actions/VerifyTwoFactorAuthenticationAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationAction.php',
+            '/Actions/VerifyTwoFactorAuthenticationOTPAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationOTPAction.php',
+            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
         ];
 
         foreach ($files as $stub => $destination) {
@@ -79,7 +80,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
     private function copyMigration(): void
     {
-        $this->command->info('Step 1/1: Copying migration files...');
+        $this->command->info('Step 3/5: Copying migration files...');
 
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = "database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php";
@@ -90,26 +91,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         );
     }
 
-    private function copyBaseClass(): void
-    {
-        $this->command->info('Step 1/1: Copying base class...');
-
-        $destinationFolder = 'src/Authentication/Domain/';
-        if (! is_dir($path = base_path($destinationFolder))) {
-            mkdir($path, 0755, true);
-        }
-
-        $stub =  __DIR__ . '/../../Stubs/Google2FA/Auth/TwoFactorAuthenticatable.stub';
-        $destination = $destinationFolder . 'TwoFactorAuthenticatable.php';
-        copy(
-            $stub,
-            base_path($destination)
-        );
-    }
-
     private function copyMiddlewares(): void
     {
-        $this->command->info('Step 1/1: Copying Middlewares classes...');
+        $this->command->info('Step 4/5: Copying Middlewares classes...');
 
         $destinationFolder = 'src/Shared/App/Middlewares/';
 
@@ -118,8 +102,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $stubNames = [
-            'ActiveTwoFactorAuthentication',
-            'InactiveTwoFactorAuthentication'
+            'ActiveTwoFactorAuthenticationMiddleware',
+            'InactiveTwoFactorAuthenticationMiddleware'
         ];
 
         foreach ($stubNames as $stubName){
@@ -140,19 +124,19 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->command->call('vendor:publish', [
             '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
         ]);
-
-//        $this->copyConfigFiles();
     }
 
-//    private function copyConfigFiles(): void
-//    {
-//        if (! is_dir(config_path())) {
-//            mkdir(config_path(), 0755, true);
-//        }
-//
-//        copy(
-//            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
-//            config_path('google2fa.php')
-//        );
-//    }
+    private function copyConfigFiles(): void
+    {
+        $this->command->info('Step 5/5: Copying config files...');
+
+        if (! is_dir(config_path())) {
+            mkdir(config_path(), 0755, true);
+        }
+
+        copy(
+            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
+            config_path('google2fa.php')
+        );
+    }
 }

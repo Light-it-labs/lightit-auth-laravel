@@ -5,7 +5,12 @@ return [
     /*
      * Enable / disable Google2FA.
      */
-    'enabled' => env('OTP_ENABLED', true),
+    'enabled' => env('TWO_FACTOR_AUTHENTICATION_ENABLED', true),
+
+    /*
+     * Make Google2FA mandatory / optional.
+     */
+    'mandatory' => env('TWO_FACTOR_AUTHENTICATION_MANDATORY', true),
 
     /*
      * Lifetime in minutes.
@@ -52,7 +57,7 @@ return [
     /*
      * User's table column for google2fa secret.
      */
-    'otp_secret_column' => 'google2fa_secret',
+    'otp_secret_column' => \Lightit\Authentication\Domain\TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME,
 
     /*
      * One Time Password View.

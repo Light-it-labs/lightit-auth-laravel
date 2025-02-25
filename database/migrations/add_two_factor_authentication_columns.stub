@@ -9,7 +9,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('two_factor_auth_secret')->nullable();
+            $table->text('two_factor_auth_secret')->nullable();
             $table->datetime('two_factor_auth_activated_at')->nullable();
         });
     }
