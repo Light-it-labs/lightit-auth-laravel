@@ -54,4 +54,11 @@ class TwoFactorAuthenticatable extends Authenticatable
     {
         return $this->email;
     }
+
+    public function clearTwoFactorAuthenticationCredentials(): void
+    {
+        $this->update([
+             self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
+        ]);
+    }
 }
