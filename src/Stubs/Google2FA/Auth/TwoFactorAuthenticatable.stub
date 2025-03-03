@@ -7,8 +7,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class TwoFactorAuthenticatable extends Authenticatable
 {
-
     public const TWO_FACTOR_AUTH_SECRET_COLUMN_NAME = 'two_factor_auth_secret';
+
     public const TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME = 'two_factor_auth_activated_at';
 
     /**
@@ -37,15 +37,22 @@ class TwoFactorAuthenticatable extends Authenticatable
 
     public function getTwoFactorAuthSecret(): string|null
     {
-        return $this->getAttribute(self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME);
+        /** @var string|null $secret */
+        $secret = $this->getAttribute(self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME);
+
+        return $secret;
     }
 
     public function hasTwoFactorAuthenticationExpired(): bool
     {
         $isTwoFactorAuthenticationEternal = config('google2fa.lifetime') == 0;
 
+        /** @var Carbon|null $activatedAt */
+        $activatedAt = $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
+
         return ! $isTwoFactorAuthenticationEternal
-            && $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME)?->toImmutable()
+            && $activatedAt
+                ?->toImmutable()
                 ->addMinutes((int) config('google2fa.lifetime'))
                 ->lessThan(now());
     }

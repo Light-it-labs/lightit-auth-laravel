@@ -47,7 +47,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 1/1: Creating authentication files...');
+        $this->command->info('Step 1/5: Creating authentication files...');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -114,7 +114,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         foreach ($stubNames as $stubName){
             $stub =  __DIR__ . "/../../Stubs/Google2FA/Auth/Middlewares/$stubName.stub";
-            $destination = $destinationFolder . "$stubName.php";
+            $destination = "{$destinationFolder}{$stubName}.php";
 
             copy(
                 $stub,

@@ -15,8 +15,11 @@ class GenerateQRCodeAction
 
     public function execute(string $holderIdentifier, string $secret): string
     {
+        /** @var string $appName */
+        $appName = config('app.name');
+
         return $this
             ->google2FA
-            ->getQRCodeInline((string) config('app.name'), $holderIdentifier, $secret);
+            ->getQRCodeInline($appName, $holderIdentifier, $secret);
     }
 }
