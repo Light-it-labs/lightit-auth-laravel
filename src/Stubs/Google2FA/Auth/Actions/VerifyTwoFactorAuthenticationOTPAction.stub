@@ -7,10 +7,10 @@ namespace Lightit\Authentication\Domain\Actions;
 use Lightit\Exceptions\UnauthorizedException;
 use PragmaRX\Google2FALaravel\Google2FA;
 
-class VerifyTwoFactorAuthenticationOTPAction
+final readonly class VerifyTwoFactorAuthenticationOTPAction
 {
     public function __construct(
-        private readonly Google2FA $google2FA,
+        private Google2FA $google2FA,
     ) {
     }
 

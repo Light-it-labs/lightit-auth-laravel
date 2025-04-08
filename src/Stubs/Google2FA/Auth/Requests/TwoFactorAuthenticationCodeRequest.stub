@@ -6,7 +6,7 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class TwoFactorAuthenticationCodeRequest extends FormRequest
+final readonly class TwoFactorAuthenticationCodeRequest extends FormRequest
 {
     public const ONE_TIME_PASSWORD = 'one_time_password';
 

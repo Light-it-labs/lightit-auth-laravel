@@ -6,10 +6,10 @@ namespace Lightit\Authentication\Domain\Actions;
 
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 
-class VerifyTwoFactorAuthenticationAction
+final readonly class VerifyTwoFactorAuthenticationAction
 {
     public function __construct(
-        private readonly VerifyTwoFactorAuthenticationOTPAction $verifyTwoFactorAuthenticationOTPAction,
+        private VerifyTwoFactorAuthenticationOTPAction $verifyTwoFactorAuthenticationOTPAction,
     ) {
     }
 

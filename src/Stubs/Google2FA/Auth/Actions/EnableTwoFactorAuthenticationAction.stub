@@ -7,11 +7,11 @@ namespace Lightit\Authentication\Domain\Actions;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use PragmaRX\Google2FALaravel\Google2FA;
 
-class EnableTwoFactorAuthenticationAction
+final readonly class EnableTwoFactorAuthenticationAction
 {
     public function __construct(
-        private readonly Google2FA $google2FA,
-        private readonly GenerateQRCodeAction $generateQRCodeAction,
+        private Google2FA $google2FA,
+        private GenerateQRCodeAction $generateQRCodeAction,
     ) {
     }
 
