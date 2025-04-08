@@ -9,7 +9,7 @@ use Lightit\Authentication\App\Requests\TwoFactorAuthenticationCodeRequest;
 use Lightit\Authentication\Domain\Actions\VerifyTwoFactorAuthenticationAction;
 use Lightit\Lightranet\Users\Domain\User;
 
-class VerifyTwoFactorAuthenticationController
+final readonly class VerifyTwoFactorAuthenticationController
 {
     public function __invoke(
         TwoFactorAuthenticationCodeRequest $request,
