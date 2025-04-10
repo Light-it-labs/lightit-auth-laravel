@@ -28,7 +28,7 @@ final readonly class InactiveTwoFactorAuthenticationMiddleware
         $user = $request->user($guardName);
 
         if ($user->hasTwoFactorAuthenticationConfigured() && ! $user->hasTwoFactorAuthenticationExpired()) {
-            throw new UnauthorizedException('Two-factor authentication is already configured.');
+            throw new UnauthorizedException(__('google2fa.2fa_already_configured'));
         }
 
         return $next($request);

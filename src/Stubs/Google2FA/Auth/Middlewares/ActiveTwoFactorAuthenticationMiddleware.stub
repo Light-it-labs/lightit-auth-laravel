@@ -29,11 +29,11 @@ final readonly class ActiveTwoFactorAuthenticationMiddleware
 
         if (config('google2fa.mandatory') || $user->hasTwoFactorAuthenticationEnabled()) {
             if (! $user->hasTwoFactorAuthenticationConfigured()) {
-                throw new UnauthorizedException('Two-factor authentication is not configured.');
+                throw new UnauthorizedException(__('google2fa.2fa_not_configured'));
             }
 
             if ($user->hasTwoFactorAuthenticationExpired()) {
-                throw new UnauthorizedException('Two-factor authentication is expired.');
+                throw new UnauthorizedException(__('google2fa.2fa_expired'));
             }
         }
 
