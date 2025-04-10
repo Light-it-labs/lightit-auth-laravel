@@ -28,7 +28,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! $this->composerInstaller->requirePackages([
             'pragmarx/google2fa-laravel',
             'pragmarx/google2fa-qrcode',
-            'bacon/bacon-qr-code'
+            'bacon/bacon-qr-code',
         ])) {
             $this->command->error('Installing Google 2FA laravel and QR Code');
 
@@ -44,7 +44,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->command->info('Libraries for 2FA installed successfully!');
     }
-
 
     private function createAuthFiles(): void
     {
@@ -85,12 +84,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
             );
         }
     }
+
     private function copyMigration(): void
     {
         $this->command->info('Step 3/6: Copying migration files...');
 
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
-        $destination = "database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php";
+        $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
         copy(
             $stub,
@@ -110,11 +110,11 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $stubNames = [
             'ActiveTwoFactorAuthenticationMiddleware',
-            'InactiveTwoFactorAuthenticationMiddleware'
+            'InactiveTwoFactorAuthenticationMiddleware',
         ];
 
-        foreach ($stubNames as $stubName){
-            $stub =  __DIR__ . "/../../Stubs/Google2FA/Auth/Middlewares/$stubName.stub";
+        foreach ($stubNames as $stubName) {
+            $stub = __DIR__ . "/../../Stubs/Google2FA/Auth/Middlewares/$stubName.stub";
             $destination = "{$destinationFolder}{$stubName}.php";
 
             copy(
