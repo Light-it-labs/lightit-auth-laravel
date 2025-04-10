@@ -22,8 +22,10 @@ final readonly class ActiveTwoFactorAuthenticationMiddleware
             return $next($request);
         }
 
+        $guardName = config('google2fa.guard');
+
         /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable  $user */
-        $user = $request->user();
+        $user = $request->user($guardName);
 
         if (config('google2fa.mandatory') || $user->hasTwoFactorAuthenticationEnabled()) {
             if (! $user->hasTwoFactorAuthenticationConfigured()) {

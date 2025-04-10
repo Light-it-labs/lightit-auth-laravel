@@ -15,8 +15,10 @@ final readonly class VerifyTwoFactorAuthenticationController
         TwoFactorAuthenticationCodeRequest $request,
         VerifyTwoFactorAuthenticationAction $verifyTwoFactorAuthenticationAction,
     ): JsonResponse {
+        $guardName = config('google2fa.guard');
+
         /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable  $user */
-        $user = $request->user();
+        $user = $request->user($guardName);
 
         $oneTimePassword = $request->getOtpCode();
 
