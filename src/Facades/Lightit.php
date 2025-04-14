@@ -11,6 +11,6 @@ class Lightit extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Lightit::class;
+        return \Lightit\Lightit::class;
     }
 }
