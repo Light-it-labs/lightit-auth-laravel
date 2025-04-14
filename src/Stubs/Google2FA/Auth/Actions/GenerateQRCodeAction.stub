@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use PragmaRX\Google2FALaravel\Google2FA;
+
+final readonly class GenerateQRCodeAction
+{
+    public function __construct(
+        private Google2FA $google2FA,
+    ) {
+    }
+
+    public function execute(string $holderIdentifier, string $secret): string
+    {
+        /** @var string $appName */
+        $appName = config('app.name');
+
+        return $this
+            ->google2FA
+            ->getQRCodeInline($appName, $holderIdentifier, $secret);
+    }
+}

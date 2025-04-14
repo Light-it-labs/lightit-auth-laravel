@@ -6,7 +6,6 @@ namespace Lightit\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightit\Contracts\AuthInstallerInterface;
-use Lightit\Tools\FileManipulator;
 
 final class GoogleSSOInstaller implements AuthInstallerInterface
 {
@@ -36,7 +35,6 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
         $this->command->info('Client library for Google APIs installed successfully!');
     }
-
 
     private function createAuthFiles(): void
     {

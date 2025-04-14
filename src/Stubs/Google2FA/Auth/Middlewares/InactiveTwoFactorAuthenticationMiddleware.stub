@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\App\Middlewares;
+
+use Closure;
+use Illuminate\Http\Request;
+use Lightit\Exceptions\UnauthorizedException;
+use Symfony\Component\HttpFoundation\Response;
+
+final readonly class InactiveTwoFactorAuthenticationMiddleware
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param Closure(Request): (Response) $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        if (! config('google2fa.mandatory') && ! config('google2fa.enabled')) {
+            return $next($request);
+        }
+
+        $guardName = config('google2fa.guard');
+
+        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
+        $user = $request->user($guardName);
+
+        if ($user->hasTwoFactorAuthenticationConfigured() && ! $user->hasTwoFactorAuthenticationExpired()) {
+            throw new UnauthorizedException(__('google2fa.2fa_already_configured'));
+        }
+
+        return $next($request);
+    }
+}
