@@ -60,7 +60,7 @@
         "phpstan/phpstan-deprecation-rules": "^1.1||^2.0",
         "phpstan/phpstan-phpunit": "^1.3||^2.0",
         "webgriffe/captainhook": "^2.1",
-        "worksome/coding-style": "^2.15"
+        "worksome/coding-style": "^3.2"
     },
     "autoload": {
         "psr-4": {
