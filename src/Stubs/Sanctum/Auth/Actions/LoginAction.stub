@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Auth;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Exceptions\UnauthorizedException;
+
+class LoginAction
+{
+    /**
+     * @throws UnauthorizedException
+     */
+    public function execute(array $credentials): LoginDto
+    {
+        if (! Auth::attempt($credentials)) {
+            throw new UnauthorizedException();
+        }
+
+        $user = Auth::user();
+
+        $token = $user->createToken('default');
+
+        return new LoginDto($token->plainTextToken, 'Bearer');
+    }
+}
