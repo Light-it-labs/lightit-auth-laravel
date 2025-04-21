@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Roles;
+
+use Illuminate\Support\Collection;
+use Lightit\Shared\Permissions\PermissionManagement;
+use Lightit\Shared\Permissions\UserPermissions;
+
+class RoleManagement
+{
+    public const ROLE_USER = 'user';
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_SUPER_ADMIN = 'super-admin';
+
+    public static function listFor(string $roleIdentifier): array
+    {
+        return match ($roleIdentifier) {
+            self::ROLE_SUPER_ADMIN => PermissionManagement::getPermissions()->keys()->toArray(),
+            self::ROLE_ADMIN => UserPermissions::all(),
+            self::ROLE_USER => [],
+            default => [],
+        };
+    }
+
+    public static function getRoles(): Collection
+    {
+        return collect([
+            self::ROLE_USER,
+            self::ROLE_ADMIN,
+            self::ROLE_SUPER_ADMIN,
+        ]);
+    }
+}

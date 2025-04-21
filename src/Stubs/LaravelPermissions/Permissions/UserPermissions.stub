@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions;
+
+class UserPermissions
+{
+    public const LIST = 'users.list';
+    public const GET = 'users.get';
+    public const CREATE = 'users.create';
+    public const DELETE = 'users.delete';
+
+    public static function all(): array
+    {
+        return [
+            self::LIST,
+            self::GET,
+            self::CREATE,
+            self::DELETE,
+        ];
+    }
+}

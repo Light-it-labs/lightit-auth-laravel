@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Lightit\Shared\Permissions\PermissionManagement;
+use Spatie\Permission\Models\Permission;
+
+class PermissionSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $permissions = PermissionManagement::getPermissions();
+
+        foreach ($permissions as $permission => $data) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+    }
+}
