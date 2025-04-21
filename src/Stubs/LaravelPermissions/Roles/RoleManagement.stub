@@ -11,7 +11,9 @@ use Lightit\Shared\Permissions\UserPermissions;
 class RoleManagement
 {
     public const ROLE_USER = 'user';
+
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_SUPER_ADMIN = 'super-admin';
 
     public static function listFor(string $roleIdentifier): array
