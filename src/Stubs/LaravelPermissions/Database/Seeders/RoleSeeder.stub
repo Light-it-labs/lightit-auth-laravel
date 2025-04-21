@@ -15,7 +15,7 @@ class RoleSeeder extends Seeder
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->call(PermissionsSeeder::class);
+        $this->call(PermissionSeeder::class);
 
         RoleManagement::getRoles()->each(function (string $roleName) {
             $role = Role::findOrCreate($roleName);
