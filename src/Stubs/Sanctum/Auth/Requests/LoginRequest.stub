@@ -19,4 +19,16 @@ class LoginRequest extends FormRequest
             self::PASSWORD => ['required'],
         ];
     }
+
+    public function password(): string
+    {
+        /** @var string */
+        return $this->input(self::PASSWORD);
+    }
+
+    public function email(): string
+    {
+        /** @var string */
+        return $this->input(self::EMAIL);
+    }
 }

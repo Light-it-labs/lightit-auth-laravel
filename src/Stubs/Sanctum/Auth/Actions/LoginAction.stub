@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Backoffice\Users\Domain\Models\User;
 use Lightit\Exceptions\UnauthorizedException;
 
 class LoginAction
@@ -13,13 +14,14 @@ class LoginAction
     /**
      * @throws UnauthorizedException
      */
-    public function execute(array $credentials): LoginDto
+    public function execute(string $email, string $password): LoginDto
     {
-        if (! Auth::attempt($credentials)) {
-            throw new UnauthorizedException();
-        }
+        /** @var User $user */
+        $user = User::whereEmail($email)->firstOrFail();
 
-        $user = Auth::user();
+        if (! Hash::check($password, $user->password)) {
+            throw new UnauthorizedException('Invalid credentials.');
+        }
 
         $token = $user->createToken('default');
 
