@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions;
+
+use Illuminate\Support\Collection;
+
+class PermissionManagement
+{
+    public const PERMISSIONS = [
+        UserPermissions::LIST => [
+            'name' => UserPermissions::LIST,
+        ],
+        UserPermissions::GET => [
+            'name' => UserPermissions::GET,
+        ],
+        UserPermissions::CREATE => [
+            'name' => UserPermissions::CREATE,
+        ],
+        UserPermissions::DELETE => [
+            'name' => UserPermissions::DELETE,
+        ],
+    ];
+
+    public static function getPermissions(): Collection
+    {
+        return collect(self::PERMISSIONS);
+    }
+}

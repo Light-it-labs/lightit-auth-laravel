@@ -9,6 +9,7 @@ use Lightit\Auth\Installers\ComposerInstaller;
 use Lightit\Auth\Installers\Google2FAInstaller;
 use Lightit\Auth\Installers\GoogleSSOInstaller;
 use Lightit\Auth\Installers\JWTInstaller;
+use Lightit\Auth\Installers\LaravelPermissionInstaller;
 use Lightit\Enums\AuthDriver;
 use Lightit\Tools\FileManipulator;
 
@@ -100,5 +101,9 @@ class AuthSetupCommand extends Command
     protected function setupRolesAndPermissions(): void
     {
         $this->info('Setting up Roles and Permissions...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
+        $laravelPermission->install();
     }
 }

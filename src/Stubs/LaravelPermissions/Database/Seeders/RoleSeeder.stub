@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Lightit\Shared\Roles\RoleManagement;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
+
+class RoleSeeder extends Seeder
+{
+    public function run(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->call(PermissionSeeder::class);
+
+        RoleManagement::getRoles()->each(function (string $roleName) {
+            $role = Role::findOrCreate($roleName);
+            $permissions = RoleManagement::listFor($roleName);
+            $role->syncPermissions($permissions);
+        });
+    }
+}
