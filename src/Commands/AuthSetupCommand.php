@@ -10,6 +10,7 @@ use Lightit\Auth\Installers\Google2FAInstaller;
 use Lightit\Auth\Installers\GoogleSSOInstaller;
 use Lightit\Auth\Installers\JWTInstaller;
 use Lightit\Auth\Installers\LaravelPermissionInstaller;
+use Lightit\Auth\Installers\SanctumInstaller;
 use Lightit\Enums\AuthDriver;
 use Lightit\Tools\FileManipulator;
 
@@ -78,6 +79,9 @@ class AuthSetupCommand extends Command
     protected function setupSanctum(): void
     {
         $this->info('Setting up Sanctum...');
+
+        $sanctumInstaller = new SanctumInstaller($this);
+        $sanctumInstaller->install();
     }
 
     protected function setupGoogleSSO(): void
