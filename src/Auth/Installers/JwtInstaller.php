@@ -35,7 +35,7 @@ final class JWTInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->addHasApiTokenTrait();
+        $this->addServiceProvider();
         $this->publishConfiguration();
         $this->generateSecret();
         $this->generateCerts();
@@ -44,9 +44,9 @@ final class JWTInstaller implements AuthInstallerInterface
         $this->command->info('JWT authentication installed successfully!');
     }
 
-    private function addHasApiTokenTrait(): void
+    private function addServiceProvider(): void
     {
-        $this->command->info('Step 1/5: Adding HasApiToken trait to User model...');
+        $this->command->info('Step 1/5: Adding service provider...');
 
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
