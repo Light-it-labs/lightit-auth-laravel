@@ -23,13 +23,30 @@ final class ComposerInstaller
         $process = new Process($command, base_path(), ['COMPOSER_MEMORY_LIMIT' => '-1']);
         $process->setTimeout(null);
 
-        $this->command->info('Running: ' . implode(' ', $command));
+        $this->command->newLine();
+        $this->command->info('📦 Installing composer packages: ' . implode(', ', $packages));
+        $this->command->line(str_repeat('-', 60));
 
         return $process->run(function ($type, $buffer): void {
-            if ($type === Process::ERR) {
-                $this->command->error($buffer);
-            } else {
-                $this->command->info($buffer);
+            foreach (explode("\n", $buffer) as $line) {
+                $line = trim($line);
+
+                if ($line === '') {
+                    return;
+                }
+
+                if (str_contains($line, 'Installing')
+                    || str_contains($line, 'Generating optimized autoload')
+                    || str_contains($line, 'Writing lock file')
+                    || str_contains($line, 'Package operations')
+                    || str_contains($line, 'Nothing to install')
+                    || str_contains($line, 'Extracting archive')) {
+                    $this->command->line("   💡 $line");
+                }
+
+                if ($type === Process::ERR) {
+                    $this->command->error($line);
+                }
             }
         }) === 0;
     }
