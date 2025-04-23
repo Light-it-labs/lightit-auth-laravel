@@ -6,7 +6,6 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\LoginRequest;
-use Lightit\Authentication\App\Transformers\LoginTransformer;
 use Lightit\Authentication\Domain\Actions\LoginAction;
 
 class LoginController
@@ -15,10 +14,12 @@ class LoginController
     {
         $credentials = $request->only([$request::EMAIL, $request::PASSWORD]);
 
-        $response = $loginAction->execute($credentials);
+        $loginDto = $loginAction->execute($credentials);
 
-        return responder()
-            ->success($response, LoginTransformer::class)
-            ->respond();
+        return response()->json([
+            'access_token' => $loginDto->accessToken,
+            'token_type' => $loginDto->tokenType,
+            'expires_in' => $loginDto->expiresIn,
+        ]);
     }
 }

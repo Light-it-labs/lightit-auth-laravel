@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\App\Controllers;
 
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 
 class LogoutController
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): Response
     {
         $request->user()?->currentAccessToken()?->delete();
 
-        return responder()->success()->respond(JsonResponse::HTTP_NO_CONTENT);
+        return response()->noContent();
     }
 }
