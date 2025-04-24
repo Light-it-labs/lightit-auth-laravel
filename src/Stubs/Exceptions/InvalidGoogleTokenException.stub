@@ -6,7 +6,7 @@ namespace Lightit\Shared\App\Exceptions\Http;
 
 use Illuminate\Http\JsonResponse;
 
-class UnauthenticatedException extends HttpException
+class InvalidGoogleTokenException extends HttpException
 {
     /**
      * An HTTP status code.
@@ -16,5 +16,5 @@ class UnauthenticatedException extends HttpException
     /**
      * The error code.
      */
-    protected string $errorCode = 'Invalid_google_token';
+    protected string|null $errorCode = 'Invalid_google_token';
 }
