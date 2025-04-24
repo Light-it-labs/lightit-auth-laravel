@@ -16,4 +16,9 @@ class GoogleLoginRequest extends FormRequest
             self::TOKEN => ['required'],
         ];
     }
+
+    public function getToken(): string
+    {
+        return $this->string(self::TOKEN)->toString();
+    }
 }

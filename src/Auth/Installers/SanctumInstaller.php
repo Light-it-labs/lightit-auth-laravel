@@ -12,7 +12,6 @@ final class SanctumInstaller implements AuthInstallerInterface
     private const AUTH_DIRECTORIES = [
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
-        'Authentication/App/Transformers',
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
     ];
@@ -54,7 +53,6 @@ final class SanctumInstaller implements AuthInstallerInterface
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/DataTransferObjects/LoginDto.stub' => 'Domain/DataTransferObjects/LoginDto.php',
-            '/Transformers/LoginTransformer.stub' => 'App/Transformers/LoginTransformer.php',
         ];
 
         foreach ($files as $stub => $destination) {

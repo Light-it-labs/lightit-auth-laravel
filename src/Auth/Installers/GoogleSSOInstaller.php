@@ -32,6 +32,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         }
 
         $this->createAuthFiles();
+        $this->copySharedFiles();
 
         $this->command->info('Client library for Google APIs installed successfully!');
     }
@@ -65,5 +66,19 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
                 base_path("src/Authentication/{$destination}")
             );
         }
+    }
+
+    private function copySharedFiles(): void
+    {
+        $sharedStubPath = __DIR__ . '/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
+        $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
+
+        $sharedDir = dirname($sharedDestPath);
+
+        if (! is_dir($sharedDir)) {
+            mkdir($sharedDir, 0755, true);
+        }
+
+        copy($sharedStubPath, $sharedDestPath);
     }
 }
