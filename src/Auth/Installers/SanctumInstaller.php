@@ -25,6 +25,8 @@ final class SanctumInstaller implements AuthInstallerInterface
     {
         $this->command->info('Installing Sanctum-API Token Authentication...');
 
+        $this->command->call('install:api');
+        
         $this->createAuthFiles();
 
         $this->command->info('Sanctum-API Token Authentication installed successfully!');
