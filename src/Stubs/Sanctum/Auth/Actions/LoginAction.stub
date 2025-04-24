@@ -7,7 +7,7 @@ namespace Lightit\Authentication\Domain\Actions;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Backoffice\Users\Domain\Models\User;
-use Lightit\Exceptions\UnauthorizedException;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 
 class LoginAction
 {

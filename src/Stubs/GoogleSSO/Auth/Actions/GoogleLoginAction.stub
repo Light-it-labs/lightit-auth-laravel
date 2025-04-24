@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Lightit\Models\JWTAuthenticatable;
 use Lightit\Exceptions\InvalidGoogleTokenException;
-use Lightit\Exceptions\UnauthorizedException;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;

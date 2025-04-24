@@ -7,8 +7,8 @@ namespace Lightit\Authentication\App\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Lightit\Authentication\Domain\Actions\LogoutAction;
-use Lightit\Exceptions\UnauthorizedException;
 use Lightit\Models\JWTAuthenticatable;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 
 class LogoutController
 {
