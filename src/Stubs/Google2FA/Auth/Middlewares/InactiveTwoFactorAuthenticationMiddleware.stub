@@ -6,7 +6,7 @@ namespace Lightit\Shared\App\Middlewares;
 
 use Closure;
 use Illuminate\Http\Request;
-use Lightit\Exceptions\UnauthorizedException;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class InactiveTwoFactorAuthenticationMiddleware

@@ -9,13 +9,13 @@ use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 final readonly class DisableTwoFactorAuthenticationAction
 {
     public function __construct(
-        private VerifyTwoFactorAuthenticationOTPAction $verifyTwoFactorAuthenticationOTPAction,
+        private VerifyOtpAction $verifyOtpAction,
     ) {
     }
 
     public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): void
     {
-        $this->verifyTwoFactorAuthenticationOTPAction->execute($user->getTwoFactorAuthSecret(), $oneTimePassword);
+        $this->verifyOtpAction->execute($user->getTwoFactorAuthSecret(), $oneTimePassword);
 
         $user->update([
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,

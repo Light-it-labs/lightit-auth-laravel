@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain;
@@ -10,19 +11,6 @@ class TwoFactorAuthenticatable extends Authenticatable
     public const TWO_FACTOR_AUTH_SECRET_COLUMN_NAME = 'two_factor_auth_secret';
 
     public const TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME = 'two_factor_auth_activated_at';
-
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => 'encrypted',
-            self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => 'datetime',
-        ];
-    }
 
     public function hasTwoFactorAuthenticationEnabled(): bool
     {
