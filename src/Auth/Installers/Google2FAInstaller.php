@@ -64,15 +64,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         $files = [
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
-            '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
+            '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
-            '/Actions/VerifyTwoFactorAuthenticationAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationAction.php',
-            '/Actions/VerifyTwoFactorAuthenticationOTPAction.stub' => 'Domain/Actions/VerifyTwoFactorAuthenticationOTPAction.php',
+            '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
+            '/Actions/VerifyOtpAction.stub' => 'Domain/Actions/VerifyOtpAction.php',
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
 
             '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',
+            '/Controllers/SetupTwoFactorAuthenticationController.stub' => 'App/Controllers/SetupTwoFactorAuthenticationController.php',
             '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',
-            '/Controllers/VerifyTwoFactorAuthenticationController.stub' => 'App/Controllers/VerifyTwoFactorAuthenticationController.php',
 
             '/Requests/TwoFactorAuthenticationCodeRequest.stub' => 'App/Requests/TwoFactorAuthenticationCodeRequest.php',
         ];
