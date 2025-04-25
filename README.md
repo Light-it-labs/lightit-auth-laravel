@@ -1,34 +1,40 @@
-# Seamless Authentication Made Simple for Laravel
+<p align="center"><a href="https://lightit.io" target="_blank"><img src="https://lightit.io/images/Logo_purple.svg" width="400"></a></p>
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/light-it-labs/lightit-auth-laravel.svg?style=flat-square)](https://packagist.org/packages/light-it-labs/lightit-auth-laravel)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/light-it-labs/lightit-auth-laravel/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/light-it-labs/lightit-auth-laravel/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/light-it-labs/lightit-auth-laravel/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/light-it-labs/lightit-auth-laravel/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/light-it-labs/lightit-auth-laravel.svg?style=flat-square)](https://packagist.org/packages/light-it-labs/lightit-auth-laravel)
+# Laravel Auth Package
 
-Lightit Auth Laravel simplifies authentication for Laravel applications by providing built-in support for JWT-based authentication and Google Single Sign-On (SSO). This package focuses on delivering secure and efficient authentication workflows while minimizing development time.  
+Laravel Auth Package simplifies authentication, authorization, roles and permissions setup for Laravel applications.
+Supporting the following packages
 
-## Key Features
+[//]: # (- [PHP-Open-Source-Saver/jwt-auth]&#40;https://github.com/PHP-Open-Source-Saver/jwt-auth&#41;)
 
-- **JWT Authentication:**  
-  - Secure login using email and password.  
-  - Token refresh mechanism to extend user sessions seamlessly.  
-  - Logout functionality with optional token blacklisting, configurable based on project needs.  
+[//]: # (- [Laravel Sanctum &#40;Api Token Authentication&#41;]&#40;https://laravel.com/docs/12.x/sanctum&#41;)
 
-- **Sanctum API Token Authentication**  
-  - Token-based auth using Laravel Sanctum for API access.
+[//]: # (- [Google SSO]&#40;https://github.com/googleapis/google-api-php-client&#41;)
 
-- **Google SSO Integration:**  
-  - Enable Single Sign-On (SSO) via Google for a smoother user experience.  
-  - Validate Google-issued tokens on the backend and issue your application's JWT tokens for secure session management.  
+[//]: # (- [Google 2FA]&#40;https://github.com/antonioribeiro/google2fa-laravel&#41;)
 
-- **Roles & Permissions**  
-  Integration with Spatie's package for role-based access control.
+[//]: # (- [Laravel Permission By Spatie]&#40;https://github.com/spatie/laravel-permission&#41;)
 
-With these features, Lightit Auth Laravel is the perfect starting point for projects that require robust authentication solutions while maintaining flexibility and simplicity.  
+# Contents
+
+- [Installation](#installation)
+- [JWT](docs/jwt.md)
+- [Sanctum](docs/sanctum.md)
+- [Google SSO](docs/google-sso.md)
+- [Google 2FA](docs/google-2fa.md)
+- [Roles & Permissions](docs/permission.md)
+
+- [Credits](#credits)
+
 
 ## Installation
 
-To get started, you need to manually add the repository URL to your `composer.json` file to download the package. Add the following configuration:
+
+> [!IMPORTANT]
+> This package is based on and highly coupled to the Laravel Boilerplate from Light-It. For example, the main namespace is assumed to be 'Lightit', the paths where files are created, the exceptions those files use, and so on.
+>
+> Just keep this in mind if you plan to use it in a different project.
+
 
 ```json
 {
@@ -50,251 +56,6 @@ Once added, you can install the package via Composer using the following command
 After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
 
 > **Note:** For existing projects, please refer to the section below to make necessary adjustments before running the `php artisan auth:setup` command.
-
-
-## Installing Considerations
-
-##### The following steps should be completed after running the `auth:setup` Artisan command.
-
-### Installation in New Projects
-
-1. Update your `User` model to implement the `JWTSubject` contract and define two methods: `getJWTIdentifier()` and `getJWTCustomClaims()`.
-
-```php
-<?php
-
-namespace App;
-
-declare(strict_types=1);
-
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-
-class User extends Authenticatable implements JWTSubject
-{
-    /**
-     * Get the identifier that will be stored in the subject claim of the JWT.
-     *
-     * @return mixed
-     */
-    public function getJWTIdentifier(): mixed
-    {
-        return $this->getKey();
-    }
-
-    /**
-     * Return a key-value array containing any custom claims to be added to the JWT.
-     *
-     * @return array
-     */
-    public function getJWTCustomClaims(): array
-    {
-        return [];
-    }
-}
-````
-
-2. Create the routes for the methods provided by the package.
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use Illuminate\Support\Facades\Route;
-use Lightit\Authentication\App\Controllers\LoginController;
-use Lightit\Authentication\App\Controllers\LogoutController;
-use Lightit\Authentication\App\Controllers\RefreshController;
-
-Route::prefix('auth')->group(static function () {
-    Route::post('login', LoginController::class);
-    Route::post('logout', LogoutController::class);
-    Route::post('refresh', RefreshController::class);
-});
-```
-- If you have also selected Google SSO, you need to add the following endpoint to validate the tokens from Google Authentication:
-```php
-<?php
-
-use Illuminate\Support\Facades\Route;
-use Lightit\Authentication\App\Controllers\GoogleLoginController;
-
-Route::post('google', GoogleLoginController::class);
-
-```
-
-3. Update your environment configuration:
-
-    - Add the following variables to your .env file:
-    ```dotenv
-    AUTH_GUARD=api
-    AUTH_PASSWORD_BROKER=users
-    ```
-   - Update the guards array in the config/auth.php file to include the following configuration:
-    ```php
-    'api' => [
-        'driver' => 'jwt',
-        'provider' => 'users',
-    ],
-    ```
-### Installation in Projects with Existing Authentication (tymon/jwt-auth)
-
-> **Note:** Complete the following steps before running the `php artisan auth:setup` command.
-
-1. Remove the `config/jwt.php` file:
-```bash
-   rm config/jwt.php
-```
-
-2. Remove the `tymon/jwt-auth` package by running the following command:
-```bash
-composer remove tymon/jwt-auth
-```
-   
-3. Replace all occurrences of the namespace `Tymon\JWTAuth` in your project with the namespace `PHPOpenSourceSaver\JWTAuth`.
-
----
-
-## Sanctum API Token Authentication
-
-This option provides simple token-based API authentication using Laravel Sanctum.
-
-> Projects bootstrapped for this package already include Sanctum by default.
-
-### Minimal Setup
-
-1. Ensure the `HasApiTokens` trait is present in your User model:
-
-```php
-use Laravel\Sanctum\HasApiTokens;
-
-class User extends Authenticatable
-{
-    use HasApiTokens;
-}
-```
-
-2. Define login and logout routes:
-
-```php
-use Lightit\Authentication\App\Controllers\LoginController;
-use Lightit\Authentication\App\Controllers\LogoutController;
-
-Route::prefix('auth')->group(static function () {
-    Route::post('login', LoginController::class)->name('login');
-    Route::post('logout', LogoutController::class)->name('logout');
-});
-```
-
-3. Successful login responses look like:
-
-```json
-{
-  "status": 200,
-  "success": true,
-  "data": {
-    "accessToken": "9|6WJ6lQt1YKtQDZR4iPdTE1EG0B1ptd8OeyV75PSh8a55de52",
-    "tokenType": "Bearer"
-  }
-}
-```
-
-Use the returned `accessToken` in the `Authorization` header for any API requests that require the `auth:sanctum` middleware:
-
-```http
-Authorization: Bearer {accessToken}
-```
-
----
-
-## Roles and Permissions
-
-This package supports optional integration with [spatie/laravel-permission](https://github.com/spatie/laravel-permission).
-
-When enabled during `auth:setup`, it will:
-
-- Install the package.
-- Publish the config and migration.
-
-### Default Roles
-
-- `user`
-- `admin`
-- `super_admin`
-
-### Add the trait to your User model
-
-```php
-use Spatie\Permission\Traits\HasRoles;
-
-class User extends Authenticatable
-{
-    use HasRoles;
-}
-```
-
-### Super Admin Shortcut
-
-To allow a "super admin" to bypass all permission checks, follow the [official documentation](https://spatie.be/docs/laravel-permission/v6/basic-usage/super-admin) and add a global Gate check in the boot() method of **AppServiceProvider** like this:
-
-```php
-use Illuminate\Support\Facades\Gate;
-
-public function boot()
-{
-    Gate::before(function ($user, $ability) {
-        return $user->hasRole('Super Admin') ? true : null;
-    });
-}
-```
-### Seeding Roles and Creating Users
-
-You can define a database seeder to create roles and assign them to users like this:
-
-```php
-public function run(): void
-{
-    $this->call([RoleSeeder::class]);
-
-    $user = UserFactory::new()->createOne([
-        'name' => 'user',
-        'email' => 'user@mail.com',
-    ]);
-    $user->assignRole(RoleManagement::ROLE_USER);
-
-    $admin = UserFactory::new()->createOne([
-        'name' => 'admin',
-        'email' => 'admin@mail.com',
-    ]);
-    
-    $admin->assignRole(RoleManagement::ROLE_ADMIN);
-}
-```
-
-### Example: Protecting Routes with Permissions
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use Illuminate\Support\Facades\Route;
-use Lightit\Backoffice\Users\App\Controllers\{
-    DeleteUserController, GetUserController, ListUserController, StoreUserController
-};
-use Lightit\Shared\Permissions\UserPermissions;
-use Spatie\Permission\Middleware\PermissionMiddleware;
-
-Route::prefix('users')
-    ->middleware([])
-    ->group(static function (): void {
-        Route::post('/', StoreUserController::class)
-            ->middleware(PermissionMiddleware::using(UserPermissions::CREATE));
-
-        Route::delete('/{user}', DeleteUserController::class)->whereNumber('user')
-            ->middleware(PermissionMiddleware::using(UserPermissions::DELETE));
-    });
-```
 
 ---
 
