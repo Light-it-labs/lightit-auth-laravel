@@ -43,10 +43,7 @@ jobs:
             let title = `Invalid branch name 👀 (type/task-id/description)`;
             let updatedBody = body;
 
-            if (["main", "master"].includes(baseBranch)) {
-              title = `[Release] vX.X.X 🚀 - ${today.toLocaleDateString('en-GB')}`;
-              updatedBody = '';
-            } else if (["main", "master", "staging", "develop", "demo"].includes(branchName)) {
+            if (["main", "master", "staging", "develop", "demo"].includes(branchName)) {
               title = `Merge from ${branchName} to ${baseBranch}`;
             } else {
               try {
