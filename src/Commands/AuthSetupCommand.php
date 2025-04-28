@@ -8,30 +8,72 @@ use Illuminate\Console\Command;
 use Lightit\Auth\Installers\ComposerInstaller;
 use Lightit\Auth\Installers\Google2FAInstaller;
 use Lightit\Auth\Installers\GoogleSSOInstaller;
-use Lightit\Auth\Installers\JWTInstaller;
+use Lightit\Auth\Installers\JwtInstaller;
 use Lightit\Auth\Installers\LaravelPermissionInstaller;
 use Lightit\Auth\Installers\SanctumInstaller;
+use Lightit\Console\LightitConsoleOutput;
 use Lightit\Enums\AuthDriver;
 use Lightit\Tools\FileManipulator;
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
 {
+    use LightitConsoleOutput;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->initializeOutput($this);
+    }
+
     protected $signature = 'auth:setup';
 
     protected $description = 'Setup the authentication structure';
 
     public function handle(): int
     {
-        $drivers = $this->choice(
-            'Select authentication drivers (comma-separated for multiple)',
-            array_column(AuthDriver::cases(), 'value'),
-            null,
-            null,
-            true
+        $this->output->writeln('');
+        $this->output->writeln("\e[0;31m     _         _   _       ____            _                     \e[0m");
+        $this->output->writeln("\e[0;31m    / \  _   _| |_| |__   |  _ \ __ _  ___| | ____ _  __ _  ___  \e[0m");
+        $this->output->writeln("\e[0;31m   / _ \| | | | __| '_ \  | |_) / _` |/ __| |/ / _` |/ _` |/ _ \ \e[0m");
+        $this->output->writeln("\e[0;31m  / ___ \ |_| | |_| | | | |  __/ (_| | (__|   < (_| | (_| |  __/ \e[0m");
+        $this->output->writeln("\e[0;31m /_/   \_\__,_|\__|_| |_| |_|   \__,_|\___|_|\_\__,_|\__, |\___|  \e[0m");
+        $this->output->writeln("\e[0;31m                                                     |___/       \e[0m");
+        $this->output->writeln('');
+        $this->output->writeln("\e[0;35mLightit's package to streamline authentication, authorization,\e[0m");
+        $this->output->writeln("\e[0;35mroles, and permissions setup in Laravel boilerplates.\e[0m");
+        $this->output->writeln('');
+
+        $driversValues = array_map(
+            fn ($v) => $v->value,
+            AuthDriver::cases()
         );
 
-        $enable2FA = $this->confirm('Would you like to enable Two-Factor Authentication?', false);
-        $enableRolesAndPermissions = $this->confirm('Would you like to enable Roles and Permissions?', false);
+        do {
+            $drivers = multiselect(
+                label: 'Select authentication drivers',
+                options: $driversValues,
+                required: true,
+                hint: 'Press [space] to select, [enter] to confirm.'
+            );
+
+            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::Sanctum->value, $drivers)) {
+                error('You cannot select both JWT and Sanctum authentication drivers.');
+                $drivers = null;
+            }
+        } while (empty($drivers));
+
+        $enable2FA = confirm(
+            label: 'Would you like to enable Two-Factor Authentication?',
+            default: false,
+        );
+
+        $enableRolesAndPermissions = confirm(
+            label: 'Would you like to enable Roles and Permissions?',
+            default: false,
+        );
 
         /** @var array<string> $drivers */
         $this->setupDrivers($drivers);
@@ -44,7 +86,7 @@ class AuthSetupCommand extends Command
             $this->setupRolesAndPermissions();
         }
 
-        $this->info('Authentication setup completed!');
+        $this->printSuccess('Authentication setup completed!');
 
         return self::SUCCESS;
     }
@@ -68,46 +110,52 @@ class AuthSetupCommand extends Command
 
     protected function setupJWT(): void
     {
-        $this->info('Setting up JWT...');
+        $this->printBoxedMessage('🛠 Setting up JWT...');
 
         $composerInstaller = new ComposerInstaller($this);
         $fileManipulator = new FileManipulator($this);
-        $jwtInstaller = new JWTInstaller($this, $composerInstaller, $fileManipulator);
+        $jwtInstaller = new JwtInstaller($this, $composerInstaller, $fileManipulator);
         $jwtInstaller->install();
+        $this->printSectionSeparator();
     }
 
     protected function setupSanctum(): void
     {
-        $this->info('Setting up Sanctum...');
+        $this->printBoxedMessage('🛠 Setting up Sanctum...');
 
-        $sanctumInstaller = new SanctumInstaller($this);
+        $composerInstaller = new ComposerInstaller($this);
+        $sanctumInstaller = new SanctumInstaller($this, $composerInstaller);
         $sanctumInstaller->install();
+        $this->printSectionSeparator();
     }
 
     protected function setupGoogleSSO(): void
     {
-        $this->info('Setting up Google SSO...');
+        $this->printBoxedMessage('🛠 Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
         $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
         $jwtInstaller->install();
+        $this->printSectionSeparator();
     }
 
     protected function setup2FA(): void
     {
-        $this->info('Setting up 2FA...');
+        $this->printBoxedMessage('🛠 Setting up 2FA...');
 
         $composerInstaller = new ComposerInstaller($this);
         $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
+        $this->printSectionSeparator();
     }
 
     protected function setupRolesAndPermissions(): void
     {
-        $this->info('Setting up Roles and Permissions...');
+        $this->printBoxedMessage('🛠 Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
         $laravelPermission->install();
+        $this->printSectionSeparator();
     }
 }

@@ -17,8 +17,6 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     public function install(): void
     {
-        $this->command->info('Installing Laravel Permissions.');
-
         if (! $this->composerInstaller->requirePackages([
             'spatie/laravel-permission',
         ])) {
@@ -32,12 +30,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->copyMigration();
         $this->copyPackageFiles();
 
-        $this->command->info('Laravel Permissions installed successfully!');
+        $this->composerInstaller->printSuccess('Laravel Permissions installed successfully!');
     }
 
     private function copyConfigFile(): void
     {
-        $this->command->info('Step 1/4: Copying config files...');
+        $this->composerInstaller->printStep(1, 4, 'Copying config files');
 
         $source = base_path('vendor/spatie/laravel-permission/config/permission.php');
         $destination = config_path('permission.php');
@@ -49,18 +47,19 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         }
 
         copy($source, $destination);
+        $this->composerInstaller->printConfigPublished('Config file published: config/permission.php');
     }
 
     private function clearCacheConfig(): void
     {
-        $this->command->info('Step 2/4: clearing cache config files...');
+        $this->composerInstaller->printStep(2, 4, 'Clearing cache config files');
 
         $this->command->call('optimize:clear');
     }
 
     private function copyMigration(): void
     {
-        $this->command->info('Step 2/4: Copying Laravel Permission migration file...');
+        $this->composerInstaller->printStep(3, 4, 'Copying Laravel Permission migration file');
 
         $source = base_path('vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub');
 
@@ -77,12 +76,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
         copy($source, $destination);
 
-        $this->command->info("Migration copied to: {$relativePath}");
+        $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}");
     }
 
     private function copyPackageFiles(): void
     {
-        $this->command->info('Step 4/4: Copying permission structure...');
+        $this->composerInstaller->printStep(4, 4, 'Copying permission structure');
 
         $stubsPath = __DIR__ . '/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
@@ -107,7 +106,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
                 $targetPath
             );
 
-            $this->command->info("Created: {$relativeTarget}");
+            $this->composerInstaller->printFileCreated("Created: {$relativeTarget}");
         }
     }
 

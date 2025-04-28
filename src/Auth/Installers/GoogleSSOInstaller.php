@@ -23,8 +23,6 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
     public function install(): void
     {
-        $this->command->info('Installing Google api client...');
-
         if (! $this->composerInstaller->requirePackages(['google/apiclient'])) {
             $this->command->error('Failed to install google/apiclient');
 
@@ -34,12 +32,12 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         $this->createAuthFiles();
         $this->copySharedFiles();
 
-        $this->command->info('Client library for Google APIs installed successfully!');
+        $this->composerInstaller->printSuccess('Client library for Google APIs installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 1/1: Creating authentication files...');
+        $this->composerInstaller->printStep(1, 2, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -65,11 +63,14 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
+            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 
     private function copySharedFiles(): void
     {
+        $this->composerInstaller->printStep(2, 2, 'Creating shared exception file');
+
         $sharedStubPath = __DIR__ . '/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
         $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
 
@@ -80,5 +81,8 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         }
 
         copy($sharedStubPath, $sharedDestPath);
+        $this->composerInstaller->printFileCreated(
+            'Created: src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php'
+        );
     }
 }

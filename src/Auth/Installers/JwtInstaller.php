@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 use Lightit\Contracts\AuthInstallerInterface;
 use Lightit\Tools\FileManipulator;
 
-final class JWTInstaller implements AuthInstallerInterface
+final class JwtInstaller implements AuthInstallerInterface
 {
     private const AUTH_DIRECTORIES = [
         'Authentication/App/Controllers',
@@ -26,10 +26,8 @@ final class JWTInstaller implements AuthInstallerInterface
 
     public function install(): void
     {
-        $this->command->info('Installing JWT authentication...');
-
         if (! $this->composerInstaller->requirePackages(['php-open-source-saver/jwt-auth:^2.0'])) {
-            $this->command->error('Failed to install php-open-source-saver/jwt-auth');
+            $this->composerInstaller->printFailure('Failed to install php-open-source-saver/jwt-auth');
 
             return;
         }
@@ -40,23 +38,23 @@ final class JWTInstaller implements AuthInstallerInterface
         $this->generateCerts();
         $this->createAuthFiles();
 
-        $this->command->info('JWT authentication installed successfully!');
+        $this->composerInstaller->printSuccess('JWT authentication installed successfully!');
     }
 
     private function addServiceProvider(): void
     {
-        $this->command->info('Step 1/5: Adding service provider...');
-
+        $this->composerInstaller->printStep(1, 5, 'Adding service provider');
         $this->fileManipulator->replaceInFile(
             "'providers' => [",
             "'providers' => [" . PHP_EOL . "        \PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider::class,",
             config_path('app.php')
         );
+        $this->composerInstaller->printFileCreated('Service provider added to config/app.php');
     }
 
     private function publishConfiguration(): void
     {
-        $this->command->info('Step 2/5: Publishing configuration...');
+        $this->composerInstaller->printStep(2, 5, 'Publishing configuration');
 
         $this->command->call('vendor:publish', [
             '--provider' => '\PHPOpenSourceSaver\JWTAuth\Providers\LaravelServiceProvider',
@@ -75,17 +73,18 @@ final class JWTInstaller implements AuthInstallerInterface
             __DIR__ . '/../../Stubs/jwt/config/jwt.stub',
             config_path('jwt.php')
         );
+        $this->composerInstaller->printConfigPublished('Config file published: config/jwt.php');
     }
 
     private function generateSecret(): void
     {
-        $this->command->info('Step 3/5: Generating JWT secret...');
+        $this->composerInstaller->printStep(3, 5, 'Generating JWT secret');
         $this->command->call('jwt:secret');
     }
 
     private function generateCerts(): void
     {
-        $this->command->info('Step 4/5: Generating Certificate...');
+        $this->composerInstaller->printStep(4, 5, 'Generating Certificate');
         $this->command->call('jwt:generate-certs', [
             '--force' => true,
             '--algo' => 'rsa',
@@ -96,7 +95,7 @@ final class JWTInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 5/5: Creating authentication files...');
+        $this->composerInstaller->printStep(5, 5, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -126,6 +125,7 @@ final class JWTInstaller implements AuthInstallerInterface
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
+            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 }

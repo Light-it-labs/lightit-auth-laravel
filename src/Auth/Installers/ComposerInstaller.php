@@ -5,12 +5,18 @@ declare(strict_types=1);
 namespace Lightit\Auth\Installers;
 
 use Illuminate\Console\Command;
+use Lightit\Console\LightitConsoleOutput;
 use Symfony\Component\Process\Process;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
 
 final class ComposerInstaller
 {
+    use LightitConsoleOutput;
+
     public function __construct(protected Command $command)
     {
+        $this->initializeOutput($this->command);
     }
 
     /**
@@ -24,7 +30,7 @@ final class ComposerInstaller
         $process->setTimeout(null);
 
         $this->command->newLine();
-        $this->command->info('📦 Installing composer packages: ' . implode(', ', $packages));
+        info('📦 Installing composer packages: ' . implode(', ', $packages));
         $this->command->line(str_repeat('-', 60));
 
         return $process->run(function ($type, $buffer): void {
@@ -35,17 +41,18 @@ final class ComposerInstaller
                     return;
                 }
 
-                if (str_contains($line, 'Installing')
+                if (
+                    str_contains($line, 'Installing')
                     || str_contains($line, 'Generating optimized autoload')
                     || str_contains($line, 'Writing lock file')
                     || str_contains($line, 'Package operations')
                     || str_contains($line, 'Nothing to install')
                     || str_contains($line, 'Extracting archive')) {
-                    $this->command->line("   💡 $line");
+                    info("   💡 $line");
                 }
 
                 if ($type === Process::ERR) {
-                    $this->command->error($line);
+                    error($line);
                 }
             }
         }) === 0;
