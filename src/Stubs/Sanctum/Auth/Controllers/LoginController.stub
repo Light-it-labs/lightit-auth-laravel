@@ -15,8 +15,10 @@ class LoginController
         $loginDto = $loginAction->execute($request->email(), $request->password());
 
         return response()->json([
-            'access_token' => $loginDto->accessToken,
-            'token_type' => $loginDto->tokenType,
+            'data' => [
+                'access_token' => $loginDto->accessToken,
+                'token_type' => $loginDto->tokenType,
+            ],
         ]);
     }
 }

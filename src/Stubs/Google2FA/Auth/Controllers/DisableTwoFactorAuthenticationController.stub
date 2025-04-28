@@ -26,7 +26,9 @@ final class DisableTwoFactorAuthenticationController
         $disableTwoFactorAuthenticationAction->execute($user, $oneTimePassword);
 
         return response()->json([
-            'message' => (__('google2fa.2fa_disabled')),
+            'data' => [
+                'message' => (__('google2fa.2fa_disabled')),
+            ],
         ]);
     }
 }
