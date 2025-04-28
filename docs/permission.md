@@ -1,19 +1,23 @@
 ## Roles and Permissions
 
-This package supports optional integration with [spatie/laravel-permission](https://github.com/spatie/laravel-permission).
+Add role and permission-based authorization to your application using [spatie/laravel-permission](https://github.com/spatie/laravel-permission).
 
-When enabled during `auth:setup`, it will:
+### Setup
 
-- Install the package.
-- Publish the config and migration.
+When selected during `auth:setup`, this package will:
 
-### Default Roles
+- Install and configure Spatie's package.
+- Publish the permission config file and migration.
+
+### Default Roles Created
 
 - `user`
 - `admin`
 - `super_admin`
 
-### Add the trait to your User model
+### Modify the User model
+
+Add the `HasRoles` trait to your User model:
 
 ```php
 use Spatie\Permission\Traits\HasRoles;
@@ -24,60 +28,61 @@ class User extends Authenticatable
 }
 ```
 
-### Super Admin Shortcut
+### Granting Super Admin Privileges
 
-To allow a "super admin" to bypass all permission checks, follow the [official documentation](https://spatie.be/docs/laravel-permission/v6/basic-usage/super-admin) and add a global Gate check in the boot() method of **AppServiceProvider** like this:
+To allow users with the `super_admin` role to bypass all authorization checks, add the following logic to your `AppServiceProvider`:
 
 ```php
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\ServiceProvider;
 
-public function boot()
+class AppServiceProvider extends ServiceProvider
 {
-    Gate::before(function ($user, $ability) {
-        return $user->hasRole('Super Admin') ? true : null;
-    });
+    public function boot(): void
+    {
+        Gate::before(function ($user, $ability) {
+            return $user->hasRole('super_admin') ? true : null;
+        });
+    }
 }
 ```
-### Seeding Roles and Creating Users
 
-You can define a database seeder to create roles and assign them to users like this:
+### Seeding Roles and Users (Optional)
+
+You can create a database seeder to predefine roles and assign them to users:
 
 ```php
 public function run(): void
 {
     $this->call([RoleSeeder::class]);
 
-    $user = UserFactory::new()->createOne([
-        'name' => 'user',
-        'email' => 'user@mail.com',
+    $user = User::factory()->create([
+        'name' => 'Regular User',
+        'email' => 'user@example.com',
     ]);
-    $user->assignRole(RoleManagement::ROLE_USER);
+    $user->assignRole('user');
 
-    $admin = UserFactory::new()->createOne([
-        'name' => 'admin',
-        'email' => 'admin@mail.com',
+    $admin = User::factory()->create([
+        'name' => 'Admin User',
+        'email' => 'admin@example.com',
     ]);
-    
-    $admin->assignRole(RoleManagement::ROLE_ADMIN);
+    $admin->assignRole('admin');
 }
 ```
 
-### Example: Protecting Routes with Permissions
+### Protecting Routes with Permissions
+
+Use middleware to protect routes by permission:
 
 ```php
-<?php
-
-declare(strict_types=1);
-
 use Illuminate\Support\Facades\Route;
-use Lightit\Backoffice\Users\App\Controllers\{
-    DeleteUserController, GetUserController, ListUserController, StoreUserController
-};
+use Lightit\Backoffice\Users\App\Controllers\StoreUserController;
+use Lightit\Backoffice\Users\App\Controllers\DeleteUserController;
 use Lightit\Shared\Permissions\UserPermissions;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 
 Route::prefix('users')
-    ->middleware([])
+    ->middleware(['auth'])
     ->group(static function (): void {
         Route::post('/', StoreUserController::class)
             ->middleware(PermissionMiddleware::using(UserPermissions::CREATE));
@@ -86,3 +91,23 @@ Route::prefix('users')
             ->middleware(PermissionMiddleware::using(UserPermissions::DELETE));
     });
 ```
+
+### Handling Permission Exceptions
+
+To properly handle permission-related exceptions and return them as JSON responses, update the `convertDefaultExceptions` method in your `ExceptionHandler`:
+
+```php
+\Spatie\Permission\Exceptions\UnauthorizedException::class => function (\Spatie\Permission\Exceptions\UnauthorizedException $exception): void {
+    throw new UnauthorizedException(message: $exception->getMessage());
+},
+```
+
+This will catch Spatie's `UnauthorizedException` and rethrow it using your custom `UnauthorizedException`, ensuring a consistent JSON response format.
+
+**Note:**
+If you want to display detailed information about the missing permission in the exception message, you can set the `display_permission_in_exception` value to `true` in the `config/permission.php` file:
+
+```php
+'display_permission_in_exception' => true,
+```
+---

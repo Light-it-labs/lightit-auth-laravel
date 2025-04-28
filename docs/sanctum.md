@@ -29,21 +29,20 @@ Route::prefix('auth')->group(static function () {
 });
 ```
 
-3. Successful login responses look like:
+3. Update environment configuration
 
-```json
-{
-  "status": 200,
-  "success": true,
-  "data": {
-    "accessToken": "9|6WJ6lQt1YKtQDZR4iPdTE1EG0B1ptd8OeyV75PSh8a55de52",
-    "tokenType": "Bearer"
-  }
-}
+- In your `.env`:
+
+```dotenv
+AUTH_GUARD=api
 ```
 
-Use the returned `accessToken` in the `Authorization` header for any API requests that require the `auth:sanctum` middleware:
+- In `config/auth.php`:
 
-```http
-Authorization: Bearer {accessToken}
+```php
+'api' => [
+    'driver' => 'sanctum',
+    'provider' => 'users',
+],
 ```
+---

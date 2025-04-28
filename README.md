@@ -41,11 +41,10 @@ Supporting the following packages
     "repositories": [
         {
             "type": "vcs",
-            "url": "git@github.com:Light-it-labs/lightit-auth-laravel.git"
+            "url": "https://github.com/Light-it-labs/lightit-auth-laravel.git"
         }
     ]
 }
-
 ```
 Once added, you can install the package via Composer using the following command:
 
@@ -58,25 +57,6 @@ After Composer has installed the Lightit Auth Laravel package, you should run th
 > **Note:** For existing projects, please refer to the section below to make necessary adjustments before running the `php artisan auth:setup` command.
 
 ---
-
-## Autoload Configuration
-To properly use this package, you need to configure the autoloading in your composer.json file. Add the following to the "autoload" section:
-
-```json
-{
-    "autoload": {
-        "psr-4": {
-            "Lightit\\": "src/"
-        }
-    }
-}
-```
-Once you’ve added this configuration, run the following command to regenerate the Composer autoloader:
-```bash
- composer dump-autoload
-```
-This step ensures that all the namespaces used in the package, such as Lightit\Authentication\App\Controllers, are correctly recognized by your application.
-
 
 ## Changelog
 
