@@ -18,23 +18,22 @@ final class SanctumInstaller implements AuthInstallerInterface
 
     public function __construct(
         private readonly Command $command,
+        private readonly ComposerInstaller $composerInstaller,
     ) {
     }
 
     public function install(): void
     {
-        $this->command->info('Installing Sanctum-API Token Authentication...');
-
         $this->command->call('install:api');
-        
+
         $this->createAuthFiles();
 
-        $this->command->info('Sanctum-API Token Authentication installed successfully!');
+        $this->composerInstaller->printSuccess('Sanctum-API Token Authentication installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->command->info('Step 1/1: Creating authentication files...');
+        $this->composerInstaller->printStep(1, 1, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -62,6 +61,7 @@ final class SanctumInstaller implements AuthInstallerInterface
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
+            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 }
