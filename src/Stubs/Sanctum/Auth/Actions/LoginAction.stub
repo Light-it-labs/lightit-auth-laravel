@@ -9,7 +9,7 @@ use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Backoffice\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 
-class LoginAction
+final class LoginAction
 {
     /**
      * @throws UnauthorizedException
@@ -25,6 +25,19 @@ class LoginAction
 
         $token = $user->createToken('default');
 
-        return new LoginDto($token->plainTextToken, 'Bearer');
+        return new LoginDto(
+            $token->plainTextToken,
+            'Bearer'
+        );
+    }
+
+    public function loginByUser(User $user): LoginDto
+    {
+        $token = $user->createToken('default');
+
+        return new LoginDto(
+            $token->plainTextToken,
+            'Bearer'
+        );
     }
 }

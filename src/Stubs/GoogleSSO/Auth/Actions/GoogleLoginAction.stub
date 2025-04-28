@@ -5,51 +5,40 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Google\Client as GoogleClient;
-use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
-use Lightit\Models\JWTAuthenticatable;
+use Lightit\Backoffice\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\InvalidGoogleTokenException;
-use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
-use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
-use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+use UnexpectedValueException;
 
 class GoogleLoginAction
 {
     public function __construct(
-        private readonly AuthFactory $factory,
-        private readonly JWTAuth $jwtAuth,
+        private readonly LoginAction $loginAction,
         private readonly GoogleClient $googleClient,
     ) {
     }
 
     public function execute(string $googleIdToken): LoginDto
     {
-        $payload = $this->googleClient->verifyIdToken($googleIdToken);
+        try {
+            $payload = $this->googleClient->verifyIdToken($googleIdToken);
+        } catch (UnexpectedValueException $exception) {
+            throw new InvalidGoogleTokenException('Invalid format');
+        }
 
         if (! $payload) {
             throw new InvalidGoogleTokenException('The Google token is not valid');
         }
 
-        /** @var JWTGuard $guard */
-        $guard = $this->factory->guard();
-        $user = JWTAuthenticatable::firstOrNew(['email' => $payload['email']]);
-
-        if (! $user->exists) {
-            $user->name = $payload['name'];
-            $user->password = Hash::make(Str::random(10));
-            $user->save();
-        }
-
-        if (! $token = $guard->login($user)) {
-            throw new UnauthorizedException();
-        }
-
-        return new LoginDto(
-            $token,
-            'bearer',
-            $this->jwtAuth->getTTL() * 60,
+        /** @var User $user */
+        $user = User::firstOrCreate(
+            ['email' => $payload['email']],
+            [
+                'name' => $payload['name'] ?? '',
+                'password' => bcrypt(str()->random(10)),
+            ]
         );
+
+        return $this->loginAction->loginByUser($user);
     }
 }

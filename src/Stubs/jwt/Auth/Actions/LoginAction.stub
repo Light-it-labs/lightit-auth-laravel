@@ -9,8 +9,9 @@ use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+use Lightit\Backoffice\Users\Domain\Models\User;
 
-class LoginAction
+final class LoginAction implements
 {
     public function __construct(
         private readonly AuthFactory $factory,
@@ -28,6 +29,17 @@ class LoginAction
         }
 
         /** @var string $token */
+        return new LoginDto(
+            $token,
+            'bearer',
+            $this->jwtAuth->getTTL() * 60,
+        );
+    }
+
+    public function loginByUser(User $user): LoginDto
+    {
+        $token = auth()->guard()->tokenById($user->getKey());
+
         return new LoginDto(
             $token,
             'bearer',
