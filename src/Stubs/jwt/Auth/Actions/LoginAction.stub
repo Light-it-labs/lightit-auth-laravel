@@ -6,12 +6,12 @@ namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Backoffice\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use PHPOpenSourceSaver\JWTAuth\Factory as JWTAuth;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
-use Lightit\Backoffice\Users\Domain\Models\User;
 
-final class LoginAction implements
+final class LoginAction
 {
     public function __construct(
         private readonly AuthFactory $factory,
@@ -24,6 +24,7 @@ final class LoginAction implements
     {
         /** @var JWTGuard $guard */
         $guard = $this->factory->guard();
+
         if (! $token = $guard->attempt($credentials)) {
             throw new UnauthorizedException();
         }
@@ -38,7 +39,11 @@ final class LoginAction implements
 
     public function loginByUser(User $user): LoginDto
     {
-        $token = auth()->guard()->tokenById($user->getKey());
+        /** @var JWTGuard $guard */
+        $guard = $this->factory->guard();
+
+        /** @var string $token */
+        $token = $guard->tokenById($user->getKey());
 
         return new LoginDto(
             $token,

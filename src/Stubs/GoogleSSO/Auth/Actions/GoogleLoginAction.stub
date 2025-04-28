@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Google\Client as GoogleClient;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Backoffice\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\InvalidGoogleTokenException;
@@ -22,7 +24,7 @@ class GoogleLoginAction
     {
         try {
             $payload = $this->googleClient->verifyIdToken($googleIdToken);
-        } catch (UnexpectedValueException $exception) {
+        } catch (UnexpectedValueException) {
             throw new InvalidGoogleTokenException('Invalid format');
         }
 
@@ -35,7 +37,7 @@ class GoogleLoginAction
             ['email' => $payload['email']],
             [
                 'name' => $payload['name'] ?? '',
-                'password' => bcrypt(str()->random(10)),
+                'password' => Hash::make(Str::random(10)),
             ]
         );
 
