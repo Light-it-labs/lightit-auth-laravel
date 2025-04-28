@@ -22,7 +22,9 @@ final readonly class SetupTwoFactorAuthenticationController
         $qr = $setupTwoFactorAuthenticationAction->execute($user);
 
         return response()->json([
-            'qr' => $qr,
+            'data' => [
+                'qr' => $qr,
+            ],
         ]);
     }
 }

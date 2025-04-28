@@ -13,9 +13,11 @@ class RefreshController
     public function __invoke(JWTAuth $jwtAuth, JWT $jwt): JsonResponse
     {
         return response()->json([
-            'refresh_token' => $jwt->refresh(),
-            'token_type' => 'bearer',
-            'expires_in' => $jwtAuth->getTTL() * 60,
+            'data' => [
+                'access_token' => $jwt->refresh(),
+                'token_type' => 'Bearer',
+                'expires_in' => $jwtAuth->getTTL() * 60,
+            ],
         ]);
     }
 }

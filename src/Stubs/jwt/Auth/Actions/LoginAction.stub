@@ -30,7 +30,7 @@ class LoginAction
         /** @var string $token */
         return new LoginDto(
             $token,
-            'bearer',
+            'Bearer',
             $this->jwtAuth->getTTL() * 60,
         );
     }
