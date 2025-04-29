@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 
 final readonly class EnableTwoFactorAuthenticationAction
 {
@@ -15,7 +16,13 @@ final readonly class EnableTwoFactorAuthenticationAction
 
     public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): TwoFactorAuthenticatable
     {
-        $this->verifyOtpAction->execute($user->getTwoFactorAuthSecret(), $oneTimePassword);
+        $secret = $user->getTwoFactorAuthSecret();
+
+        if (is_null($secret)) {
+            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
+        }
+
+        $this->verifyOtpAction->execute($secret, $oneTimePassword);
 
         $user->update([
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => now(),
