@@ -1,23 +1,15 @@
 ## Roles and Permissions
 
-Add role and permission-based authorization to your application using [spatie/laravel-permission](https://github.com/spatie/laravel-permission).
+This module integrates [spatie/laravel-permission](https://github.com/spatie/laravel-permission) to provide robust role and permission-based authorization for your Laravel application.
+
+> [!INFO]
+> A default set of roles (`user`, `admin`, `super_admin`) is seeded during setup. You can customize this or extend it with your own logic.
 
 ### Setup
 
-When selected during `auth:setup`, this package will:
+#### 1. User model
 
-- Install and configure Spatie's package.
-- Publish the permission config file and migration.
-
-### Default Roles Created
-
-- `user`
-- `admin`
-- `super_admin`
-
-### Modify the User model
-
-Add the `HasRoles` trait to your User model:
+Add the `HasRoles` trait to your `User` model:
 
 ```php
 use Spatie\Permission\Traits\HasRoles;
@@ -28,13 +20,12 @@ class User extends Authenticatable
 }
 ```
 
-### Granting Super Admin Privileges
+#### 2. Grant Super Admin bypass
 
-To allow users with the `super_admin` role to bypass all authorization checks, add the following logic to your `AppServiceProvider`:
+Allow `super_admin` users to bypass all Gate checks in `AppServiceProvider`:
 
 ```php
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,32 +38,29 @@ class AppServiceProvider extends ServiceProvider
 }
 ```
 
-### Seeding Roles and Users (Optional)
-
-You can create a database seeder to predefine roles and assign them to users:
+#### 3. Optional: Seeding roles and users
 
 ```php
 public function run(): void
 {
     $this->call([RoleSeeder::class]);
 
-    $user = User::factory()->create([
+    $user = UserFactory::new()->createOne([
         'name' => 'Regular User',
         'email' => 'user@example.com',
     ]);
     $user->assignRole('user');
 
-    $admin = User::factory()->create([
+    $admin = UserFactory::new()->createOne([
         'name' => 'Admin User',
         'email' => 'admin@example.com',
     ]);
+    
     $admin->assignRole('admin');
 }
 ```
 
-### Protecting Routes with Permissions
-
-Use middleware to protect routes by permission:
+#### 4. Protect routes using permissions
 
 ```php
 use Illuminate\Support\Facades\Route;
@@ -92,9 +80,9 @@ Route::prefix('users')
     });
 ```
 
-### Handling Permission Exceptions
+#### 5. Handle permission exceptions
 
-To properly handle permission-related exceptions and return them as JSON responses, update the `convertDefaultExceptions` method in your `ExceptionHandler`:
+To convert Spatie's exceptions to JSON format consistently, update your `ExceptionHandler`:
 
 ```php
 \Spatie\Permission\Exceptions\UnauthorizedException::class => function (\Spatie\Permission\Exceptions\UnauthorizedException $exception): void {
@@ -102,12 +90,10 @@ To properly handle permission-related exceptions and return them as JSON respons
 },
 ```
 
-This will catch Spatie's `UnauthorizedException` and rethrow it using your custom `UnauthorizedException`, ensuring a consistent JSON response format.
-
-**Note:**
-If you want to display detailed information about the missing permission in the exception message, you can set the `display_permission_in_exception` value to `true` in the `config/permission.php` file:
+Optional: To display the required permission in the error message, update the config:
 
 ```php
 'display_permission_in_exception' => true,
 ```
+
 ---

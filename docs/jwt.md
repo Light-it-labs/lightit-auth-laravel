@@ -1,12 +1,22 @@
-## JWT
+## JSON Web Token (JWT) Authentication
 
-- Secure login using email and password.
-- Token refresh mechanism to extend user sessions seamlessly.
-- Logout functionality with optional token blacklisting, configurable based on project needs.
+This module enables stateless authentication using [php-open-source-saver/jwt-auth](https://github.com/PHP-Open-Source-Saver/jwt-auth), allowing secure login, token refresh, and logout handling for APIs.
 
-1. Update your `User` model to implement the `JWTSubject` contract and define two methods: `getJWTIdentifier()` and `getJWTCustomClaims()`.
+> [!NOTE]
+> JWT is best suited for stateless APIs where session handling is delegated entirely to the client via tokens.
+
+> [!TIP]
+> The package supports refresh tokens, token invalidation, and optional blacklisting. Final behavior should be tailored to your project: you decide when to refresh tokens, expire them, or invalidate on logout.
+
+### Setup
+
+#### 1. Update your `User` model
+
+Implement the `JWTSubject` contract and define the required methods:
 
 ```php
+use Tymon\JWTAuth\Contracts\JWTSubject;
+
 class User extends Authenticatable implements JWTSubject
 {
     /**
@@ -29,9 +39,9 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 }
-````
+```
 
-2. Create the routes for the methods provided by the package.
+#### 2. Define authentication routes
 
 ```php
 use Illuminate\Support\Facades\Route;
@@ -46,20 +56,23 @@ Route::prefix('auth')->group(static function () {
 });
 ```
 
-3. **Update environment configuration**
+#### 3. Update environment and config
 
-- In your `.env`:
+In your `.env` file:
 
 ```dotenv
 AUTH_GUARD=api
 ```
 
-- In `config/auth.php`:
+In `config/auth.php`, update the API guard:
 
 ```php
-'api' => [
-    'driver' => 'jwt',
-    'provider' => 'users',
+'guards' => [
+    'api' => [
+        'driver' => 'jwt',
+        'provider' => 'users',
+    ],
 ],
 ```
+
 ---

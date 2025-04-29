@@ -15,7 +15,7 @@ Supporting the following packages
 
 [//]: # (- [Laravel Permission By Spatie]&#40;https://github.com/spatie/laravel-permission&#41;)
 
-# Contents
+## Contents
 
 - [Installation](#installation)
 - [JWT](docs/jwt.md)
@@ -31,11 +31,16 @@ Supporting the following packages
 
 
 > [!IMPORTANT]
-> This package is based on and highly coupled to the Laravel Boilerplate from Light-It. For example, the main namespace is assumed to be 'Lightit', the paths where files are created, the exceptions those files use, and so on.
+> This package is based on and tightly coupled with the Light-it Laravel Boilerplate.  
+> It assumes conventions like:
+> - Main namespace: `Lightit`
+> - Specific file paths
+> - Custom exceptions structure
 >
-> Just keep this in mind if you plan to use it in a different project.
+> Keep this in mind if you plan to integrate it into a different project.
 
-
+First, add the repository to your `composer.json`:
+    
 ```json
 {
     "repositories": [
@@ -46,25 +51,31 @@ Supporting the following packages
     ]
 }
 ```
-Once added, you can install the package via Composer using the following command:
+Then install the package via Composer:
 
 ```bash
- composer require light-it-labs/lightit-auth-laravel:@dev
+composer require light-it-labs/lightit-auth-laravel:@dev
 ```
 
-After Composer has installed the Lightit Auth Laravel package, you should run the `auth:setup` Artisan command. This command will prompt you for your preferred authentication driver(s), whether Two-factor Authentication and/or a role/permission-based authorization will be used.
+Once installed, run the setup command:
 
-> **Note:** For existing projects, please refer to the section below to make necessary adjustments before running the `php artisan auth:setup` command.
+```bash
+php artisan auth:setup
+```
+
+If you are using Laravel Sail, you can run:
+
+```bash
+./vendor/bin/sail artisan auth:setup
+```
+
+This command will guide you through the configuration of your authentication driver(s), Two-Factor Authentication (2FA), and/or Role and Permission system.
 
 ---
 
 ## Changelog
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
-
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+For recent changes, see the [CHANGELOG](CHANGELOG.md).
 
 ## Security Vulnerabilities
 
@@ -76,6 +87,7 @@ Please review [our security policy](../../security/policy) on how to report secu
 - [Gianfranco Rocco](https://github.com/gianfranco-rocco)
 - [Tomás Sueldo](https://github.com/tomisueldo)
 - [Martín Silva](https://github.com/Tincho44)
+- [Ezequiel Flores](https://github.com/ezef)
 - [All Contributors](../../contributors)
 
 ## License
