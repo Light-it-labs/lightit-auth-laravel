@@ -8,7 +8,6 @@ Enhance account security by enabling Two-Factor Authentication (2FA) using [anto
 > [!TIP]
 > You're free to define how and when 2FA is enforced. Common strategies include two-step login, single-step login, 2FA on sensitive actions, or trusted device recognition. The exact behavior will depend on your project’s requirements.
 
-> [!INFO]
 > This package provides the base structure and middleware to support 2FA. Implementation details—such as 2FA token lifetime, logout behavior, or device trust logic—must be defined within your application logic.
 
 ### Setup

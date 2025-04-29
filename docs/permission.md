@@ -2,7 +2,6 @@
 
 This module integrates [spatie/laravel-permission](https://github.com/spatie/laravel-permission) to provide robust role and permission-based authorization for your Laravel application.
 
-> [!INFO]
 > A default set of roles (`user`, `admin`, `super_admin`) is seeded during setup. You can customize this or extend it with your own logic.
 
 ### Setup

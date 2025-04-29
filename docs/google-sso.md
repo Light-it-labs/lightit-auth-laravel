@@ -5,8 +5,7 @@ This module enables authentication via Google accounts using [googleapis/google-
 > [!NOTE]
 > Google SSO integration relies on Google's Identity Platform. Your frontend must handle the OAuth flow and provide a valid ID token to your API.
 
-> [!INFO]
-> The actual access token issued by your backend can follow any strategy: JWT, Laravel Sanctum, or others—based on the auth driver selected during `auth:setup`.
+> The actual access token issued by your backend can follow any strategy: JWT, Laravel Sanctum on the auth driver selected during `auth:setup`.
 
 ### Setup
 
