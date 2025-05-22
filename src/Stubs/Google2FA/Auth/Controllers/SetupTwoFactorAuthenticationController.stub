@@ -19,11 +19,12 @@ final readonly class SetupTwoFactorAuthenticationController
         /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
         $user = $request->user($guardName);
 
-        $qr = $setupTwoFactorAuthenticationAction->execute($user);
+        $setupData = $setupTwoFactorAuthenticationAction->execute($user);
 
         return response()->json([
             'data' => [
-                'qr' => $qr,
+                'qr' => $setupData->qr,
+                'secret' => $setupData->secret,
             ],
         ]);
     }
