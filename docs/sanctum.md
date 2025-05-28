@@ -45,7 +45,7 @@ In `config/auth.php`, update the API guard:
 ```php
 'guards' => [
     'api' => [
-        'driver' => 'jwt',
+        'driver' => 'sanctum',
         'provider' => 'users',
     ],
 ],
