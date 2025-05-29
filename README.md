@@ -54,7 +54,7 @@ First, add the repository to your `composer.json`:
 Then install the package via Composer:
 
 ```bash
-composer require light-it-labs/lightit-auth-laravel:@dev
+composer require light-it-labs/lightit-auth-laravel
 ```
 
 Once installed, run the setup command:
