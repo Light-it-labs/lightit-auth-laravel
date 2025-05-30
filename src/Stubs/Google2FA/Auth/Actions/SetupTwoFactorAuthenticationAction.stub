@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorSetupDto;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use PragmaRX\Google2FALaravel\Google2FA;
 
@@ -15,7 +16,7 @@ final readonly class SetupTwoFactorAuthenticationAction
     ) {
     }
 
-    public function execute(TwoFactorAuthenticatable $user): string
+    public function execute(TwoFactorAuthenticatable $user): TwoFactorSetupDto
     {
         $secret = $this
             ->google2FA
@@ -25,6 +26,8 @@ final readonly class SetupTwoFactorAuthenticationAction
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => $secret,
         ]);
 
-        return $this->generateQRCodeAction->execute($user->getAuthenticatableHolderIdentifier(), $secret);
+        $qr = $this->generateQRCodeAction->execute($user->getAuthenticatableHolderIdentifier(), $secret);
+
+        return new TwoFactorSetupDto($qr, $secret);
     }
 }
