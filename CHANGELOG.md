@@ -2,6 +2,14 @@
 
 All notable changes to `lightit-auth-laravel` will be documented in this file.
 
+## 1.1.0 - 2025-07-04
+
+### What's Changed
+
+* [CU-86dwuz7kp] Extender api/2fa/setup Para Incluir Secret De 2FA by @tomisueldo in https://github.com/Light-it-labs/lightit-auth-laravel/pull/26
+
+**Full Changelog**: https://github.com/Light-it-labs/lightit-auth-laravel/compare/1.0.0...1.1.0
+
 ## 1.0.0 - 2025-05-28
 
 ### What's Changed
