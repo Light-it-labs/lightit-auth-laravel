@@ -13,6 +13,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
+        'Authentication/Domain/DataTransferObjects',
     ];
 
     public function __construct(
@@ -73,6 +74,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',
 
             '/Requests/TwoFactorAuthenticationCodeRequest.stub' => 'App/Requests/TwoFactorAuthenticationCodeRequest.php',
+
+            '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
         ];
 
         foreach ($files as $stub => $destination) {
