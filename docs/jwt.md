@@ -15,7 +15,7 @@ This module enables stateless authentication using [php-open-source-saver/jwt-au
 Implement the `JWTSubject` contract and define the required methods:
 
 ```php
-use Tymon\JWTAuth\Contracts\JWTSubject;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
