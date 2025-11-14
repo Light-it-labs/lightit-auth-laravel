@@ -63,13 +63,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Lightit\\": "src/",
-            "Lightit\\Database\\Factories\\": "database/factories/"
+            "Lightitlabs\\": "src/",
+            "Lightitlabs\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Lightit\\Tests\\": "tests/",
+            "Lightitlabs\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/"
         }
     },
@@ -99,10 +99,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Lightit\\LightitServiceProvider"
+                "Lightitlabs\\LightitServiceProvider"
             ],
             "aliases": {
-                "Lightit": "Lightit\\Facades\\Lightit"
+                "Lightitlabs": "Lightitlabs\\Facades\\Lightit"
             }
         }
     },

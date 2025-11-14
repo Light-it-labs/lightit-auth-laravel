@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Console;
+namespace Lightitlabs\Console;
 
 use Illuminate\Console\Command;
 

@@ -2,17 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Auth\Installers;
+namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
-use Lightit\Contracts\AuthInstallerInterface;
-use Lightit\Tools\FileManipulator;
+use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\FileManipulator;
 
 final class JwtInstaller implements AuthInstallerInterface
 {
     private const AUTH_DIRECTORIES = [
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
+        'Authentication/App/Resources',
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
     ];
@@ -115,9 +116,12 @@ final class JwtInstaller implements AuthInstallerInterface
             '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
             '/Controllers/RefreshController.stub' => 'App/Controllers/RefreshController.php',
+            '/Resources/LoginResource.stub' => 'App/Resources/LoginResource.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
+            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
             '/Actions/LogoutAction.stub' => 'Domain/Actions/LogoutAction.php',
             '/DataTransferObjects/LoginDto.stub' => 'Domain/DataTransferObjects/LoginDto.php',
+            '/DataTransferObjects/CredentialsDto.stub' => 'Domain/DataTransferObjects/CredentialsDto.php',
         ];
 
         foreach ($files as $stub => $destination) {

@@ -45,14 +45,16 @@ class User extends Authenticatable implements JWTSubject
 
 ```php
 use Illuminate\Support\Facades\Route;
-use Lightit\Authentication\App\Controllers\LoginController;
-use Lightit\Authentication\App\Controllers\LogoutController;
-use Lightit\Authentication\App\Controllers\RefreshController;
+use Lightit\Authentication\App\Controllers\{LoginController, LogoutController, RefreshController};
 
-Route::prefix('auth')->group(static function () {
+
+
+Route::prefix('auth')->group(static function (): void {
     Route::post('login', LoginController::class);
-    Route::post('logout', LogoutController::class);
-    Route::post('refresh', RefreshController::class);
+    Route::middleware(['auth'])->group(static function (): void {
+        Route::post('logout', LogoutController::class);
+        Route::post('refresh', RefreshController::class);
+    });
 });
 ```
 
