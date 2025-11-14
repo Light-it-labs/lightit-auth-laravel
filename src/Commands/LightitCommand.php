@@ -1,14 +1,12 @@
 <?php
 
-namespace Lightit\Commands;
+namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
 
 class LightitCommand extends Command
 {
     public $signature = 'lightit-auth-laravel';
-
-    public $description = 'My command';
 
     public function handle(): int
     {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Enums;
+namespace Lightitlabs\Enums;
 
 enum AuthDriver: string
 {

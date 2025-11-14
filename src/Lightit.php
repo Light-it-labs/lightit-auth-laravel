@@ -1,6 +1,6 @@
 <?php
 
-namespace Lightit;
+namespace Lightitlabs;
 
 class Lightit
 {
