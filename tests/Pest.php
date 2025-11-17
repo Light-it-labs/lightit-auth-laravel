@@ -1,5 +1,5 @@
 <?php
 
-use Lightit\Tests\TestCase;
+use Lightitlabs\Tests\TestCase;
 
 uses(TestCase::class)->in(__DIR__);
