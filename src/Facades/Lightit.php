@@ -1,6 +1,6 @@
 <?php
 
-namespace Lightit\Facades;
+namespace Lightitlabs\Facades;
 
 use Illuminate\Support\Facades\Facade;
 
@@ -11,6 +11,6 @@ class Lightit extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Lightit\Lightit::class;
+        return \Lightitlabs\Lightit::class;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Lightit\Database\Factories;
+namespace Lightitlabs\Database\Factories;
 
 use Illuminate\Database\Eloquent\Factories\Factory;
 

@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Commands;
+namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
-use Lightit\Auth\Installers\ComposerInstaller;
-use Lightit\Auth\Installers\Google2FAInstaller;
-use Lightit\Auth\Installers\GoogleSSOInstaller;
-use Lightit\Auth\Installers\JwtInstaller;
-use Lightit\Auth\Installers\LaravelPermissionInstaller;
-use Lightit\Auth\Installers\SanctumInstaller;
-use Lightit\Console\LightitConsoleOutput;
-use Lightit\Enums\AuthDriver;
-use Lightit\Tools\FileManipulator;
+use Lightitlabs\Auth\Installers\ComposerInstaller;
+use Lightitlabs\Auth\Installers\Google2FAInstaller;
+use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
+use Lightitlabs\Auth\Installers\JwtInstaller;
+use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
+use Lightitlabs\Auth\Installers\SanctumInstaller;
+use Lightitlabs\Console\LightitConsoleOutput;
+use Lightitlabs\Enums\AuthDriver;
+use Lightitlabs\Tools\FileManipulator;
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\multiselect;

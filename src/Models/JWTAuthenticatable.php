@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Models;
+namespace Lightitlabs\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;

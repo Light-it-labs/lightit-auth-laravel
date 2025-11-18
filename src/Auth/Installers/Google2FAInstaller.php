@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Lightit\Auth\Installers;
+namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
-use Lightit\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\AuthInstallerInterface;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
