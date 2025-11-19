@@ -16,5 +16,5 @@ class InvalidGoogleTokenException extends HttpException
     /**
      * The error code.
      */
-    protected string|null $errorCode = 'Invalid_google_token';
+    protected string $errorCode = 'Invalid_google_token';
 }

@@ -15,7 +15,7 @@ use UnexpectedValueException;
 class GoogleLoginAction
 {
     public function __construct(
-        private readonly LoginAction $loginAction,
+        private readonly LoginByUserAction $loginAction,
         private readonly GoogleClient $googleClient,
     ) {
     }
@@ -41,6 +41,6 @@ class GoogleLoginAction
             ]
         );
 
-        return $this->loginAction->loginByUser($user);
+        return $this->loginAction->execute($user);
     }
 }
