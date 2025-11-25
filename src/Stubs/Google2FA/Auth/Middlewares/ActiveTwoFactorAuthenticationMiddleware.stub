@@ -16,6 +16,7 @@ final readonly class ActiveTwoFactorAuthenticationMiddleware
      * Handle an incoming request.
      *
      * @param Closure(Request): (Response) $next
+     *
      * @throws UnauthorizedException
      */
     public function handle(Request $request, Closure $next): Response
