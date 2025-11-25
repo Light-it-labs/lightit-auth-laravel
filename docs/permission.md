@@ -63,8 +63,8 @@ public function run(): void
 
 ```php
 use Illuminate\Support\Facades\Route;
-use Lightit\Backoffice\Users\App\Controllers\StoreUserController;
-use Lightit\Backoffice\Users\App\Controllers\DeleteUserController;
+use Lightit\Users\App\Controllers\StoreUserController;
+use Lightit\Users\App\Controllers\DeleteUserController;
 use Lightit\Shared\Permissions\UserPermissions;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 

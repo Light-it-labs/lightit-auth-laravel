@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\Config;
 
 class TwoFactorAuthenticatable extends Authenticatable
 {
@@ -33,21 +34,24 @@ class TwoFactorAuthenticatable extends Authenticatable
 
     public function hasTwoFactorAuthenticationExpired(): bool
     {
-        $isTwoFactorAuthenticationEternal = config('google2fa.lifetime') == 0;
+        $isTwoFactorAuthenticationEternal = Config::integer('google2fa.lifetime') === 0;
 
-        /** @var Carbon|null $activatedAt */
+        /** @var \Carbon\CarbonImmutable|null $activatedAt */
         $activatedAt = $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
 
         return ! $isTwoFactorAuthenticationEternal
             && $activatedAt
                 ?->toImmutable()
-                ->addMinutes((int) config('google2fa.lifetime'))
+                ->addMinutes(Config::integer('google2fa.lifetime'))
                 ->lessThan(now());
     }
 
     public function getAuthenticatableHolderIdentifier(): string
     {
-        return $this->email;
+        /** @var string $email */
+        $email = $this->email;
+
+        return $email;
     }
 
     public function clearTwoFactorAuthenticationCredentials(): void

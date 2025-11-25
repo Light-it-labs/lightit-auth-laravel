@@ -14,6 +14,9 @@ final readonly class VerifyOtpAction
     ) {
     }
 
+    /**
+     * @throws UnauthorizedException
+     */
     public function execute(string $secret, string $oneTimePassword): void
     {
         if (! $this->google2FA->verifyKey($secret, $oneTimePassword)) {

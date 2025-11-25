@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Illuminate\Support\Facades\Config;
 use PragmaRX\Google2FALaravel\Google2FA;
 
 final readonly class GenerateQRCodeAction
@@ -15,8 +16,7 @@ final readonly class GenerateQRCodeAction
 
     public function execute(string $holderIdentifier, string $secret): string
     {
-        /** @var string $appName */
-        $appName = config('app.name');
+        $appName = Config::string('app.name');
 
         return $this
             ->google2FA

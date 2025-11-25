@@ -12,9 +12,11 @@ use Lightit\Users\Domain\Models\User;
 
 final class LoginAction
 {
+    /**
+     * @throws UnauthorizedException
+     */
     public function execute(CredentialsDto $dto): LoginDto
     {
-        /** @var User $user */
         $user = User::whereEmail($dto->email)->firstOrFail();
 
         if (! Hash::check($dto->password, $user->password)) {

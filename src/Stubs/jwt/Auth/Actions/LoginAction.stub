@@ -19,7 +19,9 @@ final class LoginAction
     ) {
     }
 
-    /** @throws UnauthorizedException */
+    /**
+     * @throws UnauthorizedException
+     */
     public function execute(CredentialsDto $credentials): LoginDto
     {
         /** @var JWTGuard $guard */

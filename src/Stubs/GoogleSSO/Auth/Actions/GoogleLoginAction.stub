@@ -8,7 +8,7 @@ use Google\Client as GoogleClient;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
-use Lightit\Backoffice\Users\Domain\Models\User;
+use Lightit\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\InvalidGoogleTokenException;
 use UnexpectedValueException;
 
@@ -20,6 +20,9 @@ class GoogleLoginAction
     ) {
     }
 
+    /**
+     * @throws InvalidGoogleTokenException
+     */
     public function execute(string $googleIdToken): LoginDto
     {
         try {

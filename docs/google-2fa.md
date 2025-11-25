@@ -41,7 +41,7 @@ protected function casts(): array
     return [
         // ...
         self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => 'encrypted',
-        self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => 'datetime',
+        self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => 'immutable_datetime',
     ];
 }
 ```
@@ -49,26 +49,21 @@ protected function casts(): array
 #### 4. Define 2FA-related routes
 
 ```php
-use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
-use Lightit\Authentication\App\Controllers\EnableTwoFactorAuthenticationController;
-use Lightit\Authentication\App\Controllers\DisableTwoFactorAuthenticationController;
-use Lightit\Shared\App\Middlewares\ActiveTwoFactorAuthenticationMiddleware;
-use Lightit\Shared\App\Middlewares\InactiveTwoFactorAuthenticationMiddleware;
+use Lightit\Authentication\App\Controllers\{DisableTwoFactorAuthenticationController, EnableTwoFactorAuthenticationController, SetupTwoFactorAuthenticationController};
+use Lightit\Shared\App\Middlewares\{ActiveTwoFactorAuthenticationMiddleware, InactiveTwoFactorAuthenticationMiddleware};
 
-Route::middleware(['auth', InactiveTwoFactorAuthenticationMiddleware::class])
-    ->prefix('2fa')
-    ->name('2fa.')
-    ->group(static function () {
-        Route::post('setup', SetupTwoFactorAuthenticationController::class)->name('setup');
-        Route::post('enable', EnableTwoFactorAuthenticationController::class)->name('enable');
-    });
+Route::prefix('2fa')->middleware('auth')->group(static function (): void {
+    Route::middleware(InactiveTwoFactorAuthenticationMiddleware::class)
+        ->group(static function (): void {
+            Route::post('setup', SetupTwoFactorAuthenticationController::class);
+            Route::post('enable', EnableTwoFactorAuthenticationController::class);
+        });
 
-Route::middleware(['auth', ActiveTwoFactorAuthenticationMiddleware::class])
-    ->prefix('2fa')
-    ->name('2fa.')
-    ->group(static function () {
-        Route::post('disable', DisableTwoFactorAuthenticationController::class)->name('disable');
-    });
+    Route::middleware(ActiveTwoFactorAuthenticationMiddleware::class)
+        ->group(static function (): void {
+            Route::post('disable', DisableTwoFactorAuthenticationController::class);
+        });
+});
 ```
 
 ---
