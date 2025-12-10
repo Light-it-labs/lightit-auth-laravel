@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Users\Domain\Models\User;
+
+final class LoginByUserAction
+{
+    public function loginByUser(User $user): LoginDto
+    {
+        $token = $user->createToken('default');
+
+        return new LoginDto(
+            accessToken: $token->plainTextToken,
+            tokenType: 'Bearer'
+        );
+    }
+}

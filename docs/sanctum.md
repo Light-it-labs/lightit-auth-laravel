@@ -1,6 +1,6 @@
 ## Sanctum API Token Authentication
 
-This option provides simple token-based API authentication using Laravel Sanctum.
+This option provides simple token-based API authentication using (Laravel Sanctum)[https://laravel.com/docs/master/sanctum].
 
 > Projects bootstrapped for this package already include Sanctum by default.
 
@@ -23,12 +23,11 @@ class User extends Authenticatable
 
 ```php
 use Illuminate\Support\Facades\Route;
-use Lightit\Authentication\App\Controllers\LoginController;
-use Lightit\Authentication\App\Controllers\LogoutController;
+use Lightit\Authentication\App\Controllers\{LoginController, LogoutController};
 
 Route::prefix('auth')->group(static function () {
-    Route::post('login', LoginController::class)->name('login');
-    Route::post('logout', LogoutController::class)->name('logout');
+    Route::post('login', LoginController::class);
+    Route::post('logout', LogoutController::class);
 });
 ```
 

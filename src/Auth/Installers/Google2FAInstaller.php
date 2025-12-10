@@ -14,6 +14,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
+        'Authentication/App/Resources'
     ];
 
     public function __construct(
@@ -68,7 +69,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
             '/Actions/VerifyOtpAction.stub' => 'Domain/Actions/VerifyOtpAction.php',
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-
+            '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
             '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',
             '/Controllers/SetupTwoFactorAuthenticationController.stub' => 'App/Controllers/SetupTwoFactorAuthenticationController.php',
             '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',

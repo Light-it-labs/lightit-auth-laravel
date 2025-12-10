@@ -5,30 +5,28 @@ declare(strict_types=1);
 namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Lightit\Authentication\Domain\DataTransferObjects\CredentialsDto;
 
 class LoginRequest extends FormRequest
 {
-    public const EMAIL = 'email';
+    public const string EMAIL = 'email';
 
-    public const PASSWORD = 'password';
+    public const string PASSWORD = 'password';
 
     public function rules(): array
     {
         return [
-            self::EMAIL => ['required', 'email:strict'],
+            self::EMAIL => ['required', Rule::email()->strict()],
             self::PASSWORD => ['required'],
         ];
     }
 
-    public function password(): string
+    public function toDto(): CredentialsDto
     {
-        /** @var string */
-        return $this->input(self::PASSWORD);
-    }
-
-    public function email(): string
-    {
-        /** @var string */
-        return $this->input(self::EMAIL);
+        return new CredentialsDto(
+            email: $this->string(self::EMAIL)->toString(),
+            password: $this->string(self::PASSWORD)->toString()
+        );
     }
 }

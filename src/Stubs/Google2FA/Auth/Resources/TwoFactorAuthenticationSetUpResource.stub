@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorSetupDto;
+
+/**
+ * @mixin TwoFactorSetupDto
+ */
+#[SchemaName('TwoFactorSetupDto')]
+class TwoFactorAuthenticationSetUpResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'qr' => $this->qr,
+            'secret' => $this->secret,
+        ];
+    }
+}
