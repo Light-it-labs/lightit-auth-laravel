@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\DataTransferObjects;
+
+final readonly class TokenDto
+{
+    public function __construct(
+        public string $token,
+        public string $tokenType,
+        public int $expiresIn,
+    ) {
+    }
+}

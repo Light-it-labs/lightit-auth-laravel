@@ -9,6 +9,8 @@ final readonly class TwoFactorSetupDto
     public function __construct(
         public string $qr,
         public string $secret,
+        /** @var array<string> $recoveryCodes */
+        public array $recoveryCodes,
     ) {
     }
 }
