@@ -9,6 +9,8 @@ return [
      */
     'enabled' => (bool) env('TWO_FACTOR_AUTHENTICATION_ENABLED', true),
 
+    'challenge_ttl_minutes' => (int) env('TWO_FACTOR_CHALLENGUE_TTL_MINUTES', 15),
+
     /*
      * Make Google2FA mandatory / optional.
      */
@@ -24,7 +26,7 @@ return [
     /*
      * Renew lifetime at every new request.
      */
-    'keep_alive' => (bool) env('OTP_KEEP_ALIVE', true),
+    'keep_alive' => env('OTP_KEEP_ALIVE', true),
 
     /*
      * Auth container binding.
@@ -34,7 +36,7 @@ return [
     /*
      * Guard.
      */
-    'guard' => '',
+    'guard' => env('AUTH_GUARD', 'api'),
 
     /*
      * 2FA verified session var.
@@ -78,7 +80,7 @@ return [
     /*
      * Throw exceptions or just fire events?
      */
-    'throw_exceptions' => (bool) env('OTP_THROW_EXCEPTION', true),
+    'throw_exceptions' => env('OTP_THROW_EXCEPTION', true),
 
     /*
      * Which image backend to use for generating QR codes?
