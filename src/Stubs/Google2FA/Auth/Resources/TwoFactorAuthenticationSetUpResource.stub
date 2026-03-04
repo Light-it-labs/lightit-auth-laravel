@@ -12,14 +12,18 @@ use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorSetupDto;
 /**
  * @mixin TwoFactorSetupDto
  */
-#[SchemaName('TwoFactorSetupDto')]
+#[SchemaName('TwoFactorSetup')]
 class TwoFactorAuthenticationSetUpResource extends JsonResource
 {
+    /**
+     * @return array{qr: string, secret: string, recovery_codes: array<string>}
+     */
     public function toArray(Request $request): array
     {
         return [
             'qr' => $this->qr,
             'secret' => $this->secret,
+            'recovery_codes' => $this->recoveryCodes,
         ];
     }
 }
