@@ -6,10 +6,39 @@ namespace Lightit\Authentication\Domain;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Crypt;
+use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorTokenPayloadDto;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class TwoFactorAuthenticatable extends Authenticatable
+/**
+ * @property string $email
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TwoFactorAuthenticatable newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TwoFactorAuthenticatable newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|TwoFactorAuthenticatable query()
+ *
+ * @mixin \Eloquent
+ */
+abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSubject
 {
     public const TWO_FACTOR_AUTH_SECRET_COLUMN_NAME = 'two_factor_auth_secret';
+
+    /**
+     * Get the identifier that will be stored in the JWT token.
+     */
+    public function getJWTIdentifier(): mixed
+    {
+        return $this->getKey();
+    }
+
+    /**
+     * Return a key-value array, containing any custom claims to be added to the JWT.
+     */
+    public function getJWTCustomClaims(): array
+    {
+        return [];
+    }
 
     public const TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME = 'two_factor_auth_activated_at';
 
@@ -20,8 +49,12 @@ class TwoFactorAuthenticatable extends Authenticatable
 
     public function hasTwoFactorAuthenticationConfigured(): bool
     {
-        return $this->getTwoFactorAuthSecret()
-            && $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
+        return (bool) $this->getTwoFactorAuthSecret() && $this->hasTwoFactorAuthenticationEnabled();
+    }
+
+    public function hasTwoFactorAuthenticationActivated(): bool
+    {
+        return (bool) $this->getAttribute(self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME);
     }
 
     public function getTwoFactorAuthSecret(): string|null
@@ -32,32 +65,26 @@ class TwoFactorAuthenticatable extends Authenticatable
         return $secret;
     }
 
-    public function hasTwoFactorAuthenticationExpired(): bool
-    {
-        $isTwoFactorAuthenticationEternal = Config::integer('google2fa.lifetime') === 0;
-
-        /** @var \Carbon\CarbonImmutable|null $activatedAt */
-        $activatedAt = $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
-
-        return ! $isTwoFactorAuthenticationEternal
-            && $activatedAt
-                ?->toImmutable()
-                ->addMinutes(Config::integer('google2fa.lifetime'))
-                ->lessThan(now());
-    }
-
     public function getAuthenticatableHolderIdentifier(): string
     {
-        /** @var string $email */
-        $email = $this->email;
-
-        return $email;
+        return $this->email;
     }
 
-    public function clearTwoFactorAuthenticationCredentials(): void
+    public function create2faToken(int $ttlInMinutes, TwoFactorReason $factorReason): string
     {
-        $this->update([
-             self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
-        ]);
+        $mandatory = Config::boolean('google2fa.mandatory');
+
+        /** @var string $id */
+        $id = $this->id;
+
+        $payload = new TwoFactorTokenPayloadDto(
+            sub: $id,
+            exp: (int) now()->addMinutes($ttlInMinutes)->timestamp,
+            typ: '2fa',
+            reason: $factorReason,
+            mandatory: $mandatory,
+        );
+
+        return Crypt::encrypt($payload->toArray());
     }
 }
