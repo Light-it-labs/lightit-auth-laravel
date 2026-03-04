@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+class TwoFactorAuthException extends HttpException
+{
+    /**
+     * An HTTP status code.
+     */
+    protected int $status = 403;
+
+    public function __construct(string|null $message = null, array|null $headers = null, string|null $reason = null)
+    {
+        parent::__construct($message, $headers);
+        $this->errorCode = $reason ?? 'two_factor_auth';
+    }
+}
