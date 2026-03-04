@@ -1,0 +1,66 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Lightit\Authentication\Domain\DataTransferObjects\CredentialsDto;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Users\Domain\Models\User;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+
+final class LoginContext
+{
+    private User|null $user = null;
+
+    private string|null $finalToken = null;
+
+    private int $expiresInSeconds = 0;
+
+    private string $tokenType;
+
+    public function __construct(
+        public readonly CredentialsDto $credentials,
+        public readonly JWTGuard $guard,
+    ) {
+    }
+
+    public function issueFinalToken(string $token, int $expiresInSeconds, string $type = 'Bearer'): void
+    {
+        $this->finalToken = $token;
+        $this->expiresInSeconds = $expiresInSeconds;
+        $this->tokenType = $type;
+    }
+
+    public function setUser(User $user): void
+    {
+        $this->user = $user;
+    }
+
+    public function getUser(): User
+    {
+        if (! $this->user instanceof User) {
+            throw new \RuntimeException('User not set');
+        }
+
+        return $this->user;
+    }
+
+    public function hasFinalToken(): bool
+    {
+        return is_string($this->finalToken) && $this->finalToken !== '';
+    }
+
+    public function toDto(): LoginDto
+    {
+        if (! $this->hasFinalToken()) {
+            throw new \RuntimeException('Token not set');
+        }
+
+        return new LoginDto(
+            accessToken: $this->finalToken,
+            tokenType: $this->tokenType,
+            expiresIn: $this->expiresInSeconds,
+        );
+    }
+}

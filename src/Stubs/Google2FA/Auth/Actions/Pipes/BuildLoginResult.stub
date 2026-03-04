@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+
+final class BuildLoginResult
+{
+    public function handle(LoginContext $context): LoginDto
+    {
+        return $context->toDto();
+    }
+}

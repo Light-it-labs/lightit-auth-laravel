@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Closure;
+use Illuminate\Support\Facades\Config;
+
+final class IssueAccessTokenIfNoFinalToken
+{
+    public function handle(LoginContext $context, Closure $next): mixed
+    {
+        if (! $context->hasFinalToken()) {
+            $ttlMinutes = Config::integer('jwt.ttl');
+
+            $accessToken = $context->guard
+                ->setTTL($ttlMinutes)
+                ->fromUser($context->getUser());
+
+            $context->issueFinalToken(token: $accessToken, expiresInSeconds: $ttlMinutes * 60);
+        }
+
+        return $next($context);
+    }
+}

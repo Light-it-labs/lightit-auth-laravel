@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Closure;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+
+final class IssueTwoFactorSetupTokenIfMandatory
+{
+    public function handle(LoginContext $ctx, Closure $next): mixed
+    {
+        $isEnable = Config::boolean('google2fa.enabled');
+
+        if (! $isEnable) {
+            return $next($ctx);
+        }
+
+        if ($ctx->getUser()->hasTwoFactorAuthenticationConfigured()) {
+            return $next($ctx);
+        }
+
+        $mandatory = Config::boolean('google2fa.mandatory');
+
+        if (! $mandatory) {
+            return $next($ctx);
+        }
+
+        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
+
+        $twoFaToken = $ctx->getUser()->create2faToken($ttlMinutes, TwoFactorReason::SetupRequired);
+
+        $ctx->issueFinalToken(
+            token: $twoFaToken,
+            expiresInSeconds: $ttlMinutes * 60,
+            type: TwoFactorReason::SetupRequired->value
+        );
+
+        return $next($ctx);
+    }
+}
