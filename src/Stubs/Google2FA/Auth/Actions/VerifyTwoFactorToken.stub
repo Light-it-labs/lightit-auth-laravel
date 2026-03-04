@@ -1,0 +1,88 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\Crypt;
+use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorTokenPayloadDto;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class VerifyTwoFactorToken
+{
+    public function execute(string $token): User
+    {
+        $payload = $this->decrypt($token);
+
+        $this->assertIs2faToken($payload);
+
+        $dto = TwoFactorTokenPayloadDto::fromArray($payload);
+
+        $this->assertNotExpired($dto);
+
+        $user = User::query()->find($dto->sub);
+
+        if (! $user instanceof User) {
+            throw new TwoFactorAuthException(
+                'The token does not contain a valid user identifier.'
+            );
+        }
+
+        return $user;
+    }
+
+    /**
+     * @return array{sub:string, exp:int, typ:string, reason:string, mandatory:bool}
+     */
+    private function decrypt(string $token): array
+    {
+        try {
+            $decrypted = Crypt::decrypt($token);
+        } catch (DecryptException) {
+            throw new TwoFactorAuthException(message: 'The token payload is invalid.');
+        }
+
+        if (! is_array($decrypted)) {
+            throw new TwoFactorAuthException(message: 'The token payload is invalid.');
+        }
+
+        /** @var array{sub:string, exp:int, typ:string, reason:string, mandatory:bool} $decrypted */
+        return $decrypted;
+    }
+
+    private function assertIs2faToken(array $payload): void
+    {
+        if (($payload['typ'] ?? null) !== '2fa') {
+            throw new TwoFactorAuthException(
+                message: __('This token is not a valid 2FA token.'),
+                reason: 'invalid_token_type'
+            );
+        }
+
+        if (! isset($payload['reason']) || ! is_string($payload['reason']) || $payload['reason'] === '') {
+            throw new TwoFactorAuthException(
+                message: __('The token does not contain a valid 2FA reason.'),
+                reason: 'missing_2fa_reason'
+            );
+        }
+
+        if (! array_key_exists('mandatory', $payload) || ! is_bool($payload['mandatory'])) {
+            throw new TwoFactorAuthException(
+                message: __('The token does not contain a valid 2FA configuration.'),
+                reason: 'invalid_2fa_configuration'
+            );
+        }
+    }
+
+    private function assertNotExpired(TwoFactorTokenPayloadDto $payload): void
+    {
+        if (now()->timestamp > $payload->exp) {
+            throw new TwoFactorAuthException(
+                message: __('The token has expired. Please sign in again.'),
+                reason: '2fa_expired'
+            );
+        }
+    }
+}

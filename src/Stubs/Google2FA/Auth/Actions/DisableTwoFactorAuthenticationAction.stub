@@ -4,28 +4,29 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
-use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Users\Domain\Models\User;
 
 final readonly class DisableTwoFactorAuthenticationAction
 {
     public function __construct(
-        private VerifyOtpAction $verifyOtpAction,
+        private PasswordValidatorAction $passwordValidatorAction,
     ) {
     }
 
-    /**
-     * @throws UnauthorizedException
-     */
-    public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): void
+    public function execute(User $user, string $password): void
     {
         $secret = $user->getTwoFactorAuthSecret();
 
         if (is_null($secret)) {
-            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
+            throw new TwoFactorAuthException(
+                message: 'Cannot disable 2FA because it is not configured.',
+                reason: 'cannot_disable_2fa'
+            );
         }
 
-        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+        $this->passwordValidatorAction->execute($user, $password);
 
         $user->update([
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,

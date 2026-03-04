@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
+use Lightit\Authentication\Domain\DataTransferObjects\TokenDto;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Users\Domain\Models\User;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
+
+final readonly class VerifyRecoveryCodeAction
+{
+    public function __construct(
+        private AuthFactory $auth,
+    ) {
+    }
+
+    /**
+     * @throws UnauthorizedException
+     */
+    public function execute(User $user, string $suppliedCode): TokenDto
+    {
+        $hashedCodes = $user->getRecoveryCodes();
+
+        if ($hashedCodes === []) {
+            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+        }
+
+        $matchIndex = -1;
+
+        foreach ($hashedCodes as $index => $hash) {
+            if (Hash::check($suppliedCode, $hash)) {
+                $matchIndex = $index;
+
+                break;
+            }
+        }
+
+        if ($matchIndex === -1) {
+            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+        }
+
+        unset($hashedCodes[$matchIndex]);
+        $user->replaceRecoveryCodes(array_values($hashedCodes));
+
+        $ttlMinutes = Config::integer('jwt.ttl');
+
+        /** @var JWTGuard $guard */
+        $guard = $this->auth->guard();
+
+        $token = $guard
+            ->setTTL($ttlMinutes)
+            ->fromUser($user);
+
+        return new TokenDto(
+            token: $token,
+            tokenType: 'Bearer',
+            expiresIn: $ttlMinutes,
+        );
+    }
+}

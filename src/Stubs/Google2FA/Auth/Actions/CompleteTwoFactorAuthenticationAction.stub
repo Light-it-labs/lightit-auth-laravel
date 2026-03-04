@@ -1,0 +1,45 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\DataTransferObjects\TokenDto;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use PHPOpenSourceSaver\JWTAuth\JWTAuth;
+
+final readonly class CompleteTwoFactorAuthenticationAction
+{
+    public function __construct(
+        private VerifyOtpAction $verifyOtpAction,
+        private JWTAuth $jwtAuth,
+    ) {
+    }
+
+    public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): TokenDto
+    {
+        $secret = $user->getTwoFactorAuthSecret();
+
+        if (is_null($secret)) {
+            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
+        }
+
+        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+
+        if (! $user->hasTwoFactorAuthenticationEnabled()) {
+            $user->update([
+                TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => now(),
+            ]);
+        }
+
+        $token = $this->jwtAuth->claims([
+            'activated_at' => now()->timestamp,
+            'two_factor_verified' => true,
+            'expires_at' => now()->addMinutes(Config::integer('jwt.ttl'))->timestamp,
+        ])->fromUser($user);
+
+        return new TokenDto(token: $token, tokenType: 'bearer', expiresIn: Config::integer('jwt.ttl'));
+    }
+}

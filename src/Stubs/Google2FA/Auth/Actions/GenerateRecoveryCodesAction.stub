@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class GenerateRecoveryCodesAction
+{
+    /** @return array<string> */
+    public function execute(User $user): array
+    {
+        $recoveryCodes = Collection::times(8, static function (): string {
+            return Str::random(10) . '-' . Str::random(10);
+        })->all();
+
+        $hashedCodes = array_map(static function (string $code): string {
+            return Hash::make($code);
+        }, $recoveryCodes);
+
+        $user->replaceRecoveryCodes($hashedCodes);
+
+        return $recoveryCodes;
+    }
+}
