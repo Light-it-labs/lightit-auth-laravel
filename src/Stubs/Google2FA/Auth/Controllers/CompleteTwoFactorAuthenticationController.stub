@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\CompleteTwoFactorAuthenticationRequest;
+use Lightit\Authentication\App\Resources\TokenResource;
+use Lightit\Authentication\Domain\Actions\CompleteTwoFactorAuthenticationAction;
+
+final readonly class CompleteTwoFactorAuthenticationController
+{
+    public function __invoke(
+        CompleteTwoFactorAuthenticationRequest $request,
+        CompleteTwoFactorAuthenticationAction $completeTwoFactorAuthenticationAction,
+    ): JsonResponse {
+        $user = $request->getAuthenticatedUser();
+
+        $oneTimePassword = $request->getOTPCode();
+
+        $result = $completeTwoFactorAuthenticationAction->execute($user, $oneTimePassword);
+
+        return TokenResource::make($result)->response();
+    }
+}
