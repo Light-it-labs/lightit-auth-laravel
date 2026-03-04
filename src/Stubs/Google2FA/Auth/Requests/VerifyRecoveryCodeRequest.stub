@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+final class VerifyRecoveryCodeRequest extends FormRequest
+{
+    public const string RECOVERY_CODE = 'recovery_code';
+
+    public function rules(): array
+    {
+        return [
+            self::RECOVERY_CODE => ['required', 'string'],
+        ];
+    }
+
+    public function getRecoveryCode(): string
+    {
+        return $this->string(self::RECOVERY_CODE)->toString();
+    }
+}

@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
+
+final class SetupTwoFactorAuthenticationRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        $user = $this->get2faUser();
+
+        if ($user->hasTwoFactorAuthenticationConfigured()) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_already_configured'),
+                reason: TwoFactorReason::TwoFactorAlreadyConfigured->value
+            );
+        }
+
+        return true;
+    }
+
+    public function get2faUser(): User
+    {
+        $token = $this->bearerToken();
+
+        if (is_null($token)) {
+            throw new TwoFactorAuthException(message: __('google2fa.2fa_already_configured'));
+        }
+
+        return new VerifyTwoFactorToken()->execute($token);
+    }
+}
