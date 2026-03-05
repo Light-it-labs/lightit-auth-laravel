@@ -7,7 +7,7 @@ namespace Lightit\Authentication\Domain\Actions;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Hash;
-use Lightit\Authentication\Domain\DataTransferObjects\TokenDto;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use Lightit\Users\Domain\Models\User;
 use PHPOpenSourceSaver\JWTAuth\JWTGuard;
@@ -22,7 +22,7 @@ final readonly class VerifyRecoveryCodeAction
     /**
      * @throws UnauthorizedException
      */
-    public function execute(User $user, string $suppliedCode): TokenDto
+    public function execute(User $user, string $suppliedCode): LoginDto
     {
         $hashedCodes = $user->getRecoveryCodes();
 
@@ -56,8 +56,8 @@ final readonly class VerifyRecoveryCodeAction
             ->setTTL($ttlMinutes)
             ->fromUser($user);
 
-        return new TokenDto(
-            token: $token,
+        return new LoginDto(
+            accessToken: $token,
             tokenType: 'Bearer',
             expiresIn: $ttlMinutes,
         );

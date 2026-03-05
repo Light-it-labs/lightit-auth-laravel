@@ -70,12 +70,38 @@ abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSu
         return $this->email;
     }
 
+    /**
+     * @return array<string>
+     */
+    public function getRecoveryCodes(): array
+    {
+        $value = $this->getAttribute('recovery_codes');
+
+        if (is_string($value)) {
+            /** @var array<string> $decoded */
+            $decoded = json_decode($value, true) ?? [];
+
+            return $decoded;
+        }
+
+        /** @var array<string> $value */
+        return $value ?? [];
+    }
+
+    /**
+     * @param array<string> $codes
+     */
+    public function replaceRecoveryCodes(array $codes): void
+    {
+        $this->recovery_codes = json_encode($codes);
+        $this->saveOrFail();
+    }
+
     public function create2faToken(int $ttlInMinutes, TwoFactorReason $factorReason): string
     {
         $mandatory = Config::boolean('google2fa.mandatory');
 
-        /** @var string $id */
-        $id = $this->id;
+        $id = (string) $this->id;
 
         $payload = new TwoFactorTokenPayloadDto(
             sub: $id,

@@ -6,7 +6,7 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\CompleteTwoFactorAuthenticationRequest;
-use Lightit\Authentication\App\Resources\TokenResource;
+use Lightit\Authentication\App\Resources\LoginResource;
 use Lightit\Authentication\Domain\Actions\CompleteTwoFactorAuthenticationAction;
 
 final readonly class CompleteTwoFactorAuthenticationController
@@ -21,6 +21,6 @@ final readonly class CompleteTwoFactorAuthenticationController
 
         $result = $completeTwoFactorAuthenticationAction->execute($user, $oneTimePassword);
 
-        return TokenResource::make($result)->response();
+        return LoginResource::make($result)->response();
     }
 }
