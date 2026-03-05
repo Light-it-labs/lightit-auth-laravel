@@ -44,13 +44,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->copyMiddlewares();
         $this->copyConfigFiles();
         $this->copyLangFiles();
+        $this->updateUserModel();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 7, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -66,9 +67,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            // LoginAction override (pipeline version)
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
-            // Pipes
             '/Actions/Pipes/LoginContext.stub' => 'Domain/Actions/Pipes/LoginContext.php',
             '/Actions/Pipes/ValidateCredentials.stub' => 'Domain/Actions/Pipes/ValidateCredentials.php',
             '/Actions/Pipes/ResolveUser.stub' => 'Domain/Actions/Pipes/ResolveUser.php',
@@ -76,7 +75,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/Pipes/BuildLoginResult.stub' => 'Domain/Actions/Pipes/BuildLoginResult.php',
             '/Actions/Pipes/IssueTwoFactorSetupTokenIfMandatory.stub' => 'Domain/Actions/Pipes/IssueTwoFactorSetupTokenIfMandatory.php',
             '/Actions/Pipes/IssueTwoFactorChallengeTokenIfEnabled.stub' => 'Domain/Actions/Pipes/IssueTwoFactorChallengeTokenIfEnabled.php',
-            // Actions
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
@@ -86,24 +84,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
             '/Actions/VerifyTwoFactorToken.stub' => 'Domain/Actions/VerifyTwoFactorToken.php',
             '/Actions/PasswordValidatorAction.stub' => 'Domain/Actions/PasswordValidatorAction.php',
-            // Base class
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-            // DTOs
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/DataTransferObjects/TwoFactorTokenPayloadDto.stub' => 'Domain/DataTransferObjects/TwoFactorTokenPayloadDto.php',
-            // Enums
             '/Enums/TwoFactorReason.stub' => 'Domain/Enums/TwoFactorReason.php',
-            // Exceptions
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
-            // Resources
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
-            // Controllers
             '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',
             '/Controllers/SetupTwoFactorAuthenticationController.stub' => 'App/Controllers/SetupTwoFactorAuthenticationController.php',
             '/Controllers/CompleteTwoFactorAuthenticationController.stub' => 'App/Controllers/CompleteTwoFactorAuthenticationController.php',
             '/Controllers/RegenerateRecoveryCodesController.stub' => 'App/Controllers/RegenerateRecoveryCodesController.php',
             '/Controllers/VerifyRecoveryCodeController.stub' => 'App/Controllers/VerifyRecoveryCodeController.php',
-            // Requests
             '/Requests/SetupTwoFactorAuthenticationRequest.stub' => 'App/Requests/SetupTwoFactorAuthenticationRequest.php',
             '/Requests/CompleteTwoFactorAuthenticationRequest.stub' => 'App/Requests/CompleteTwoFactorAuthenticationRequest.php',
             '/Requests/DisableTwoFactorAuthenticationRequest.stub' => 'App/Requests/DisableTwoFactorAuthenticationRequest.php',
@@ -120,9 +111,18 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
     }
 
+    private function publishConfiguration(): void
+    {
+        $this->composerInstaller->printStep(2, 7, 'Publishing configuration');
+
+        $this->command->call('vendor:publish', [
+            '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
+        ]);
+    }
+
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 6, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 7, 'Copying migration files');
 
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
@@ -136,7 +136,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMiddlewares(): void
     {
-        $this->composerInstaller->printStep(4, 6, 'Copying Middlewares classes');
+        $this->composerInstaller->printStep(4, 7, 'Copying Middlewares classes');
 
         $destinationFolder = 'src/Shared/App/Middlewares/';
 
@@ -161,18 +161,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
     }
 
-    private function publishConfiguration(): void
-    {
-        $this->composerInstaller->printStep(2, 6, 'Publishing configuration');
-
-        $this->command->call('vendor:publish', [
-            '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
-        ]);
-    }
-
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(5, 6, 'Copying config files');
+        $this->composerInstaller->printStep(5, 7, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -187,7 +178,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(6, 6, 'Copying lang files');
+        $this->composerInstaller->printStep(6, 7, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
@@ -198,4 +189,36 @@ final class Google2FAInstaller implements AuthInstallerInterface
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
     }
+
+    private function updateUserModel(): void
+    {
+        $this->composerInstaller->printStep(7, 7, 'Updating User model');
+
+        $userModelPath = base_path('src/Users/Domain/Models/User.php');
+
+        if (! file_exists($userModelPath)) {
+            $this->command->warn('User model not found at src/Users/Domain/Models/User.php. Please manually extend TwoFactorAuthenticatable.');
+
+            return;
+        }
+
+        $contents = file_get_contents($userModelPath);
+
+        $contents = str_replace(
+            'use Illuminate\Foundation\Auth\User as Authenticatable;',
+            'use Lightit\Authentication\Domain\TwoFactorAuthenticatable;',
+            $contents
+        );
+
+        $contents = str_replace(
+            'extends Authenticatable',
+            'extends TwoFactorAuthenticatable',
+            $contents
+        );
+
+        file_put_contents($userModelPath, $contents);
+
+        $this->composerInstaller->printFileCreated('Updated: src/Users/Domain/Models/User.php');
+    }
+
 }
