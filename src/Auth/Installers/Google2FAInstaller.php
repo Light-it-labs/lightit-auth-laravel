@@ -44,14 +44,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->copyMiddlewares();
         $this->copyConfigFiles();
         $this->copyLangFiles();
-        $this->updateUserModel();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 7, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -113,7 +112,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function publishConfiguration(): void
     {
-        $this->composerInstaller->printStep(2, 7, 'Publishing configuration');
+        $this->composerInstaller->printStep(2, 6, 'Publishing configuration');
 
         $this->command->call('vendor:publish', [
             '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
@@ -122,7 +121,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 7, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 6, 'Copying migration files');
 
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
@@ -136,7 +135,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMiddlewares(): void
     {
-        $this->composerInstaller->printStep(4, 7, 'Copying Middlewares classes');
+        $this->composerInstaller->printStep(4, 6, 'Copying Middlewares classes');
 
         $destinationFolder = 'src/Shared/App/Middlewares/';
 
@@ -163,7 +162,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(5, 7, 'Copying config files');
+        $this->composerInstaller->printStep(5, 6, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -178,7 +177,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(6, 7, 'Copying lang files');
+        $this->composerInstaller->printStep(6, 6, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
@@ -188,37 +187,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             lang_path('en/google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
-    }
-
-    private function updateUserModel(): void
-    {
-        $this->composerInstaller->printStep(7, 7, 'Updating User model');
-
-        $userModelPath = base_path('src/Users/Domain/Models/User.php');
-
-        if (! file_exists($userModelPath)) {
-            $this->command->warn('User model not found at src/Users/Domain/Models/User.php. Please manually extend TwoFactorAuthenticatable.');
-
-            return;
-        }
-
-        $contents = file_get_contents($userModelPath);
-
-        $contents = str_replace(
-            'use Illuminate\Foundation\Auth\User as Authenticatable;',
-            'use Lightit\Authentication\Domain\TwoFactorAuthenticatable;',
-            $contents
-        );
-
-        $contents = str_replace(
-            'extends Authenticatable',
-            'extends TwoFactorAuthenticatable',
-            $contents
-        );
-
-        file_put_contents($userModelPath, $contents);
-
-        $this->composerInstaller->printFileCreated('Updated: src/Users/Domain/Models/User.php');
     }
 
 }
