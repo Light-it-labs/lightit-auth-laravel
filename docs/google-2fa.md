@@ -103,7 +103,30 @@ Route::prefix('2fa')->group(static function (): void {
 **Disable 2FA:**
 
 - `POST /2fa/disable` with a real JWT as Bearer + `password` in body → clears 2FA configuration
-- If `google2fa.mandatory = false`: subsequent logins return a real JWT directly
-- If `google2fa.mandatory = true`: subsequent logins restart the setup flow
+
+```mermaid
+flowchart TD
+    Login[POST /login] --> ValidateCreds{Valid credentials?}
+    ValidateCreds -- no --> E401[401 Unauthorized]
+    ValidateCreds -- yes --> AppHas2FA{2FA enabled?\ngoogle2fa.enabled}
+
+    AppHas2FA -- no --> JWT1[JWT Access Token]
+    AppHas2FA -- yes --> IsMandatory{2FA mandatory?\ngoogle2fa.mandatory}
+
+    IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
+    UserHas2FA -- no --> JWT2[JWT Access Token]
+    UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
+
+    IsMandatory -- yes --> IsSetup{2FA configured?}
+    IsSetup -- no --> SetupToken[2FA Setup Token]
+    SetupToken --> Setup[POST /2fa/setup\nReturns QR code + Recovery Codes]
+    Setup --> Complete
+
+    IsSetup -- yes --> ChallengeToken
+    ChallengeToken --> Complete[POST /2fa/complete\none_time_password or recovery code]
+
+    Complete -- invalid --> E401_2[401 Unauthorized]
+    Complete -- valid --> JWT3[JWT Access Token]
+```
 
 ---
