@@ -48,25 +48,7 @@ protected function casts(): array
 
 #### 4. Configure the authentication guard
 
-In `config/auth.php`, set `api` as the default guard and add the JWT driver:
-
-```php
-'defaults' => [
-    'guard' => 'api',
-    'passwords' => 'users',
-],
-
-'guards' => [
-    'web' => [
-        'driver' => 'session',
-        'provider' => 'users',
-    ],
-    'api' => [
-        'driver' => 'jwt',
-        'provider' => 'users',
-    ],
-],
-```
+Follow the guard configuration from your chosen driver — see [JWT setup](jwt.md#3-update-environment-and-config) or [Sanctum setup](sanctum.md#3-update-environment-and-config).
 
 #### 5. Define 2FA-related routes
 
@@ -93,16 +75,16 @@ Route::prefix('2fa')->group(static function (): void {
 
 1. `POST /login` → returns a challenge token (`token_type: "verification_required"`)
 2. `POST /2fa/setup` with the challenge token as Bearer → returns QR code, secret, and recovery codes
-3. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real JWT
+3. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real access token
 
 **Subsequent logins (2FA already configured):**
 
 1. `POST /login` → returns a challenge token
-2. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real JWT
+2. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real access token
 
 **Disable 2FA:**
 
-- `POST /2fa/disable` with a real JWT as Bearer + `password` in body → clears 2FA configuration
+- `POST /2fa/disable` with a real access token as Bearer + `password` in body → clears 2FA configuration
 
 ```mermaid
 flowchart TD
@@ -110,11 +92,11 @@ flowchart TD
     ValidateCreds -- no --> E401[401 Unauthorized]
     ValidateCreds -- yes --> AppHas2FA{2FA enabled?\ngoogle2fa.enabled}
 
-    AppHas2FA -- no --> JWT1[JWT Access Token]
+    AppHas2FA -- no --> JWT1[Access Token]
     AppHas2FA -- yes --> IsMandatory{2FA mandatory?\ngoogle2fa.mandatory}
 
     IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
-    UserHas2FA -- no --> JWT2[JWT Access Token]
+    UserHas2FA -- no --> JWT2[Access Token]
     UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
 
     IsMandatory -- yes --> IsSetup{2FA configured?}
@@ -126,7 +108,7 @@ flowchart TD
     ChallengeToken --> Complete[POST /2fa/complete\none_time_password or recovery code]
 
     Complete -- invalid --> E401_2[401 Unauthorized]
-    Complete -- valid --> JWT3[JWT Access Token]
+    Complete -- valid --> JWT3[Access Token]
 ```
 
 ---

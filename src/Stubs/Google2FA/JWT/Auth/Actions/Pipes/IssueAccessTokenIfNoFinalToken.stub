@@ -6,6 +6,7 @@ namespace Lightit\Authentication\Domain\Actions\Pipes;
 
 use Closure;
 use Illuminate\Support\Facades\Config;
+use PHPOpenSourceSaver\JWTAuth\JWTGuard;
 
 final class IssueAccessTokenIfNoFinalToken
 {
@@ -14,7 +15,10 @@ final class IssueAccessTokenIfNoFinalToken
         if (! $context->hasFinalToken()) {
             $ttlMinutes = Config::integer('jwt.ttl');
 
-            $accessToken = $context->guard
+            /** @var JWTGuard $guard */
+            $guard = $context->guard;
+
+            $accessToken = $guard
                 ->setTTL($ttlMinutes)
                 ->fromUser($context->getUser());
 
