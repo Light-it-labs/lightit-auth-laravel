@@ -55,14 +55,18 @@ Follow the guard configuration from your chosen driver — see [JWT setup](jwt.m
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\DisableTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\RegenerateRecoveryCodesController;
 use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
 Route::prefix('2fa')->group(static function (): void {
     Route::post('setup', SetupTwoFactorAuthenticationController::class);
     Route::post('complete', CompleteTwoFactorAuthenticationController::class);
+    Route::post('verify-recovery-code', VerifyRecoveryCodeController::class);
 
     Route::middleware('auth')->group(static function (): void {
         Route::post('disable', DisableTwoFactorAuthenticationController::class);
+        Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class);
     });
 });
 ```
@@ -81,6 +85,15 @@ Route::prefix('2fa')->group(static function (): void {
 
 1. `POST /login` → returns a challenge token
 2. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real access token
+
+**Login with a recovery code (lost authenticator):**
+
+1. `POST /login` → returns a challenge token
+2. `POST /2fa/verify-recovery-code` with the challenge token as Bearer + `recovery_code` → consumes the code (one-time use) and returns a real access token
+
+**Regenerate recovery codes:**
+
+- `POST /2fa/regenerate-recovery-codes` with a real access token as Bearer + `password` in body → invalidates existing codes and returns a new set
 
 **Disable 2FA:**
 
