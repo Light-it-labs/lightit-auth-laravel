@@ -7,6 +7,7 @@ namespace Lightit\Authentication\Domain\Actions;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifyRecoveryCodeDto;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use Lightit\Users\Domain\Models\User;
 
@@ -15,7 +16,7 @@ final readonly class VerifyRecoveryCodeAction
     /**
      * @throws UnauthorizedException
      */
-    public function execute(User $user, string $suppliedCode): LoginDto
+    public function execute(User $user, string $suppliedCode): VerifyRecoveryCodeDto
     {
         $hashedCodes = $user->getRecoveryCodes();
 
@@ -43,10 +44,13 @@ final readonly class VerifyRecoveryCodeAction
         /** @var int|null $expirationMinutes */
         $expirationMinutes = Config::get('sanctum.expiration');
 
-        return new LoginDto(
-            accessToken: $user->createToken('default')->plainTextToken,
-            tokenType: 'Bearer',
-            expiresIn: $expirationMinutes !== null ? $expirationMinutes * 60 : null,
+        return new VerifyRecoveryCodeDto(
+            loginDto: new LoginDto(
+                accessToken: $user->createToken('default')->plainTextToken,
+                tokenType: 'Bearer',
+                expiresIn: $expirationMinutes !== null ? $expirationMinutes * 60 : null,
+            ),
+            remainingRecoveryCodes: count($hashedCodes),
         );
     }
 }

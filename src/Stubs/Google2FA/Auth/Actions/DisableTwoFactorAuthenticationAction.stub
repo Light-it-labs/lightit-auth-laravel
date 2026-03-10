@@ -22,7 +22,7 @@ final readonly class DisableTwoFactorAuthenticationAction
 
         if ($mandatory) {
             throw new TwoFactorAuthException(
-                message: 'Cannot disable 2FA because it is mandatory.',
+                message: __('google2fa.disable_forbidden'),
                 reason: 'disable_forbidden',
             );
         }
@@ -31,8 +31,8 @@ final readonly class DisableTwoFactorAuthenticationAction
 
         if (is_null($secret)) {
             throw new TwoFactorAuthException(
-                message: 'Cannot disable 2FA because it is not configured.',
-                reason: 'cannot_disable_2fa'
+                message: __('google2fa.cannot_disable_2fa_unconfigured'),
+                reason: 'cannot_disable_2fa_unconfigured'
             );
         }
 

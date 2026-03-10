@@ -8,5 +8,7 @@ return [
     '2fa_disabled' => 'Successfully disabled two-factor authentication.',
     'secret_not_configured' => 'Two-factor authentication secret is not configured.',
     'invalid_recovery_code' => 'The provided recovery code is invalid.',
-    '2fa_reset' => 'Two-factor authentication has been reset. Please set it up again on next login.',
+    'disable_forbidden' => 'Cannot disable 2FA because it is mandatory.',
+    'cannot_disable_2fa_unconfigured' => 'Cannot disable 2FA because it is not configured.',
+    '2fa_reset' => 'Two-factor authentication has been reset.',
 ];

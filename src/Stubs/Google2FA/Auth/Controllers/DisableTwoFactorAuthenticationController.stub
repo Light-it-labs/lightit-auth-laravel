@@ -21,7 +21,7 @@ final readonly class DisableTwoFactorAuthenticationController
         /** @var User $user */
         $user = $request->user($guardName);
 
-        $password = $request->getOTPCode();
+        $password = $request->getPassword();
 
         $action->execute($user, $password);
 

@@ -18,7 +18,7 @@ final readonly class ResetTwoFactorAuthenticationController
 
         return response()->json([
             'data' => [
-                'message' => 'Two-factor authentication has been reset.',
+                'message' => __('google2fa.2fa_reset'),
             ],
         ]);
     }

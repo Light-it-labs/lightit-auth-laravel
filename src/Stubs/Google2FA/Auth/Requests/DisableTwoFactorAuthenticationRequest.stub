@@ -17,7 +17,7 @@ final class DisableTwoFactorAuthenticationRequest extends FormRequest
         ];
     }
 
-    public function getOTPCode(): string
+    public function getPassword(): string
     {
         return $this->string(self::PASSWORD)->toString();
     }
