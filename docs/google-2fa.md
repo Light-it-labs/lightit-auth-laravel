@@ -46,11 +46,36 @@ protected function casts(): array
 }
 ```
 
-#### 4. Configure the authentication guard
+#### 4. Ensure `UnauthorizedException` exists
+
+The 2FA stubs depend on `Lightit\Shared\App\Exceptions\Http\UnauthorizedException`. If your app doesn't have it yet, create it:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\App\Exceptions\Http;
+
+class UnauthorizedException extends HttpException
+{
+    /**
+     * An HTTP status code.
+     */
+    protected int $status = 401;
+
+    /**
+     * An error code.
+     */
+    protected string $errorCode = 'unauthorized';
+}
+```
+
+#### 5. Configure the authentication guard
 
 Follow the guard configuration from your chosen driver — see [JWT setup](jwt.md#3-update-environment-and-config) or [Sanctum setup](sanctum.md#3-update-environment-and-config).
 
-#### 5. Define 2FA-related routes
+#### 6. Define 2FA-related routes
 
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
@@ -81,35 +106,68 @@ Route::prefix('2fa')->group(static function (): void {
 
 **First-time setup (mandatory 2FA or user-initiated):**
 
-1. `POST /login` → returns a challenge token (`token_type: "setup_required"`)
-2. `POST /2fa/setup` with the challenge token as Bearer → returns QR code, secret, and recovery codes
-3. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real access token
+1. `POST /login`
+   - Body: `{ "email": "...", "password": "..." }`
+   - Returns: `{ access_token, token_type: "setup_required", expires_in }`
+2. `POST /2fa/setup`
+   - Bearer: setup token
+   - Returns: `{ qr, secret, recovery_codes[] }`
+3. `POST /2fa/complete`
+   - Bearer: setup token
+   - Body: `{ "one_time_password": "..." }`
+   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
 
 **Subsequent logins (2FA already configured):**
 
-1. `POST /login` → returns a challenge token (`token_type: "verification_required"`)
-2. `POST /2fa/complete` with the challenge token as Bearer + `one_time_password` → returns a real access token
+1. `POST /login`
+   - Body: `{ "email": "...", "password": "..." }`
+   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
+2. `POST /2fa/complete`
+   - Bearer: challenge token
+   - Body: `{ "one_time_password": "..." }`
+   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
 
 **Login with a recovery code (lost authenticator):**
 
-1. `POST /login` → returns a challenge token
-2. `POST /2fa/verify-recovery-code` with the challenge token as Bearer + `recovery_code` → consumes the code (one-time use) and returns a real access token + `remaining_recovery_codes` count
+1. `POST /login`
+   - Body: `{ "email": "...", "password": "..." }`
+   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
+2. `POST /2fa/verify-recovery-code`
+   - Bearer: challenge token
+   - Body: `{ "recovery_code": "..." }`
+   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
 
 **Reset 2FA (lost authenticator, using a recovery code to regain access):**
 
-1. `POST /login` → challenge token
-2. `POST /2fa/verify-recovery-code` (challenge token + recovery code) → real access token
-3. `POST /2fa/request-reset` (real access token + `password`) → returns a re-setup token (`token_type: "reset_required"`)
-4. `POST /2fa/reset` (re-setup token as Bearer) → clears 2FA config
+1. `POST /login`
+   - Body: `{ "email": "...", "password": "..." }`
+   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
+2. `POST /2fa/verify-recovery-code`
+   - Bearer: challenge token
+   - Body: `{ "recovery_code": "..." }`
+   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
+3. `POST /2fa/request-reset`
+   - Bearer: real access token
+   - Body: `{ "password": "..." }`
+   - Returns: `{ access_token, token_type: "reset_required", expires_in }`
+4. `POST /2fa/reset`
+   - Bearer: reset token
+   - Returns: `{ data: { message } }`
 
 **Regenerate recovery codes:**
 
-- `POST /2fa/regenerate-recovery-codes` with a real access token as Bearer + `password` in body → invalidates existing codes and returns a new set
+1. `POST /2fa/regenerate-recovery-codes`
+   - Bearer: real access token
+   - Body: `{ "password": "..." }`
+   - Returns: `{ data: { recovery_codes[] } }`
 
 **Disable 2FA:**
 
-- `POST /2fa/disable` with a real access token as Bearer + `password` in body → clears 2FA configuration
-- Returns `403 Forbidden` if `google2fa.mandatory` is `true`
+1. `POST /2fa/disable`
+   - Bearer: real access token
+   - Body: `{ "password": "..." }`
+   - Returns: `{ data: { message } }`
+   - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
 
 ```mermaid
 flowchart TD

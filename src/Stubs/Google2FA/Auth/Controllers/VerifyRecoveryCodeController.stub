@@ -4,22 +4,18 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\App\Controllers;
 
-use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\VerifyRecoveryCodeRequest;
 use Lightit\Authentication\App\Resources\VerifyRecoveryCodeResource;
 use Lightit\Authentication\Domain\Actions\VerifyRecoveryCodeAction;
-use Lightit\Users\Domain\Models\User;
 
 final readonly class VerifyRecoveryCodeController
 {
     public function __invoke(
-        #[CurrentUser]
-        User $user,
         VerifyRecoveryCodeRequest $request,
         VerifyRecoveryCodeAction $verifyRecoveryCodeAction,
     ): JsonResponse {
-        $result = $verifyRecoveryCodeAction->execute($user, $request->getRecoveryCode());
+        $result = $verifyRecoveryCodeAction->execute($request->getAuthenticatedUser(), $request->getRecoveryCode());
 
         return VerifyRecoveryCodeResource::make($result)->response();
     }

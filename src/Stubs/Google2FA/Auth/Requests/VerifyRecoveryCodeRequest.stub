@@ -5,10 +5,35 @@ declare(strict_types=1);
 namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Users\Domain\Models\User;
 
 final class VerifyRecoveryCodeRequest extends FormRequest
 {
     public const string RECOVERY_CODE = 'recovery_code';
+
+    private User|null $authenticatedUser = null;
+
+    public function authorize(): bool
+    {
+        $token = $this->bearerToken();
+
+        if ($token) {
+            $this->authenticatedUser = new VerifyTwoFactorToken()->execute($token);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function getAuthenticatedUser(): User
+    {
+        /** @var User $user */
+        $user = $this->authenticatedUser;
+
+        return $user;
+    }
 
     public function rules(): array
     {
