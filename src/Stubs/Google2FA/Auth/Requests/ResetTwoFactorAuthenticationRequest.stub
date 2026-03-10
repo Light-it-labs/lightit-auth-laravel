@@ -1,0 +1,57 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Crypt;
+use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
+
+final class ResetTwoFactorAuthenticationRequest extends FormRequest
+{
+    private User|null $authenticatedUser = null;
+
+    public function authorize(): bool
+    {
+        $token = $this->bearerToken();
+
+        if (is_null($token)) {
+            return false;
+        }
+
+        try {
+            $payload = Crypt::decrypt($token);
+        } catch (DecryptException) {
+            throw new TwoFactorAuthException(message: 'The token payload is invalid.');
+        }
+
+        if (! is_array($payload) || ($payload['reason'] ?? null) !== TwoFactorReason::ResetRequired->value) {
+            throw new TwoFactorAuthException(
+                message: 'This token cannot be used to reset two-factor authentication.',
+                reason: 'invalid_token_reason',
+            );
+        }
+
+        $this->authenticatedUser = new VerifyTwoFactorToken()->execute($token);
+
+        return true;
+    }
+
+    public function getAuthenticatedUser(): User
+    {
+        /** @var User $user */
+        $user = $this->authenticatedUser;
+
+        return $user;
+    }
+
+    public function rules(): array
+    {
+        return [];
+    }
+}

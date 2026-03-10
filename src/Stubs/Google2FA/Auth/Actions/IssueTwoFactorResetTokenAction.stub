@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class IssueTwoFactorResetTokenAction
+{
+    public function __construct(
+        private PasswordValidatorAction $passwordValidatorAction,
+    ) {
+    }
+
+    public function execute(User $user, string $password): LoginDto
+    {
+        $this->passwordValidatorAction->execute($user, $password);
+
+        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
+
+        $token = $user->create2faToken($ttlMinutes, TwoFactorReason::ResetRequired);
+
+        return new LoginDto(
+            accessToken: $token,
+            tokenType: TwoFactorReason::ResetRequired->value,
+            expiresIn: $ttlMinutes * 60,
+        );
+    }
+}

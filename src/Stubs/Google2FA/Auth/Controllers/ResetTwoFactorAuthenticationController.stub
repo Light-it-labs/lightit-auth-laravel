@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\ResetTwoFactorAuthenticationRequest;
+use Lightit\Authentication\Domain\Actions\ResetTwoFactorAuthenticationAction;
+
+final readonly class ResetTwoFactorAuthenticationController
+{
+    public function __invoke(
+        ResetTwoFactorAuthenticationRequest $request,
+        ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
+    ): JsonResponse {
+        $resetTwoFactorAuthenticationAction->execute($request->getAuthenticatedUser());
+
+        return response()->json([
+            'data' => [
+                'message' => 'Two-factor authentication has been reset.',
+            ],
+        ]);
+    }
+}

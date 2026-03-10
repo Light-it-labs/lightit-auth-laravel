@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\RequestTwoFactorResetRequest;
+use Lightit\Authentication\App\Resources\LoginResource;
+use Lightit\Authentication\Domain\Actions\IssueTwoFactorResetTokenAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class RequestTwoFactorResetController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        RequestTwoFactorResetRequest $request,
+        IssueTwoFactorResetTokenAction $issueTwoFactorResetTokenAction,
+    ): JsonResponse {
+        $result = $issueTwoFactorResetTokenAction->execute($user, $request->getPassword());
+
+        return LoginResource::make($result)->response();
+    }
+}

@@ -9,4 +9,5 @@ enum TwoFactorReason: string
     case SetupRequired = 'setup_required';
     case VerificationRequired = 'verification_required';
     case TwoFactorAlreadyConfigured = '2fa_already_configured';
+    case ResetRequired = 'reset_required';
 }

@@ -4,19 +4,29 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
-use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class DisableTwoFactorAuthenticationAction
 {
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
+        private ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
     ) {
     }
 
     public function execute(User $user, string $password): void
     {
+        $mandatory = Config::boolean('google2fa.mandatory');
+
+        if ($mandatory) {
+            throw new TwoFactorAuthException(
+                message: 'Cannot disable 2FA because it is mandatory.',
+                reason: 'disable_forbidden',
+            );
+        }
+
         $secret = $user->getTwoFactorAuthSecret();
 
         if (is_null($secret)) {
@@ -28,9 +38,6 @@ final readonly class DisableTwoFactorAuthenticationAction
 
         $this->passwordValidatorAction->execute($user, $password);
 
-        $user->update([
-            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,
-            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
-        ]);
+        $this->resetTwoFactorAuthenticationAction->execute($user);
     }
 }
