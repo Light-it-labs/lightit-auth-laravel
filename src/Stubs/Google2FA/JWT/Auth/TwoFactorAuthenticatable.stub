@@ -52,7 +52,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSu
         return (bool) $this->getTwoFactorAuthSecret() && $this->hasTwoFactorAuthenticationEnabled();
     }
 
-    public function hasTwoFactorAuthenticationActivated(): bool
+    public function hasTwoFactorAuthenticationSecretStored(): bool
     {
         return (bool) $this->getAttribute(self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME);
     }

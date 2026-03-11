@@ -22,7 +22,7 @@ final readonly class IssueTwoFactorChallengeTokenIfEnabled
             return $next($context);
         }
 
-        if (! $context->getUser()->hasTwoFactorAuthenticationActivated()) {
+        if (! $context->getUser()->hasTwoFactorAuthenticationSecretStored()) {
             return $next($context);
         }
 
