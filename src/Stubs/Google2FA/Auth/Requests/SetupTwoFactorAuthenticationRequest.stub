@@ -14,6 +14,12 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
 {
     public function authorize(): bool
     {
+        $token = $this->bearerToken();
+
+        if (is_null($token)) {
+            return false;
+        }
+
         $user = $this->get2faUser();
 
         if ($user->hasTwoFactorAuthenticationConfigured()) {
@@ -28,11 +34,8 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
 
     public function get2faUser(): User
     {
+        /** @var string $token */
         $token = $this->bearerToken();
-
-        if (is_null($token)) {
-            throw new TwoFactorAuthException(message: __('google2fa.2fa_already_configured'));
-        }
 
         return new VerifyTwoFactorToken()->execute($token);
     }
