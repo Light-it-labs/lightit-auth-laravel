@@ -6,7 +6,7 @@ namespace Lightit\Authentication\Domain\Actions\Pipes;
 
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 
-final class BuildLoginResult
+final readonly class BuildLoginResult
 {
     public function handle(LoginContext $context): LoginDto
     {

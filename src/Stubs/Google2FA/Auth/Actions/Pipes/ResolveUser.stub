@@ -7,7 +7,7 @@ namespace Lightit\Authentication\Domain\Actions\Pipes;
 use Closure;
 use Lightit\Users\Domain\Models\User;
 
-final class ResolveUser
+final readonly class ResolveUser
 {
     public function handle(LoginContext $context, Closure $next): mixed
     {
