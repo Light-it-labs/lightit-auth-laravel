@@ -7,16 +7,17 @@ namespace Lightit\Authentication\Domain\Actions;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Facades\Crypt;
 use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorTokenPayloadDto;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class VerifyTwoFactorToken
 {
-    public function execute(string $token): User
+    public function execute(string $token, ?TwoFactorReason $expectedReason = null): User
     {
         $payload = $this->decrypt($token);
 
-        $this->assertIs2faToken($payload);
+        $this->assertIs2faToken($payload, $expectedReason);
 
         $dto = TwoFactorTokenPayloadDto::fromArray($payload);
 
@@ -52,7 +53,7 @@ final readonly class VerifyTwoFactorToken
         return $decrypted;
     }
 
-    private function assertIs2faToken(array $payload): void
+    private function assertIs2faToken(array $payload, ?TwoFactorReason $expectedReason = null): void
     {
         if (($payload['typ'] ?? null) !== '2fa') {
             throw new TwoFactorAuthException(
@@ -72,6 +73,13 @@ final readonly class VerifyTwoFactorToken
             throw new TwoFactorAuthException(
                 message: __('The token does not contain a valid 2FA configuration.'),
                 reason: 'invalid_2fa_configuration'
+            );
+        }
+
+        if ($expectedReason !== null && $payload['reason'] !== $expectedReason->value) {
+            throw new TwoFactorAuthException(
+                message: __('This token cannot be used for this action.'),
+                reason: 'invalid_token_reason'
             );
         }
     }
