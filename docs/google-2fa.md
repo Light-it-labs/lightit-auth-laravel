@@ -86,6 +86,7 @@ use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationControlle
 use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
+// Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks
 Route::prefix('2fa')->group(static function (): void {
     Route::post('setup', SetupTwoFactorAuthenticationController::class);
     Route::post('complete', CompleteTwoFactorAuthenticationController::class);
