@@ -37,7 +37,7 @@ final class ResetTwoFactorAuthenticationRequest extends FormRequest
             );
         }
 
-        $this->authenticatedUser = new VerifyTwoFactorToken()->execute($token);
+        $this->authenticatedUser = app(VerifyTwoFactorToken::class)->execute($token);
 
         return true;
     }

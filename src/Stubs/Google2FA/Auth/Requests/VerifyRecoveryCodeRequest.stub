@@ -19,7 +19,7 @@ final class VerifyRecoveryCodeRequest extends FormRequest
         $token = $this->bearerToken();
 
         if ($token) {
-            $this->authenticatedUser = new VerifyTwoFactorToken()->execute($token);
+            $this->authenticatedUser = app(VerifyTwoFactorToken::class)->execute($token);
 
             return true;
         }

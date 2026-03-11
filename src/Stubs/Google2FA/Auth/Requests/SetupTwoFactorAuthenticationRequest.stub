@@ -37,6 +37,6 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
         /** @var string $token */
         $token = $this->bearerToken();
 
-        return new VerifyTwoFactorToken()->execute($token);
+        return app(VerifyTwoFactorToken::class)->execute($token);
     }
 }
