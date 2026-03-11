@@ -25,6 +25,8 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
 
     public const TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME = 'two_factor_auth_activated_at';
 
+    public const RECOVERY_CODES_COLUMN_NAME = 'recovery_codes';
+
     public function hasTwoFactorAuthenticationEnabled(): bool
     {
         return (bool) $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
@@ -58,7 +60,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
      */
     public function getRecoveryCodes(): array
     {
-        $value = $this->getAttribute('recovery_codes');
+        $value = $this->getAttribute(self::RECOVERY_CODES_COLUMN_NAME);
 
         if (is_string($value)) {
             /** @var array<string> $decoded */
@@ -76,7 +78,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
      */
     public function replaceRecoveryCodes(array $codes): void
     {
-        $this->recovery_codes = json_encode($codes);
+        $this->setAttribute(self::RECOVERY_CODES_COLUMN_NAME, json_encode($codes));
         $this->saveOrFail();
     }
 

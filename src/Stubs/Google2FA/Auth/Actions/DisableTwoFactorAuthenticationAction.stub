@@ -24,6 +24,7 @@ final readonly class DisableTwoFactorAuthenticationAction
             throw new TwoFactorAuthException(
                 message: __('google2fa.disable_forbidden'),
                 reason: 'disable_forbidden',
+                status: 403,
             );
         }
 

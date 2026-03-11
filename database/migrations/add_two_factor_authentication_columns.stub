@@ -15,7 +15,7 @@ return new class extends Migration
             $table->text(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME)->nullable();
             $table->datetime(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME)->nullable();
 
-            $table->text('recovery_codes')->nullable();
+            $table->text(TwoFactorAuthenticatable::RECOVERY_CODES_COLUMN_NAME)->nullable();
         });
     }
 
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->dropColumn(
                 TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME,
                 TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME,
-                'recovery_codes'
+                TwoFactorAuthenticatable::RECOVERY_CODES_COLUMN_NAME
             );
         });
     }

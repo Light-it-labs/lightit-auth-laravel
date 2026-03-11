@@ -14,7 +14,7 @@ final readonly class ResetTwoFactorAuthenticationAction
         $user->update([
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
-            'recovery_codes' => null,
+            TwoFactorAuthenticatable::RECOVERY_CODES_COLUMN_NAME => null,
         ]);
     }
 }

@@ -24,6 +24,8 @@ abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSu
 {
     public const TWO_FACTOR_AUTH_SECRET_COLUMN_NAME = 'two_factor_auth_secret';
 
+    public const RECOVERY_CODES_COLUMN_NAME = 'recovery_codes';
+
     /**
      * Get the identifier that will be stored in the JWT token.
      */
@@ -75,7 +77,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSu
      */
     public function getRecoveryCodes(): array
     {
-        $value = $this->getAttribute('recovery_codes');
+        $value = $this->getAttribute(self::RECOVERY_CODES_COLUMN_NAME);
 
         if (is_string($value)) {
             /** @var array<string> $decoded */
@@ -93,7 +95,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable implements JWTSu
      */
     public function replaceRecoveryCodes(array $codes): void
     {
-        $this->recovery_codes = json_encode($codes);
+        $this->setAttribute(self::RECOVERY_CODES_COLUMN_NAME, json_encode($codes));
         $this->saveOrFail();
     }
 

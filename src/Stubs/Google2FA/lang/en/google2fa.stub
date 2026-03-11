@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'invalid_credentials' => 'Invalid credentials.',
     'invalid_otp' => 'Invalid 2FA OTP.',
     '2fa_not_configured' => 'Two-factor authentication is not configured.',
     '2fa_expired' => 'Two-factor authentication is expired.',
