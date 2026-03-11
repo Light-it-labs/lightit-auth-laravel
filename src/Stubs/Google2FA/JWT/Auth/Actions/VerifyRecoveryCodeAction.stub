@@ -61,7 +61,7 @@ final readonly class VerifyRecoveryCodeAction
             loginDto: new LoginDto(
                 accessToken: $token,
                 tokenType: 'Bearer',
-                expiresIn: $ttlMinutes,
+                expiresIn: $ttlMinutes * 60,
             ),
             remainingRecoveryCodes: count($hashedCodes),
         );

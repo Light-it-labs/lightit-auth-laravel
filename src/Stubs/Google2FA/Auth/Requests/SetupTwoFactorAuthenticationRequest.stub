@@ -6,7 +6,6 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
-use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Users\Domain\Models\User;
 
@@ -25,7 +24,7 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
         if ($user->hasTwoFactorAuthenticationConfigured()) {
             throw new TwoFactorAuthException(
                 message: __('google2fa.2fa_already_configured'),
-                reason: TwoFactorReason::TwoFactorAlreadyConfigured->value
+                reason: '2fa_already_configured'
             );
         }
 

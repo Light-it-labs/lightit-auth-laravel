@@ -40,6 +40,6 @@ final readonly class CompleteTwoFactorAuthenticationAction
             'expires_at' => now()->addMinutes(Config::integer('jwt.ttl'))->timestamp,
         ])->fromUser($user);
 
-        return new LoginDto(accessToken: $token, tokenType: 'bearer', expiresIn: Config::integer('jwt.ttl'));
+        return new LoginDto(accessToken: $token, tokenType: 'bearer', expiresIn: Config::integer('jwt.ttl') * 60);
     }
 }
