@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 
 final class ForgotPasswordInstaller implements AuthInstallerInterface
@@ -17,7 +16,6 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
     ) {
     }

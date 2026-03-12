@@ -181,7 +181,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Forgot Password...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $forgotPasswordInstaller = new ForgotPasswordInstaller($this, $composerInstaller);
+        $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller);
         $forgotPasswordInstaller->install();
         $this->printSectionSeparator();
     }
