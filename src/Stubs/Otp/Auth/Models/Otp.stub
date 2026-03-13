@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+final class Otp extends Model
+{
+    protected $fillable = [
+        'destination',
+        'code',
+        'expires_at',
+        'used_at',
+    ];
+
+    protected $casts = [
+        'expires_at' => 'datetime',
+        'used_at'    => 'datetime',
+    ];
+}

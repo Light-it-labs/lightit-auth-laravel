@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Contracts;
+
+interface OtpSenderInterface
+{
+    public function send(string $destination, string $code): void;
+}

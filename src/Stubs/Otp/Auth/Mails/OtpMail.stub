@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Mails;
+
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Queue\SerializesModels;
+
+final class OtpMail extends Mailable
+{
+    use Queueable;
+    use SerializesModels;
+
+    public function __construct(
+        private readonly string $code,
+    ) {
+    }
+
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: 'Your one-time password',
+        );
+    }
+
+    public function content(): Content
+    {
+        return new Content(
+            htmlString: "Your one-time password is: <strong>{$this->code}</strong>. It expires in 5 minutes.",
+        );
+    }
+}
