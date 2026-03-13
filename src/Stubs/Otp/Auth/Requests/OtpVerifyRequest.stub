@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+final class OtpVerifyRequest extends FormRequest
+{
+    public const string EMAIL = 'email';
+
+    public const string CODE = 'code';
+
+    public function rules(): array
+    {
+        return [
+            self::EMAIL => ['required', Rule::email()->strict()],
+            self::CODE  => ['required', 'string', 'digits:6'],
+        ];
+    }
+
+    public function getDestination(): string
+    {
+        return $this->string(self::EMAIL)->toString();
+    }
+
+    public function getCode(): string
+    {
+        return $this->string(self::CODE)->toString();
+    }
+}

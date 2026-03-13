@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Hash;
+use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
+use Lightit\Authentication\Domain\Models\Otp;
+
+final readonly class VerifyOtpAction
+{
+    /**
+     * @throws InvalidOtpException
+     */
+    public function execute(string $destination, string $code): void
+    {
+        $otp = Otp::where('destination', $destination)
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if ($otp === null || ! Hash::check($code, $otp->code)) {
+            throw new InvalidOtpException();
+        }
+
+        $otp->update(['used_at' => now()]);
+    }
+}

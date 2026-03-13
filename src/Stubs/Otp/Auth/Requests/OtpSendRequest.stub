@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+final class OtpSendRequest extends FormRequest
+{
+    public const string EMAIL = 'email';
+
+    public function rules(): array
+    {
+        return [
+            self::EMAIL => ['required', Rule::email()->strict()],
+        ];
+    }
+
+    public function getDestination(): string
+    {
+        return $this->string(self::EMAIL)->toString();
+    }
+}

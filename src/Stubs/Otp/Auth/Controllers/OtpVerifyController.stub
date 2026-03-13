@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\OtpVerifyRequest;
+use Lightit\Authentication\Domain\Actions\VerifyOtpAction;
+use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
+
+final readonly class OtpVerifyController
+{
+    public function __invoke(OtpVerifyRequest $request, VerifyOtpAction $verifyOtpAction): JsonResponse
+    {
+        try {
+            $verifyOtpAction->execute($request->getDestination(), $request->getCode());
+        } catch (InvalidOtpException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'data' => [
+                'message' => 'OTP verified.',
+            ],
+        ]);
+    }
+}
