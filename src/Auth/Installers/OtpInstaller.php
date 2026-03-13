@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 
 final class OtpInstaller implements AuthInstallerInterface
@@ -21,7 +20,6 @@ final class OtpInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
     ) {
     }
@@ -30,7 +28,6 @@ final class OtpInstaller implements AuthInstallerInterface
     {
         $this->createAuthFiles();
         $this->copyMigration();
-        $this->printNextSteps();
 
         $this->composerInstaller->printSuccess('OTP installed successfully!');
     }
@@ -90,22 +87,5 @@ final class OtpInstaller implements AuthInstallerInterface
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
-    private function printNextSteps(): void
-    {
-        $this->command->line('');
-        $this->command->line("\e[0;35m📋 Next steps:\e[0m");
-        $this->command->line('');
-        $this->command->line("\e[0;35m  1. Register the OTP sender binding in AppServiceProvider::register():\e[0m");
-        $this->command->line("\e[0;35m     \$this->app->bind(\e[0m");
-        $this->command->line("\e[0;35m         \\Lightit\\Authentication\\Domain\\Contracts\\OtpSenderInterface::class,\e[0m");
-        $this->command->line("\e[0;35m         \\Lightit\\Authentication\\Domain\\OtpSenders\\EmailOtpSender::class\e[0m");
-        $this->command->line("\e[0;35m     );\e[0m");
-        $this->command->line('');
-        $this->command->line("\e[0;35m  2. Add the routes to routes/api.php:\e[0m");
-        $this->command->line("\e[0;35m     Route::post('otp/send', OtpSendController::class);\e[0m");
-        $this->command->line("\e[0;35m     Route::post('otp/verify', OtpVerifyController::class);\e[0m");
-        $this->command->line('');
-        $this->command->line("\e[0;35m  3. Run: php artisan migrate\e[0m");
-        $this->command->line('');
-    }
+
 }

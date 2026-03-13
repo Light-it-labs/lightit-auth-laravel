@@ -181,7 +181,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up OTP...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $otpInstaller = new OtpInstaller($this, $composerInstaller);
+        $otpInstaller = new OtpInstaller($composerInstaller);
         $otpInstaller->install();
         $this->printSectionSeparator();
     }
