@@ -31,14 +31,20 @@ php artisan migrate
 
 #### 4. Configure the reset URL
 
-Laravel sends the reset token inside a URL pointing to your frontend. Set it in your `AppServiceProvider`:
+Laravel sends the reset token inside a URL pointing to your frontend. Add this inside the `boot()` method of your `AppServiceProvider`:
 
 ```php
 use Illuminate\Auth\Notifications\ResetPassword;
+use App\Models\User;
 
-ResetPassword::createUrlUsing(function (User $user, string $token) {
-    return 'https://your-frontend.com/reset-password?token=' . $token . '&email=' . urlencode($user->email);
-});
+public function boot(): void
+{
+    ResetPassword::createUrlUsing(function (User $user, string $token): string {
+        return 'https://your-frontend.com/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+    });
+
+    // ... rest of boot()
+}
 ```
 
 #### 5. Define routes
