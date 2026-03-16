@@ -11,7 +11,7 @@ final class OtpInstaller implements AuthInstallerInterface
     private const AUTH_DIRECTORIES = [
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
-        'Authentication/App/Mails',
+        'Authentication/App/Notifications',
         'Authentication/Domain/Actions',
         'Authentication/Domain/Contracts',
         'Authentication/Domain/OtpSenders',
@@ -55,7 +55,7 @@ final class OtpInstaller implements AuthInstallerInterface
             '/Controllers/OtpVerifyController.stub'     => 'App/Controllers/OtpVerifyController.php',
             '/Requests/OtpSendRequest.stub'             => 'App/Requests/OtpSendRequest.php',
             '/Requests/OtpVerifyRequest.stub'           => 'App/Requests/OtpVerifyRequest.php',
-            '/Mails/OtpMail.stub'                       => 'App/Mails/OtpMail.php',
+            '/Notifications/OtpNotification.stub'       => 'App/Notifications/OtpNotification.php',
             '/Actions/SendOtpAction.stub'               => 'Domain/Actions/SendOtpAction.php',
             '/Actions/VerifyOtpAction.stub'             => 'Domain/Actions/VerifyOtpAction.php',
             '/Contracts/OtpSenderInterface.stub'        => 'Domain/Contracts/OtpSenderInterface.php',

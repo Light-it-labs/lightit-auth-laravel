@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\OtpSenders;
 
-use Illuminate\Support\Facades\Mail;
-use Lightit\Authentication\App\Mails\OtpMail;
+use Illuminate\Support\Facades\Notification;
+use Lightit\Authentication\App\Notifications\OtpNotification;
 use Lightit\Authentication\Domain\Contracts\OtpSenderInterface;
 
 final readonly class EmailOtpSender implements OtpSenderInterface
 {
     public function send(string $destination, string $code): void
     {
-        Mail::to($destination)->send(new OtpMail($code));
+        Notification::route('mail', $destination)->notify(new OtpNotification($code));
     }
 }
