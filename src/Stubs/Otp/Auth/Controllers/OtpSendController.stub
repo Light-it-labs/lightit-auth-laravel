@@ -7,12 +7,17 @@ namespace Lightit\Authentication\App\Controllers;
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\OtpSendRequest;
 use Lightit\Authentication\Domain\Actions\SendOtpAction;
+use Lightit\Users\Domain\Models\User;
 
 final readonly class OtpSendController
 {
     public function __invoke(OtpSendRequest $request, SendOtpAction $sendOtpAction): JsonResponse
     {
-        $sendOtpAction->execute($request->getDestination());
+        $user = User::where('email', $request->getDestination())->first();
+
+        if ($user !== null) {
+            $sendOtpAction->execute($request->getDestination());
+        }
 
         return response()->json([
             'data' => [
