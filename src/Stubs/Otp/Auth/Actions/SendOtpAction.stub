@@ -17,12 +17,7 @@ final readonly class SendOtpAction
 
     public function execute(string $destination): void
     {
-        Otp::where('destination', $destination)
-            ->where(function ($query): void {
-                $query->whereNotNull('used_at')
-                    ->orWhere('expires_at', '<=', now());
-            })
-            ->delete();
+        Otp::where('destination', $destination)->delete();
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
