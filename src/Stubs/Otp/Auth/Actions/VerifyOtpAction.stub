@@ -18,7 +18,6 @@ final readonly class VerifyOtpAction
         $otp = Otp::where('destination', $destination)
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
-            ->latest()
             ->first();
 
         if ($otp === null || ! Hash::check($code, $otp->code)) {

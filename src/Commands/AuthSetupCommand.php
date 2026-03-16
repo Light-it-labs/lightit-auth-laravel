@@ -76,7 +76,9 @@ class AuthSetupCommand extends Command
             default: false,
         );
 
-        $enableOtp = confirm(
+        $hasTokenDriver = in_array(AuthDriver::Jwt->value, $drivers) || in_array(AuthDriver::SanctumApiToken->value, $drivers);
+
+        $enableOtp = $hasTokenDriver && confirm(
             label: 'Would you like to enable OTP (one-time password)?',
             default: false,
         );
