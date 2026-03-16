@@ -30,7 +30,7 @@ final class OtpMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            htmlString: "Your one-time password is: <strong>{$this->code}</strong>. It expires in 5 minutes.",
+            htmlString: "Your one-time password is: <strong>{$this->code}</strong>. It expires in " . config('otp.expires_in') . " minutes.",
         );
     }
 }

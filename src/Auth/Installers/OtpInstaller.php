@@ -28,13 +28,14 @@ final class OtpInstaller implements AuthInstallerInterface
     {
         $this->createAuthFiles();
         $this->copyMigration();
+        $this->copyConfigFile();
 
         $this->composerInstaller->printSuccess('OTP installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 2, 'Creating OTP files');
+        $this->composerInstaller->printStep(1, 3, 'Creating OTP files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -74,7 +75,7 @@ final class OtpInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(2, 2, 'Copying migration files');
+        $this->composerInstaller->printStep(2, 3, 'Copying migration files');
 
         $stub = __DIR__ . '/../../Stubs/Otp/database/migrations/create_otps_table.stub';
         $timestamp = date('Y_m_d_His');
@@ -87,5 +88,18 @@ final class OtpInstaller implements AuthInstallerInterface
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
+    private function copyConfigFile(): void
+    {
+        $this->composerInstaller->printStep(3, 3, 'Copying config file');
 
+        if (! is_dir(config_path())) {
+            mkdir(config_path(), 0755, true);
+        }
+
+        copy(
+            __DIR__ . '/../../Stubs/Otp/config/otp.stub',
+            config_path('otp.php')
+        );
+        $this->composerInstaller->printConfigPublished('Config file published: config/otp.php');
+    }
 }

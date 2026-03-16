@@ -24,7 +24,7 @@ final readonly class SendOtpAction
         Otp::create([
             'destination' => $destination,
             'code'        => Hash::make($code),
-            'expires_at'  => now()->addMinutes(5),
+            'expires_at'  => now()->addMinutes(config('otp.expires_in')),
         ]);
 
         $this->sender->send($destination, $code);
