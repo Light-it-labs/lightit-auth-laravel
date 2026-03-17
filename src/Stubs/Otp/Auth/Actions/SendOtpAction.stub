@@ -5,16 +5,12 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Support\Facades\Hash;
-use Lightit\Authentication\Domain\Contracts\OtpSenderInterface;
+use Illuminate\Support\Facades\Notification;
+use Lightit\Authentication\App\Notifications\OtpNotification;
 use Lightit\Authentication\Domain\Models\Otp;
 
 final readonly class SendOtpAction
 {
-    public function __construct(
-        private OtpSenderInterface $sender,
-    ) {
-    }
-
     public function execute(string $destination): void
     {
         Otp::where('destination', $destination)->delete();
@@ -27,6 +23,6 @@ final readonly class SendOtpAction
         $otp->expires_at = now()->addMinutes(config('otp.expires_in'));
         $otp->save();
 
-        $this->sender->send($destination, $code);
+        Notification::route('mail', $destination)->notify(new OtpNotification($code));
     }
 }
