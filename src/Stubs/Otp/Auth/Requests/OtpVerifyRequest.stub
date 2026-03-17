@@ -40,6 +40,10 @@ final class OtpVerifyRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                if ($validator->errors()->has(self::EMAIL) || $validator->errors()->has(self::CODE)) {
+                    return;
+                }
+
                 try {
                     app(VerifyEmailOtpAction::class)->execute($this->getEmail(), $this->getCode());
                 } catch (InvalidOtpException $e) {
