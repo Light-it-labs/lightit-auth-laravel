@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Exceptions;
 
-use Exception;
+use Illuminate\Http\JsonResponse;
+use Lightit\Shared\App\Exceptions\Http\HttpException;
 
-final class InvalidOtpException extends Exception
+final class InvalidOtpException extends HttpException
 {
-    public function __construct()
-    {
-        parent::__construct('Invalid or expired OTP.');
-    }
+    protected int $status = JsonResponse::HTTP_UNPROCESSABLE_ENTITY;
+
+    protected string $errorCode = 'invalid_otp';
+
+    protected $message = 'Invalid or expired OTP.';
 }

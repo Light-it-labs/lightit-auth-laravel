@@ -7,13 +7,19 @@ namespace Lightit\Authentication\App\Controllers;
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\OtpVerifyRequest;
 use Lightit\Authentication\App\Resources\LoginResource;
+use Lightit\Authentication\Domain\Actions\ConsumeOtpAction;
 use Lightit\Authentication\Domain\Actions\LoginByUserAction;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class OtpVerifyController
 {
-    public function __invoke(OtpVerifyRequest $request, LoginByUserAction $loginByUserAction): JsonResponse
-    {
+    public function __invoke(
+        OtpVerifyRequest $request,
+        ConsumeOtpAction $consumeOtpAction,
+        LoginByUserAction $loginByUserAction,
+    ): JsonResponse {
+        $consumeOtpAction->execute($request->getEmail(), $request->getCode());
+
         $user = User::where('email', $request->getEmail())->first();
         $loginDto = $loginByUserAction->execute($user);
 
