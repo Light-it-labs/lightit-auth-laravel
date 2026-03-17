@@ -8,11 +8,18 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Lightit\Authentication\App\Notifications\OtpNotification;
 use Lightit\Authentication\Domain\Models\Otp;
+use Lightit\Users\Domain\Models\User;
 
 final readonly class SendOtpAction
 {
     public function execute(string $destination): void
     {
+        $user = User::where('email', $destination)->first();
+
+        if ($user === null) {
+            return;
+        }
+
         Otp::where('destination', $destination)->delete();
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
