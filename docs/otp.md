@@ -9,6 +9,10 @@ Email-based one-time password delivery for identity verification.
 
 The OTP flow is automatically installed when selected during `auth:setup`.
 
+ > Note: The generated `OtpVerifyController` issues API tokens using your configured token driver.  
+ > OTP therefore **requires** either JWT or Sanctum to be installed and enabled.  
+ > The `auth:setup` command enforces this by asking you to choose a token driver when you enable OTP.
+ 
 #### 2. Run the migration
 
 ```bash
@@ -36,7 +40,7 @@ Route::prefix('otp')->group(static function () {
 1. `POST /otp/send`
    - Body: `{ "email": "..." }`
    - Returns: `200` — generates a 6-digit code, stores it hashed in the `otps` table, and delivers it to the user via `OtpNotification`
-   - Any previously expired or used codes for the same destination are cleaned up automatically
+   - Any existing codes for the same destination are deleted before creating the new one
 
 2. User receives the code (via email by default)
 
