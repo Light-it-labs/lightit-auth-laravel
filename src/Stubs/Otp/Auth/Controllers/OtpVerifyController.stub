@@ -14,7 +14,7 @@ final readonly class OtpVerifyController
 {
     public function __invoke(OtpVerifyRequest $request, LoginByUserAction $loginByUserAction): JsonResponse
     {
-        $user = User::where('email', $request->getDestination())->first();
+        $user = User::where('email', $request->getEmail())->first();
         $loginDto = $loginByUserAction->execute($user);
 
         return LoginResource::make($loginDto)->response();

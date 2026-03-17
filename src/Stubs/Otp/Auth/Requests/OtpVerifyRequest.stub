@@ -25,7 +25,7 @@ final class OtpVerifyRequest extends FormRequest
         ];
     }
 
-    public function getDestination(): string
+    public function getEmail(): string
     {
         return $this->string(self::EMAIL)->toString();
     }
@@ -41,7 +41,7 @@ final class OtpVerifyRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 try {
-                    app(VerifyOtpAction::class)->execute($this->getDestination(), $this->getCode());
+                    app(VerifyOtpAction::class)->execute($this->getEmail(), $this->getCode());
                 } catch (InvalidOtpException $e) {
                     $validator->errors()->add(self::CODE, $e->getMessage());
                 }

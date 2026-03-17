@@ -13,10 +13,10 @@ final readonly class OtpSendController
 {
     public function __invoke(OtpSendRequest $request, SendOtpAction $sendOtpAction): JsonResponse
     {
-        $user = User::where('email', $request->getDestination())->first();
+        $user = User::where('email', $request->getEmail())->first();
 
         if ($user !== null) {
-            $sendOtpAction->execute($request->getDestination());
+            $sendOtpAction->execute($request->getEmail());
         }
 
         return response()->json([

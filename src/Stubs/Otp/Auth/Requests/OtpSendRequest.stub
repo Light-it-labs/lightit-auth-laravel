@@ -18,7 +18,7 @@ final class OtpSendRequest extends FormRequest
         ];
     }
 
-    public function getDestination(): string
+    public function getEmail(): string
     {
         return $this->string(self::EMAIL)->toString();
     }
