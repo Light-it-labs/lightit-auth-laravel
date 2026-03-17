@@ -35,16 +35,29 @@ Laravel sends the reset token inside a URL pointing to your frontend. Add this i
 
 ```php
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\Config;
 use App\Models\User;
 
 public function boot(): void
 {
     ResetPassword::createUrlUsing(function (User $user, string $token): string {
-        return 'https://your-frontend.com/reset-password?token=' . $token . '&email=' . urlencode($user->email);
+        return Config::string('app.password_reset_url') . '?token=' . $token . '&email=' . urlencode($user->email);
     });
 
     // ... rest of boot()
 }
+```
+
+Add the corresponding env variable to your `.env` and `.env.example`:
+
+```env
+PASSWORD_RESET_URL=https://your-frontend.com/reset-password
+```
+
+And expose it in `config/app.php`:
+
+```php
+'password_reset_url' => env('PASSWORD_RESET_URL'),
 ```
 
 #### 5. Define routes
