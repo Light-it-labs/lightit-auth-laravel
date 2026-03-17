@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('code');
             $table->datetime('expires_at');
             $table->datetime('used_at')->nullable();
-            $table->timestamp('created_at');
-            $table->timestamp('updated_at');
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
 
             $table->index('destination');
         });
