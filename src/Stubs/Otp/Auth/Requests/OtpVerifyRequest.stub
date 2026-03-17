@@ -6,6 +6,7 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Email;
 use Illuminate\Validation\Validator;
 use Lightit\Authentication\Domain\Actions\VerifyOtpAction;
 use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
@@ -19,7 +20,7 @@ final class OtpVerifyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            self::EMAIL => ['required', Rule::email()->strict(), Rule::exists('users', 'email')],
+            self::EMAIL => ['required', Email::default(), Rule::exists('users', 'email')],
             self::CODE  => ['required', 'string', 'digits:6'],
         ];
     }
