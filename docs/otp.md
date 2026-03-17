@@ -15,7 +15,7 @@ The OTP flow is automatically installed when selected during `auth:setup`.
 php artisan migrate
 ```
 
-This creates the `otps` table with a generic `destination` column, so the same table works for any delivery channel.
+This creates the `otps` table.
 
 #### 3. Define routes
 
@@ -58,23 +58,3 @@ flowchart TD
     MarkUsed --> E200[200 OK]
 ```
 
----
-
-### Adding a new delivery channel
-
-Delivery is handled by `OtpNotification`, which uses Laravel's built-in Notifications system. To add a new channel, update `via()` and add the corresponding `to{Channel}()` method:
-
-```php
-public function via(): array
-{
-    return ['mail', 'vonage'];
-}
-
-public function toVonage(): VonageSmsMessage
-{
-    return (new VonageSmsMessage())
-        ->content('Your OTP code is: ' . $this->code);
-}
-```
-
-No migration or business logic changes needed — the `destination` column is channel-agnostic.
