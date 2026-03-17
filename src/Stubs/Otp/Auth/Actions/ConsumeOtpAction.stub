@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Support\Facades\Hash;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpVerifyDto;
 use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
 use Lightit\Authentication\Domain\Models\Otp;
 
@@ -13,14 +14,14 @@ final readonly class ConsumeOtpAction
     /**
      * @throws InvalidOtpException
      */
-    public function execute(string $destination, string $code): void
+    public function execute(OtpVerifyDto $dto): void
     {
-        $otp = Otp::where('destination', $destination)
+        $otp = Otp::where('destination', $dto->email)
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
             ->first();
 
-        if ($otp === null || ! Hash::check($code, $otp->code)) {
+        if ($otp === null || ! Hash::check($dto->code, $otp->code)) {
             throw new InvalidOtpException();
         }
 

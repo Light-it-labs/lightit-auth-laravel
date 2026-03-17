@@ -7,6 +7,7 @@ namespace Lightit\Authentication\App\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Email;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpVerifyDto;
 
 final class OtpVerifyRequest extends FormRequest
 {
@@ -22,13 +23,11 @@ final class OtpVerifyRequest extends FormRequest
         ];
     }
 
-    public function getEmail(): string
+    public function toDto(): OtpVerifyDto
     {
-        return $this->string(self::EMAIL)->toString();
-    }
-
-    public function getCode(): string
-    {
-        return $this->string(self::CODE)->toString();
+        return new OtpVerifyDto(
+            email: $this->string(self::EMAIL)->toString(),
+            code: $this->string(self::CODE)->toString(),
+        );
     }
 }

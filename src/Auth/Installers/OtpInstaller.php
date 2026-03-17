@@ -13,6 +13,7 @@ final class OtpInstaller implements AuthInstallerInterface
         'Authentication/App/Requests',
         'Authentication/App/Notifications',
         'Authentication/Domain/Actions',
+        'Authentication/Domain/DataTransferObjects',
         'Authentication/Domain/Models',
         'Authentication/Domain/Exceptions',
     ];
@@ -49,15 +50,16 @@ final class OtpInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Controllers/OtpSendController.stub'       => 'App/Controllers/OtpSendController.php',
-            '/Controllers/OtpVerifyController.stub'     => 'App/Controllers/OtpVerifyController.php',
-            '/Requests/OtpSendRequest.stub'             => 'App/Requests/OtpSendRequest.php',
-            '/Requests/OtpVerifyRequest.stub'           => 'App/Requests/OtpVerifyRequest.php',
-            '/Notifications/OtpNotification.stub'       => 'App/Notifications/OtpNotification.php',
-            '/Actions/SendOtpAction.stub'               => 'Domain/Actions/SendOtpAction.php',
-            '/Actions/ConsumeOtpAction.stub'            => 'Domain/Actions/ConsumeOtpAction.php',
-            '/Models/Otp.stub'                          => 'Domain/Models/Otp.php',
-            '/Exceptions/InvalidOtpException.stub'      => 'Domain/Exceptions/InvalidOtpException.php',
+            '/Controllers/OtpSendController.stub'                       => 'App/Controllers/OtpSendController.php',
+            '/Controllers/OtpVerifyController.stub'                     => 'App/Controllers/OtpVerifyController.php',
+            '/Requests/OtpSendRequest.stub'                             => 'App/Requests/OtpSendRequest.php',
+            '/Requests/OtpVerifyRequest.stub'                           => 'App/Requests/OtpVerifyRequest.php',
+            '/Notifications/OtpNotification.stub'                       => 'App/Notifications/OtpNotification.php',
+            '/Actions/SendOtpAction.stub'                               => 'Domain/Actions/SendOtpAction.php',
+            '/Actions/ConsumeOtpAction.stub'                            => 'Domain/Actions/ConsumeOtpAction.php',
+            '/DataTransferObjects/OtpVerifyDto.stub'                    => 'Domain/DataTransferObjects/OtpVerifyDto.php',
+            '/Models/Otp.stub'                                          => 'Domain/Models/Otp.php',
+            '/Exceptions/InvalidOtpException.stub'                      => 'Domain/Exceptions/InvalidOtpException.php',
         ];
 
         foreach ($files as $stub => $destination) {

@@ -18,9 +18,11 @@ final readonly class OtpVerifyController
         ConsumeOtpAction $consumeOtpAction,
         LoginByUserAction $loginByUserAction,
     ): JsonResponse {
-        $consumeOtpAction->execute($request->getEmail(), $request->getCode());
+        $dto = $request->toDto();
 
-        $user = User::where('email', $request->getEmail())->first();
+        $consumeOtpAction->execute($dto);
+
+        $user = User::where('email', $dto->email)->first();
         $loginDto = $loginByUserAction->execute($user);
 
         return LoginResource::make($loginDto)->response();
