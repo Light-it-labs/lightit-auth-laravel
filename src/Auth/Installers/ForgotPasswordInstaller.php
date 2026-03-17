@@ -13,6 +13,7 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
+        'Authentication/Domain/Exceptions',
     ];
 
     public function __construct(
@@ -52,6 +53,7 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
             '/Actions/SendPasswordResetLinkAction.stub'           => 'Domain/Actions/SendPasswordResetLinkAction.php',
             '/Actions/ResetPasswordAction.stub'                   => 'Domain/Actions/ResetPasswordAction.php',
             '/DataTransferObjects/ResetPasswordDto.stub'          => 'Domain/DataTransferObjects/ResetPasswordDto.php',
+            '/Exceptions/ResetPasswordException.stub'             => 'Domain/Exceptions/ResetPasswordException.php',
         ];
 
         foreach ($files as $stub => $destination) {
