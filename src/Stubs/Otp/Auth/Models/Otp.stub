@@ -11,7 +11,7 @@ final class Otp extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'expires_at' => 'datetime',
-        'used_at'    => 'datetime',
+        'expires_at' => 'immutable_datetime',
+        'used_at'    => 'immutable_datetime',
     ];
 }
