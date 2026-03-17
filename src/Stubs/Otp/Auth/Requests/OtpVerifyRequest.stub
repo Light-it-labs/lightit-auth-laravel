@@ -19,7 +19,7 @@ final class OtpVerifyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            self::EMAIL => ['required', Rule::email()->strict()],
+            self::EMAIL => ['required', Rule::email()->strict(), Rule::exists('users', 'email')],
             self::CODE  => ['required', 'string', 'digits:6'],
         ];
     }
