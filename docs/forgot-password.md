@@ -60,7 +60,41 @@ And expose it in `config/app.php`:
 'password_reset_url' => env('PASSWORD_RESET_URL'),
 ```
 
-#### 5. Define routes
+#### 5. Customize the email (optional)
+
+By default, Laravel sends a plain Markdown email with a generic subject and a "Reset Password" button. To customize the content, use `toMailUsing` in your `AppServiceProvider::boot()`:
+
+```php
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Support\Facades\Config;
+use App\Models\User;
+
+ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
+    $url = Config::string('app.password_reset_url') . '?token=' . $token . '&email=' . urlencode($user->email);
+
+    return (new MailMessage)
+        ->subject('Reset your password')
+        ->line('Click the button below to reset your password.')
+        ->action('Reset Password', $url);
+});
+```
+
+> **Note:** When using `toMailUsing`, `createUrlUsing` is bypassed — you must build the reset URL yourself.
+
+For fully custom emails with images or branded HTML, point `view()` to a Blade template instead:
+
+```php
+ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
+    $url = Config::string('app.password_reset_url') . '?token=' . $token . '&email=' . urlencode($user->email);
+
+    return (new MailMessage)
+        ->subject('Reset your password')
+        ->view('emails.reset-password', ['url' => $url, 'user' => $user]);
+});
+```
+
+#### 6. Define routes
 
 ```php
 use Lightit\Authentication\App\Controllers\ForgotPasswordController;
