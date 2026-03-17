@@ -24,6 +24,7 @@ final readonly class VerifyOtpAction
             throw new InvalidOtpException();
         }
 
-        $otp->update(['used_at' => now()]);
+        $otp->used_at = now();
+        $otp->saveOrFail();
     }
 }
