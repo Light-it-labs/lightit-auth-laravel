@@ -6,6 +6,9 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
+use Lightit\Authentication\Domain\Actions\VerifyOtpAction;
+use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
 
 final class OtpVerifyRequest extends FormRequest
 {
@@ -29,5 +32,19 @@ final class OtpVerifyRequest extends FormRequest
     public function getCode(): string
     {
         return $this->string(self::CODE)->toString();
+    }
+
+    /** @return array<callable> */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                try {
+                    app(VerifyOtpAction::class)->execute($this->getDestination(), $this->getCode());
+                } catch (InvalidOtpException $e) {
+                    $validator->errors()->add(self::CODE, $e->getMessage());
+                }
+            },
+        ];
     }
 }
