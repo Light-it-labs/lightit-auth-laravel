@@ -36,7 +36,7 @@ Laravel sends the reset token inside a URL pointing to your frontend. Add this i
 ```php
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Config;
-use App\Models\User;
+use Lightit\Users\Domain\Models\User;
 
 public function boot(): void
 {
@@ -68,7 +68,7 @@ By default, Laravel sends a plain Markdown email with a generic subject and a "R
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Config;
-use App\Models\User;
+use Lightit\Users\Domain\Models\User;
 
 ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
     $url = Config::string('app.password_reset_url') . '?token=' . $token . '&email=' . urlencode($user->email);
@@ -85,6 +85,8 @@ ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
 For fully custom emails with images or branded HTML, point `view()` to a Blade template instead:
 
 ```php
+use Lightit\Users\Domain\Models\User;
+
 ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
     $url = Config::string('app.password_reset_url') . '?token=' . $token . '&email=' . urlencode($user->email);
 
