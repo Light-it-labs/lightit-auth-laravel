@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
 use Lightit\Authentication\Domain\Models\Otp;
 
-final readonly class VerifyOtpAction
+final readonly class VerifyEmailOtpAction
 {
     /**
      * @throws InvalidOtpException

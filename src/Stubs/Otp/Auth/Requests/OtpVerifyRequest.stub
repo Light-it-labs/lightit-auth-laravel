@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Email;
 use Illuminate\Validation\Validator;
-use Lightit\Authentication\Domain\Actions\VerifyOtpAction;
+use Lightit\Authentication\Domain\Actions\VerifyEmailOtpAction;
 use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
 
 final class OtpVerifyRequest extends FormRequest
@@ -41,7 +41,7 @@ final class OtpVerifyRequest extends FormRequest
         return [
             function (Validator $validator): void {
                 try {
-                    app(VerifyOtpAction::class)->execute($this->getEmail(), $this->getCode());
+                    app(VerifyEmailOtpAction::class)->execute($this->getEmail(), $this->getCode());
                 } catch (InvalidOtpException $e) {
                     $validator->errors()->add(self::CODE, $e->getMessage());
                 }
