@@ -20,12 +20,12 @@ final class OtpNotification extends Notification
     }
 
     /** @return array<string> */
-    public function via(): array
+    public function via(mixed $notifiable): array
     {
         return ['mail'];
     }
 
-    public function toMail(): MailMessage
+    public function toMail(mixed $notifiable): MailMessage
     {
         return (new MailMessage())
             ->subject('Your one-time password')
