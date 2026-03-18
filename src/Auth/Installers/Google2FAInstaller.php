@@ -43,7 +43,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->createAuthFiles();
         $this->publishConfiguration();
         $this->copyMigration();
-        $this->copyMiddlewares();
         $this->copyConfigFiles();
         $this->copyLangFiles();
 
@@ -52,7 +51,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 5, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -146,7 +145,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function publishConfiguration(): void
     {
-        $this->composerInstaller->printStep(2, 6, 'Publishing configuration');
+        $this->composerInstaller->printStep(2, 5, 'Publishing configuration');
 
         $this->command->call('vendor:publish', [
             '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
@@ -155,7 +154,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 6, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 5, 'Copying migration files');
 
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
@@ -167,36 +166,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
-    private function copyMiddlewares(): void
-    {
-        $this->composerInstaller->printStep(4, 6, 'Copying Middlewares classes');
-
-        $destinationFolder = 'src/Shared/App/Middlewares/';
-
-        if (! is_dir($path = base_path($destinationFolder))) {
-            mkdir($path, 0755, true);
-        }
-
-        $stubNames = [
-            'ActiveTwoFactorAuthenticationMiddleware',
-            'InactiveTwoFactorAuthenticationMiddleware',
-        ];
-
-        foreach ($stubNames as $stubName) {
-            $stub = __DIR__ . "/../../Stubs/Google2FA/Auth/Middlewares/$stubName.stub";
-            $destination = "{$destinationFolder}{$stubName}.php";
-
-            copy(
-                $stub,
-                base_path($destination)
-            );
-            $this->composerInstaller->printMiddlewareCreated("Created: {$destination}");
-        }
-    }
-
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(5, 6, 'Copying config files');
+        $this->composerInstaller->printStep(4, 5, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -211,7 +183,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(6, 6, 'Copying lang files');
+        $this->composerInstaller->printStep(5, 5, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
