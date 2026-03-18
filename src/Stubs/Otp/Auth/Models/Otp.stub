@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Model;
 
 final class Otp extends Model
 {
-    protected $guarded = [];
+    protected $guarded = [
+        'id',
+    ];
 
     protected $casts = [
         'expires_at' => 'immutable_datetime',
