@@ -8,22 +8,16 @@ use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\OtpVerifyRequest;
 use Lightit\Authentication\App\Resources\LoginResource;
 use Lightit\Authentication\Domain\Actions\ConsumeOtpAction;
-use Lightit\Authentication\Domain\Actions\LoginByUserAction;
-use Lightit\Users\Domain\Models\User;
 
 final readonly class OtpVerifyController
 {
     public function __invoke(
         OtpVerifyRequest $request,
         ConsumeOtpAction $consumeOtpAction,
-        LoginByUserAction $loginByUserAction,
     ): JsonResponse {
         $dto = $request->toDto();
 
-        $consumeOtpAction->execute($dto);
-
-        $user = User::where('email', $dto->email)->first();
-        $loginDto = $loginByUserAction->execute($user);
+        $loginDto = $consumeOtpAction->execute($dto);
 
         return LoginResource::make($loginDto)->response();
     }

@@ -59,7 +59,7 @@ final class OtpInstaller implements AuthInstallerInterface
             '/Actions/ConsumeOtpAction.stub'                            => 'Domain/Actions/ConsumeOtpAction.php',
             '/DataTransferObjects/OtpVerifyDto.stub'                    => 'Domain/DataTransferObjects/OtpVerifyDto.php',
             '/Models/Otp.stub'                                          => 'Domain/Models/Otp.php',
-            '/Exceptions/InvalidOtpException.stub'                      => 'Domain/Exceptions/InvalidOtpException.php',
+            '/Exceptions/OtpException.stub'                             => 'Domain/Exceptions/OtpException.php',
         ];
 
         foreach ($files as $stub => $destination) {

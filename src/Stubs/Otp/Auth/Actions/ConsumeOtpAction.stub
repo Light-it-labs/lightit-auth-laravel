@@ -5,16 +5,24 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Support\Facades\Hash;
+use Lightit\Authentication\Domain\Actions\LoginByUserAction;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Authentication\Domain\DataTransferObjects\OtpVerifyDto;
-use Lightit\Authentication\Domain\Exceptions\InvalidOtpException;
+use Lightit\Authentication\Domain\Exceptions\OtpException;
 use Lightit\Authentication\Domain\Models\Otp;
+use Lightit\Users\Domain\Models\User;
 
 final readonly class ConsumeOtpAction
 {
+    public function __construct(
+        private LoginByUserAction $loginByUserAction,
+    ) {
+    }
+
     /**
-     * @throws InvalidOtpException
+     * @throws OtpException
      */
-    public function execute(OtpVerifyDto $dto): void
+    public function execute(OtpVerifyDto $dto): LoginDto
     {
         $otp = Otp::where('destination', $dto->email)
             ->whereNull('used_at')
@@ -22,10 +30,14 @@ final readonly class ConsumeOtpAction
             ->first();
 
         if ($otp === null || ! Hash::check($dto->code, $otp->code)) {
-            throw new InvalidOtpException();
+            throw new OtpException('Invalid or expired OTP.');
         }
 
         $otp->used_at = now();
         $otp->saveOrFail();
+
+        $user = User::where('email', $dto->email)->firstOrFail();
+
+        return $this->loginByUserAction->execute($user);
     }
 }
