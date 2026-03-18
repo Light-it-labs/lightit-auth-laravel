@@ -57,6 +57,7 @@ final class OtpInstaller implements AuthInstallerInterface
             '/Notifications/OtpNotification.stub'                       => 'App/Notifications/OtpNotification.php',
             '/Actions/SendOtpAction.stub'                               => 'Domain/Actions/SendOtpAction.php',
             '/Actions/ConsumeOtpAction.stub'                            => 'Domain/Actions/ConsumeOtpAction.php',
+            '/DataTransferObjects/OtpSendDto.stub'                      => 'Domain/DataTransferObjects/OtpSendDto.php',
             '/DataTransferObjects/OtpVerifyDto.stub'                    => 'Domain/DataTransferObjects/OtpVerifyDto.php',
             '/Models/Otp.stub'                                          => 'Domain/Models/Otp.php',
             '/Exceptions/OtpException.stub'                             => 'Domain/Exceptions/OtpException.php',
