@@ -6,6 +6,7 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Email;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpSendDto;
 
 final class OtpSendRequest extends FormRequest
 {
@@ -18,8 +19,10 @@ final class OtpSendRequest extends FormRequest
         ];
     }
 
-    public function getEmail(): string
+    public function toDto(): OtpSendDto
     {
-        return $this->string(self::EMAIL)->toString();
+        return new OtpSendDto(
+            email: strtolower($this->string(self::EMAIL)->toString()),
+        );
     }
 }

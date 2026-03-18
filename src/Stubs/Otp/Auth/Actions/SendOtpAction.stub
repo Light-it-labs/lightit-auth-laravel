@@ -8,29 +8,30 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Lightit\Authentication\App\Notifications\OtpNotification;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpSendDto;
 use Lightit\Authentication\Domain\Models\Otp;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class SendOtpAction
 {
-    public function execute(string $destination): void
+    public function execute(OtpSendDto $dto): void
     {
-        $user = User::where('email', $destination)->first();
+        $user = User::where('email', $dto->email)->first();
 
         if ($user === null) {
             return;
         }
 
-        Otp::where('destination', $destination)->delete();
+        Otp::where('destination', $dto->email)->delete();
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
         $otp = new Otp();
-        $otp->destination = $destination;
+        $otp->destination = $dto->email;
         $otp->code = Hash::make($code);
         $otp->expires_at = now()->addMinutes(Config::integer('otp.expires_in'));
         $otp->save();
 
-        Notification::route('mail', $destination)->notify(new OtpNotification($code));
+        Notification::route('mail', $dto->email)->notify(new OtpNotification($code));
     }
 }

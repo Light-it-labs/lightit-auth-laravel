@@ -26,7 +26,7 @@ final class OtpVerifyRequest extends FormRequest
     public function toDto(): OtpVerifyDto
     {
         return new OtpVerifyDto(
-            email: $this->string(self::EMAIL)->toString(),
+            email: strtolower($this->string(self::EMAIL)->toString()),
             code: $this->string(self::CODE)->toString(),
         );
     }

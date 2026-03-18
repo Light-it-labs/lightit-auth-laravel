@@ -7,6 +7,6 @@ return [
     /*
      * OTP expiration time in minutes.
      */
-    'expires_in' => (int) env('OTP_EXPIRES_IN', 5),
+    'expires_in' => (int) env('OTP_EXPIRES_IN_MINUTES', 5),
 
 ];

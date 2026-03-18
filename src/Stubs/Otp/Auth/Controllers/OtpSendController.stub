@@ -12,7 +12,7 @@ final readonly class OtpSendController
 {
     public function __invoke(OtpSendRequest $request, SendOtpAction $sendOtpAction): JsonResponse
     {
-        $sendOtpAction->execute($request->getEmail());
+        $sendOtpAction->execute($request->toDto());
 
         return response()->json([
             'data' => [
