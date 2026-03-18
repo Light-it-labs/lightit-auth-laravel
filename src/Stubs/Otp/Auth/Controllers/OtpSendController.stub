@@ -4,20 +4,16 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\App\Controllers;
 
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Lightit\Authentication\App\Requests\OtpSendRequest;
 use Lightit\Authentication\Domain\Actions\SendOtpAction;
 
 final readonly class OtpSendController
 {
-    public function __invoke(OtpSendRequest $request, SendOtpAction $sendOtpAction): JsonResponse
+    public function __invoke(OtpSendRequest $request, SendOtpAction $sendOtpAction): Response
     {
         $sendOtpAction->execute($request->toDto());
 
-        return response()->json([
-            'data' => [
-                'message' => 'OTP sent.',
-            ],
-        ]);
+        return response()->noContent();
     }
 }
