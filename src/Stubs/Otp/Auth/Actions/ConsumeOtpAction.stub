@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\Actions\LoginByUserAction;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
@@ -24,19 +25,20 @@ final readonly class ConsumeOtpAction
      */
     public function execute(OtpVerifyDto $dto): LoginDto
     {
-        $otp = Otp::where('destination', $dto->email)
+        $otp = Otp::query()
+            ->where('destination', $dto->email)
             ->whereNull('used_at')
-            ->where('expires_at', '>', now()->toImmutable())
+            ->where('expires_at', '>', CarbonImmutable::now())
             ->first();
 
         if ($otp === null || ! Hash::check($dto->code, $otp->code)) {
             throw new OtpException('Invalid or expired OTP.');
         }
 
-        $otp->used_at = now()->toImmutable();
-        $otp->saveOrFail();
+        $user = User::whereRaw('LOWER(email) = ?', [$dto->email])->firstOrFail();
 
-        $user = User::where('email', $dto->email)->firstOrFail();
+        $otp->used_at = CarbonImmutable::now();
+        $otp->saveOrFail();
 
         return $this->loginByUserAction->execute($user);
     }

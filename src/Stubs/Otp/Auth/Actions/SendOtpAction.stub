@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\App\Notifications\OtpNotification;
@@ -15,7 +16,7 @@ final readonly class SendOtpAction
 {
     public function execute(OtpSendDto $dto): void
     {
-        $user = User::query()->where('email', $dto->email)->first();
+        $user = User::query()->whereRaw('LOWER(email) = ?', [$dto->email])->first();
 
         if ($user === null) {
             return;
@@ -31,7 +32,7 @@ final readonly class SendOtpAction
         $otp = new Otp();
         $otp->destination = $dto->email;
         $otp->code = Hash::make($code);
-        $otp->expires_at = now()->toImmutable()->addMinutes(Config::integer('otp.expires_in'));
+        $otp->expires_at = CarbonImmutable::now()->addMinutes(Config::integer('otp.expires_in'));
         $otp->saveOrFail();
 
         $user->notify(new OtpNotification($code));
