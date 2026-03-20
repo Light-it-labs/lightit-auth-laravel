@@ -6,6 +6,7 @@ namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
+use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\JwtInstaller;
@@ -75,6 +76,11 @@ class AuthSetupCommand extends Command
             default: false,
         );
 
+        $enableForgotPassword = confirm(
+            label: 'Would you like to enable the Forgot Password flow?',
+            default: false,
+        );
+
         /** @var array<string> $drivers */
         $this->setupDrivers($drivers);
 
@@ -84,6 +90,10 @@ class AuthSetupCommand extends Command
 
         if ($enableRolesAndPermissions) {
             $this->setupRolesAndPermissions();
+        }
+
+        if ($enableForgotPassword) {
+            $this->setupForgotPassword();
         }
 
         $this->printSuccess('Authentication setup completed!');
@@ -163,6 +173,16 @@ class AuthSetupCommand extends Command
         $composerInstaller = new ComposerInstaller($this);
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
         $laravelPermission->install();
+        $this->printSectionSeparator();
+    }
+
+    protected function setupForgotPassword(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Forgot Password...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller);
+        $forgotPasswordInstaller->install();
         $this->printSectionSeparator();
     }
 }

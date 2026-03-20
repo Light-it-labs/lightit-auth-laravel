@@ -23,6 +23,7 @@ Supporting the following packages
 - [Google SSO](docs/google-sso.md)
 - [Google 2FA](docs/google-2fa.md)
 - [Roles & Permissions](docs/permission.md)
+- [Forgot Password](docs/forgot-password.md)
 
 - [Credits](#credits)
 
