@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Validation\Rules\Email;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpVerifyDto;
+
+final class OtpVerifyRequest extends FormRequest
+{
+    public const string EMAIL = 'email';
+
+    public const string CODE = 'code';
+
+    public function rules(): array
+    {
+        return [
+            self::EMAIL => ['required', Email::default()],
+            self::CODE  => ['required', 'string', 'digits:' . Config::integer('otp.length')],
+        ];
+    }
+
+    public function toDto(): OtpVerifyDto
+    {
+        return new OtpVerifyDto(
+            email: strtolower($this->string(self::EMAIL)->toString()),
+            code: $this->string(self::CODE)->toString(),
+        );
+    }
+}

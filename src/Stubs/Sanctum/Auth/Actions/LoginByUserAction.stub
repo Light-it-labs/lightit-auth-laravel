@@ -9,7 +9,7 @@ use Lightit\Users\Domain\Models\User;
 
 final class LoginByUserAction
 {
-    public function loginByUser(User $user): LoginDto
+    public function execute(User $user): LoginDto
     {
         $token = $user->createToken('default');
 

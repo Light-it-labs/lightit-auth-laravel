@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    /*
+     * OTP expiration time in minutes.
+     */
+    'expires_in' => (int) env('OTP_EXPIRES_IN_MINUTES', 5),
+
+    /*
+     * OTP length.
+     */
+    'length' => (int) env('OTP_LENGTH', 6),
+
+];

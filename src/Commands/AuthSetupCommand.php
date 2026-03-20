@@ -11,6 +11,7 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\JwtInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
+use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\AuthDriver;
@@ -76,6 +77,13 @@ class AuthSetupCommand extends Command
             default: false,
         );
 
+        $hasTokenDriver = in_array(AuthDriver::Jwt->value, $drivers) || in_array(AuthDriver::SanctumApiToken->value, $drivers);
+
+        $enableOtp = $hasTokenDriver && confirm(
+            label: 'Would you like to enable OTP (one-time password)?',
+            default: false,
+        );
+
         $enableForgotPassword = confirm(
             label: 'Would you like to enable the Forgot Password flow?',
             default: false,
@@ -92,6 +100,10 @@ class AuthSetupCommand extends Command
             $this->setupRolesAndPermissions();
         }
 
+        if ($enableOtp) {
+            $this->setupOtp();
+        }
+        
         if ($enableForgotPassword) {
             $this->setupForgotPassword();
         }
@@ -173,6 +185,16 @@ class AuthSetupCommand extends Command
         $composerInstaller = new ComposerInstaller($this);
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
         $laravelPermission->install();
+        $this->printSectionSeparator();
+    }
+
+    protected function setupOtp(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up OTP...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $otpInstaller = new OtpInstaller($composerInstaller);
+        $otpInstaller->install();
         $this->printSectionSeparator();
     }
 

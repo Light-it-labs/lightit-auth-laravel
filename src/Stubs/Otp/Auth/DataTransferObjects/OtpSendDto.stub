@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\DataTransferObjects;
+
+readonly class OtpSendDto
+{
+    public function __construct(
+        public string $email,
+    ) {
+    }
+}

@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Notifications;
+
+use Illuminate\Support\Facades\Config;
+use Illuminate\Bus\Queueable;
+use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
+use Illuminate\Queue\SerializesModels;
+
+final class OtpNotification extends Notification
+{
+    use Queueable;
+    use SerializesModels;
+
+    public function __construct(
+        private readonly string $code,
+    ) {
+    }
+
+    /** @return array<string> */
+    public function via(mixed $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    public function toMail(mixed $notifiable): MailMessage
+    {
+        return (new MailMessage())
+            ->subject('Your one-time password')
+            ->greeting('Hello!')
+            ->line('Use the following code to verify your identity:')
+            ->line('**' . $this->code . '**')
+            ->line('This code expires in ' . Config::integer('otp.expires_in') . ' minutes.')
+            ->line('If you did not request this code, no further action is required.');
+    }
+}

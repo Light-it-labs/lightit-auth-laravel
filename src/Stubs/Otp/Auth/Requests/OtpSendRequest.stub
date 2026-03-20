@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rules\Email;
+use Lightit\Authentication\Domain\DataTransferObjects\OtpSendDto;
+
+final class OtpSendRequest extends FormRequest
+{
+    public const string EMAIL = 'email';
+
+    public function rules(): array
+    {
+        return [
+            self::EMAIL => ['required', Email::default()],
+        ];
+    }
+
+    public function toDto(): OtpSendDto
+    {
+        return new OtpSendDto(
+            email: strtolower($this->string(self::EMAIL)->toString()),
+        );
+    }
+}

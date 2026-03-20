@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\OtpVerifyRequest;
+use Lightit\Authentication\App\Resources\LoginResource;
+use Lightit\Authentication\Domain\Actions\ConsumeOtpAction;
+
+final readonly class OtpVerifyController
+{
+    public function __invoke(
+        OtpVerifyRequest $request,
+        ConsumeOtpAction $consumeOtpAction,
+    ): JsonResponse {
+        $dto = $request->toDto();
+
+        $loginDto = $consumeOtpAction->execute($dto);
+
+        return LoginResource::make($loginDto)->response();
+    }
+}
