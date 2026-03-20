@@ -70,7 +70,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
         }
 
         /** @var array<string> $value */
-        return $value ?? [];
+        return $value;
     }
 
     /**
@@ -86,7 +86,9 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
     {
         $mandatory = Config::boolean('google2fa.mandatory');
 
-        $id = (string) $this->id;
+        /** @var int|string $rawId */
+        $rawId = $this->id;
+        $id = (string) $rawId;
 
         $payload = new TwoFactorTokenPayloadDto(
             sub: $id,

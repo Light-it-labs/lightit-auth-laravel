@@ -11,6 +11,11 @@ use Lightit\Users\Domain\Models\User;
 
 final class SetupTwoFactorAuthenticationRequest extends FormRequest
 {
+    public function __construct(private readonly VerifyTwoFactorToken $verifyTwoFactorToken)
+    {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         $token = $this->bearerToken();
@@ -36,6 +41,6 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
         /** @var string $token */
         $token = $this->bearerToken();
 
-        return app(VerifyTwoFactorToken::class)->execute($token);
+        return $this->verifyTwoFactorToken->execute($token);
     }
 }

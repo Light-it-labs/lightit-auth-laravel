@@ -57,8 +57,11 @@ final class LoginContext
             throw new \RuntimeException('Token not set');
         }
 
+        /** @var string $token */
+        $token = $this->finalToken;
+
         return new LoginDto(
-            accessToken: $this->finalToken,
+            accessToken: $token,
             tokenType: $this->tokenType,
             expiresIn: $this->expiresInSeconds,
         );
