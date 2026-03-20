@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\App\Requests\RequestTwoFactorResetRequest;
+use Lightit\Authentication\App\Resources\LoginResource;
+use Lightit\Authentication\Domain\Actions\IssueTwoFactorResetTokenAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class RequestTwoFactorResetController
+{
+    public function __invoke(
+        RequestTwoFactorResetRequest $request,
+        IssueTwoFactorResetTokenAction $issueTwoFactorResetTokenAction,
+    ): JsonResponse {
+        $guardName = Config::string('google2fa.guard');
+
+        /** @var User $user */
+        $user = $request->user($guardName);
+
+        $result = $issueTwoFactorResetTokenAction->execute($user, $request->getPassword());
+
+        return LoginResource::make($result)->response();
+    }
+}

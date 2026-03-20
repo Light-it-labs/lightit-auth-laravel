@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
+
+final class CompleteTwoFactorAuthenticationRequest extends FormRequest
+{
+    public const ONE_TIME_PASSWORD = 'one_time_password';
+
+    private User|null $authenticatedUser = null;
+
+    public function __construct(private readonly VerifyTwoFactorToken $verifyTwoFactorToken)
+    {
+        parent::__construct();
+    }
+
+    public function authorize(): bool
+    {
+        $token = $this->bearerToken();
+
+        if ($token) {
+            $user = $this->verifyTwoFactorToken->execute($token);
+
+            if (! $user->hasTwoFactorAuthenticationSecretStored()) {
+                throw new TwoFactorAuthException(
+                    message: __('google2fa.2fa_not_configured'),
+                    reason: TwoFactorReason::SetupRequired->value
+                );
+            }
+
+            $this->authenticatedUser = $user;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function getAuthenticatedUser(): User
+    {
+        /** @var User $user */
+        $user = $this->authenticatedUser;
+
+        return $user;
+    }
+
+    public function rules(): array
+    {
+        return [
+            self::ONE_TIME_PASSWORD => ['required', 'string', 'digits:6'],
+        ];
+    }
+
+    public function getOTPCode(): string
+    {
+        return $this->string(self::ONE_TIME_PASSWORD)->toString();
+    }
+}

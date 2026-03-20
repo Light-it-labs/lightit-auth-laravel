@@ -1,9 +1,15 @@
 <?php
 
 return [
+    'invalid_credentials' => 'Invalid credentials.',
     'invalid_otp' => 'Invalid 2FA OTP.',
     '2fa_not_configured' => 'Two-factor authentication is not configured.',
     '2fa_expired' => 'Two-factor authentication is expired.',
     '2fa_already_configured' => 'Two-factor authentication is already configured.',
     '2fa_disabled' => 'Successfully disabled two-factor authentication.',
+    'secret_not_configured' => 'Two-factor authentication secret is not configured.',
+    'invalid_recovery_code' => 'The provided recovery code is invalid.',
+    'disable_forbidden' => 'Cannot disable 2FA because it is mandatory.',
+    'cannot_disable_2fa_unconfigured' => 'Cannot disable 2FA because it is not configured.',
+    '2fa_reset' => 'Two-factor authentication has been reset.',
 ];

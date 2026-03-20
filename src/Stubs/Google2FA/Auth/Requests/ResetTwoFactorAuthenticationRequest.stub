@@ -1,0 +1,46 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Users\Domain\Models\User;
+
+final class ResetTwoFactorAuthenticationRequest extends FormRequest
+{
+    private User|null $authenticatedUser = null;
+
+    public function __construct(private readonly VerifyTwoFactorToken $verifyTwoFactorToken)
+    {
+        parent::__construct();
+    }
+
+    public function authorize(): bool
+    {
+        $token = $this->bearerToken();
+
+        if (is_null($token)) {
+            return false;
+        }
+
+        $this->authenticatedUser = $this->verifyTwoFactorToken->execute($token, TwoFactorReason::ResetRequired);
+
+        return true;
+    }
+
+    public function getAuthenticatedUser(): User
+    {
+        /** @var User $user */
+        $user = $this->authenticatedUser;
+
+        return $user;
+    }
+
+    public function rules(): array
+    {
+        return [];
+    }
+}

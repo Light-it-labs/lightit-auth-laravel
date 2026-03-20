@@ -4,32 +4,41 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
-use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
 
 final readonly class DisableTwoFactorAuthenticationAction
 {
     public function __construct(
-        private VerifyOtpAction $verifyOtpAction,
+        private PasswordValidatorAction $passwordValidatorAction,
+        private ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
     ) {
     }
 
-    /**
-     * @throws UnauthorizedException
-     */
-    public function execute(TwoFactorAuthenticatable $user, string $oneTimePassword): void
+    public function execute(User $user, string $password): void
     {
+        $mandatory = Config::boolean('google2fa.mandatory');
+
+        if ($mandatory) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.disable_forbidden'),
+                reason: 'disable_forbidden',
+                status: 403,
+            );
+        }
+
         $secret = $user->getTwoFactorAuthSecret();
 
         if (is_null($secret)) {
-            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
+            throw new TwoFactorAuthException(
+                message: __('google2fa.cannot_disable_2fa_unconfigured'),
+                reason: 'cannot_disable_2fa_unconfigured'
+            );
         }
 
-        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+        $this->passwordValidatorAction->execute($user, $password);
 
-        $user->update([
-            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,
-            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
-        ]);
+        $this->resetTwoFactorAuthenticationAction->execute($user);
     }
 }

@@ -1,0 +1,50 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Pipeline\Pipeline;
+use Lightit\Authentication\Domain\Actions\Pipes\BuildLoginResult;
+use Lightit\Authentication\Domain\Actions\Pipes\IssueAccessTokenIfNoFinalToken;
+use Lightit\Authentication\Domain\Actions\Pipes\IssueTwoFactorChallengeTokenIfEnabled;
+use Lightit\Authentication\Domain\Actions\Pipes\IssueTwoFactorSetupTokenIfMandatory;
+use Lightit\Authentication\Domain\Actions\Pipes\LoginContext;
+use Lightit\Authentication\Domain\Actions\Pipes\ResolveUser;
+use Lightit\Authentication\Domain\Actions\Pipes\ValidateCredentials;
+use Lightit\Authentication\Domain\DataTransferObjects\CredentialsDto;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+
+final readonly class LoginAction
+{
+    public function __construct(
+        private AuthFactory $auth,
+        private Pipeline $pipeline,
+    ) {
+    }
+
+    public function execute(CredentialsDto $credentials): LoginDto
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $context = new LoginContext($credentials, $guard);
+
+        /** @var LoginDto $dto */
+        $dto = $this->pipeline
+            ->send($context)
+            ->through([
+                ValidateCredentials::class,
+                ResolveUser::class,
+                IssueTwoFactorSetupTokenIfMandatory::class,
+                IssueTwoFactorChallengeTokenIfEnabled::class,
+                IssueAccessTokenIfNoFinalToken::class,
+                BuildLoginResult::class,
+            ])
+            ->thenReturn();
+
+        return $dto;
+    }
+}

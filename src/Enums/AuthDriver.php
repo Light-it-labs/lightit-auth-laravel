@@ -7,6 +7,6 @@ namespace Lightitlabs\Enums;
 enum AuthDriver: string
 {
     case Jwt = 'JWT';
-    case Sanctum = 'Sanctum';
+    case SanctumApiToken = 'Sanctum API Token';
     case GoogleSso = 'Google SSO';
 }

@@ -6,6 +6,7 @@ namespace Lightit\Authentication\Domain\Actions;
 
 use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorSetupDto;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Users\Domain\Models\User;
 use PragmaRX\Google2FALaravel\Google2FA;
 
 final readonly class SetupTwoFactorAuthenticationAction
@@ -13,10 +14,11 @@ final readonly class SetupTwoFactorAuthenticationAction
     public function __construct(
         private Google2FA $google2FA,
         private GenerateQRCodeAction $generateQRCodeAction,
+        private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
     ) {
     }
 
-    public function execute(TwoFactorAuthenticatable $user): TwoFactorSetupDto
+    public function execute(User $user): TwoFactorSetupDto
     {
         $secret = $this
             ->google2FA
@@ -26,8 +28,10 @@ final readonly class SetupTwoFactorAuthenticationAction
             TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => $secret,
         ]);
 
+        $recoveryCodes = $this->generateRecoveryCodesAction->execute($user);
+
         $qr = $this->generateQRCodeAction->execute($user->getAuthenticatableHolderIdentifier(), $secret);
 
-        return new TwoFactorSetupDto($qr, $secret);
+        return new TwoFactorSetupDto($qr, $secret, $recoveryCodes);
     }
 }

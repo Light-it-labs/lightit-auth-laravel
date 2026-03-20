@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\GenerateRecoveryCodesRequest;
+use Lightit\Authentication\Domain\Actions\GenerateRecoveryCodesAction;
+use Lightit\Authentication\Domain\Actions\PasswordValidatorAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class RegenerateRecoveryCodesController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        GenerateRecoveryCodesRequest $request,
+        GenerateRecoveryCodesAction $generateRecoveryCodesAction,
+        PasswordValidatorAction $passwordValidatorAction,
+    ): JsonResponse {
+        $passwordValidatorAction->execute($user, $request->getPassword());
+        
+        $recoveryCodes = $generateRecoveryCodesAction->execute($user);
+
+        return response()->json([
+            'data' => [
+                'recovery_codes' => $recoveryCodes,
+            ],
+        ]);
+    }
+}

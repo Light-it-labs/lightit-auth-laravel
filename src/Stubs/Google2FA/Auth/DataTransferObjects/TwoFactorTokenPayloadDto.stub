@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\DataTransferObjects;
+
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+
+final readonly class TwoFactorTokenPayloadDto
+{
+    public function __construct(
+        public string $sub,
+        public int $exp,
+        public string $typ,
+        public TwoFactorReason $reason,
+        public bool $mandatory,
+    ) {
+    }
+
+    /**
+     * @param array{sub: string, exp: int, typ: string, reason: string, mandatory: bool} $data
+     */
+    public static function fromArray(array $data): self
+    {
+        return new self(
+            sub: $data['sub'],
+            exp: $data['exp'],
+            typ: $data['typ'],
+            reason: TwoFactorReason::from($data['reason']),
+            mandatory: $data['mandatory'],
+        );
+    }
+
+    /**
+     * @return array{sub: string, exp: int, typ: string, reason: string, mandatory: bool}
+     */
+    public function toArray(): array
+    {
+        return [
+            'sub' => $this->sub,
+            'exp' => $this->exp,
+            'typ' => $this->typ,
+            'reason' => $this->reason->value,
+            'mandatory' => $this->mandatory,
+        ];
+    }
+}

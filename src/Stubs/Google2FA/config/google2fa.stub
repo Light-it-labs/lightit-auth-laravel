@@ -9,6 +9,8 @@ return [
      */
     'enabled' => (bool) env('TWO_FACTOR_AUTHENTICATION_ENABLED', true),
 
+    'challenge_ttl_minutes' => (int) env('TWO_FACTOR_CHALLENGE_TTL_MINUTES', 15),
+
     /*
      * Make Google2FA mandatory / optional.
      */
@@ -34,7 +36,7 @@ return [
     /*
      * Guard.
      */
-    'guard' => '',
+    'guard' => env('AUTH_GUARD', 'api'),
 
     /*
      * 2FA verified session var.

@@ -59,7 +59,7 @@ class AuthSetupCommand extends Command
                 hint: 'Press [space] to select, [enter] to confirm.'
             );
 
-            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::Sanctum->value, $drivers)) {
+            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::SanctumApiToken->value, $drivers)) {
                 error('You cannot select both JWT and Sanctum authentication drivers.');
                 $drivers = null;
             }
@@ -79,7 +79,7 @@ class AuthSetupCommand extends Command
         $this->setupDrivers($drivers);
 
         if ($enable2FA) {
-            $this->setup2FA();
+            $this->setup2FA($drivers);
         }
 
         if ($enableRolesAndPermissions) {
@@ -98,7 +98,7 @@ class AuthSetupCommand extends Command
     {
         $setup = [
             AuthDriver::Jwt->value => fn () => $this->setupJWT(),
-            AuthDriver::Sanctum->value => fn () => $this->setupSanctum(),
+            AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
             AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
         ];
 
@@ -139,12 +139,19 @@ class AuthSetupCommand extends Command
         $this->printSectionSeparator();
     }
 
-    protected function setup2FA(): void
+    /**
+     * @param array<string> $drivers
+     */
+    protected function setup2FA(array $drivers): void
     {
         $this->printBoxedMessage('🛠 Setting up 2FA...');
 
+        $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
+            ? AuthDriver::SanctumApiToken
+            : AuthDriver::Jwt;
+
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
     }

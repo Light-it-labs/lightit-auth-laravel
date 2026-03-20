@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Closure;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class ResolveUser
+{
+    public function handle(LoginContext $context, Closure $next): mixed
+    {
+        /** @var User $user */
+        $user = $context->guard->user();
+
+        $context->setUser($user);
+
+        return $next($context);
+    }
+}

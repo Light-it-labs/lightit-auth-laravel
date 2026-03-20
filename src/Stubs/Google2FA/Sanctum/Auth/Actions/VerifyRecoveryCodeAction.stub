@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Hash;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifyRecoveryCodeDto;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class VerifyRecoveryCodeAction
+{
+    /**
+     * @throws UnauthorizedException
+     */
+    public function execute(User $user, string $suppliedCode): VerifyRecoveryCodeDto
+    {
+        $hashedCodes = $user->getRecoveryCodes();
+
+        if ($hashedCodes === []) {
+            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+        }
+
+        $matchIndex = -1;
+
+        foreach ($hashedCodes as $index => $hash) {
+            if (Hash::check($suppliedCode, $hash)) {
+                $matchIndex = $index;
+
+                break;
+            }
+        }
+
+        if ($matchIndex === -1) {
+            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+        }
+
+        unset($hashedCodes[$matchIndex]);
+        $user->replaceRecoveryCodes(array_values($hashedCodes));
+
+        /** @var int|null $expirationMinutes */
+        $expirationMinutes = Config::get('sanctum.expiration');
+
+        return new VerifyRecoveryCodeDto(
+            loginDto: new LoginDto(
+                accessToken: $user->createToken('default')->plainTextToken,
+                tokenType: 'Bearer',
+                expiresIn: $expirationMinutes !== null ? $expirationMinutes * 60 : null,
+            ),
+            remainingRecoveryCodes: count($hashedCodes),
+        );
+    }
+}

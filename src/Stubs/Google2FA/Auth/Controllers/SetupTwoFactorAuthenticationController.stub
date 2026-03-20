@@ -5,24 +5,19 @@ declare(strict_types=1);
 namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\App\Requests\SetupTwoFactorAuthenticationRequest;
 use Lightit\Authentication\App\Resources\TwoFactorAuthenticationSetUpResource;
 use Lightit\Authentication\Domain\Actions\SetupTwoFactorAuthenticationAction;
 
 final readonly class SetupTwoFactorAuthenticationController
 {
     public function __invoke(
-        Request $request,
+        SetupTwoFactorAuthenticationRequest $request,
         SetupTwoFactorAuthenticationAction $setupTwoFactorAuthenticationAction,
     ): JsonResponse {
-        $guardName = Config::string('google2fa.guard');
+        $setupData = $setupTwoFactorAuthenticationAction->execute($request->get2faUser());
 
-        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
-        $user = $request->user($guardName);
-
-        $setupData = $setupTwoFactorAuthenticationAction->execute($user);
-
-        return TwoFactorAuthenticationSetUpResource::make($setupData)->response();
+        return TwoFactorAuthenticationSetUpResource::make($setupData)
+            ->response();
     }
 }

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use PragmaRX\Google2FA\Exceptions\IncompatibleWithGoogleAuthenticatorException;
+use PragmaRX\Google2FA\Exceptions\InvalidCharactersException;
+use PragmaRX\Google2FA\Exceptions\SecretKeyTooShortException;
 use PragmaRX\Google2FALaravel\Google2FA;
 
 final readonly class VerifyOtpAction
@@ -15,12 +18,14 @@ final readonly class VerifyOtpAction
     }
 
     /**
-     * @throws UnauthorizedException
+     * @throws IncompatibleWithGoogleAuthenticatorException
+     * @throws InvalidCharactersException
+     * @throws SecretKeyTooShortException
      */
     public function execute(string $secret, string $oneTimePassword): void
     {
         if (! $this->google2FA->verifyKey($secret, $oneTimePassword)) {
-            throw new UnauthorizedException(__('google2fa.invalid_otp'));
+            throw new TwoFactorAuthException(message: __('google2fa.invalid_otp'), reason: 'invalid_otp');
         }
     }
 }

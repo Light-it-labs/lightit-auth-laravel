@@ -4,33 +4,34 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Support\Facades\Config;
-use Lightit\Authentication\Domain\DataTransferObjects\CredentialsDto;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
 use Lightit\Users\Domain\Models\User;
 
-final class LoginAction
+final readonly class CompleteTwoFactorAuthenticationAction
 {
     public function __construct(
-        private readonly AuthFactory $factory,
+        private VerifyOtpAction $verifyOtpAction,
     ) {
     }
 
-    /**
-     * @throws UnauthorizedException
-     */
-    public function execute(CredentialsDto $credentials): LoginDto
+    public function execute(User $user, string $oneTimePassword): LoginDto
     {
-        $guard = $this->factory->guard();
+        $secret = $user->getTwoFactorAuthSecret();
 
-        if (! $guard->attempt($credentials->toArray())) {
-            throw new UnauthorizedException();
+        if (is_null($secret)) {
+            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
         }
 
-        /** @var User $user */
-        $user = $guard->user();
+        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+
+        if (! $user->hasTwoFactorAuthenticationEnabled()) {
+            $user->update([
+                TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => now(),
+            ]);
+        }
 
         /** @var int|null $expirationMinutes */
         $expirationMinutes = Config::get('sanctum.expiration');

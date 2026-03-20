@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class ResetTwoFactorAuthenticationAction
+{
+    public function execute(User $user): void
+    {
+        $user->update([
+            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => null,
+            TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => null,
+            TwoFactorAuthenticatable::RECOVERY_CODES_COLUMN_NAME => null,
+        ]);
+    }
+}

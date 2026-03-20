@@ -6,23 +6,24 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Config;
-use Lightit\Authentication\App\Requests\TwoFactorAuthenticationCodeRequest;
+use Lightit\Authentication\App\Requests\DisableTwoFactorAuthenticationRequest;
 use Lightit\Authentication\Domain\Actions\DisableTwoFactorAuthenticationAction;
+use Lightit\Users\Domain\Models\User;
 
-final class DisableTwoFactorAuthenticationController
+final readonly class DisableTwoFactorAuthenticationController
 {
     public function __invoke(
-        TwoFactorAuthenticationCodeRequest $request,
-        DisableTwoFactorAuthenticationAction $disableTwoFactorAuthenticationAction,
+        DisableTwoFactorAuthenticationRequest $request,
+        DisableTwoFactorAuthenticationAction $action,
     ): JsonResponse {
         $guardName = Config::string('google2fa.guard');
 
-        /** @var \Lightit\Authentication\Domain\TwoFactorAuthenticatable $user */
+        /** @var User $user */
         $user = $request->user($guardName);
 
-        $oneTimePassword = $request->getOtpCode();
+        $password = $request->getPassword();
 
-        $disableTwoFactorAuthenticationAction->execute($user, $oneTimePassword);
+        $action->execute($user, $password);
 
         return response()->json([
             'data' => [
