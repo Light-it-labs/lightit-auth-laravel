@@ -13,6 +13,11 @@ final class ResetTwoFactorAuthenticationRequest extends FormRequest
 {
     private User|null $authenticatedUser = null;
 
+    public function __construct(private readonly VerifyTwoFactorToken $verifyTwoFactorToken)
+    {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         $token = $this->bearerToken();
@@ -21,7 +26,7 @@ final class ResetTwoFactorAuthenticationRequest extends FormRequest
             return false;
         }
 
-        $this->authenticatedUser = app(VerifyTwoFactorToken::class)->execute($token, TwoFactorReason::ResetRequired);
+        $this->authenticatedUser = $this->verifyTwoFactorToken->execute($token, TwoFactorReason::ResetRequired);
 
         return true;
     }

@@ -14,12 +14,17 @@ final class VerifyRecoveryCodeRequest extends FormRequest
 
     private User|null $authenticatedUser = null;
 
+    public function __construct(private readonly VerifyTwoFactorToken $verifyTwoFactorToken)
+    {
+        parent::__construct();
+    }
+
     public function authorize(): bool
     {
         $token = $this->bearerToken();
 
         if ($token) {
-            $this->authenticatedUser = app(VerifyTwoFactorToken::class)->execute($token);
+            $this->authenticatedUser = $this->verifyTwoFactorToken->execute($token);
 
             return true;
         }
