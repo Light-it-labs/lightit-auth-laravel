@@ -8,5 +8,6 @@ enum AuthDriver: string
 {
     case Jwt = 'JWT';
     case SanctumApiToken = 'Sanctum API Token';
+    case SanctumCookie = 'Sanctum Cookie (SPA)';
     case GoogleSso = 'Google SSO';
 }

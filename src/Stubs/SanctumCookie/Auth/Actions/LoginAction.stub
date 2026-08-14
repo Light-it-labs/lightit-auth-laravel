@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Auth;
+use Lightit\Authentication\Domain\DataTransferObjects\CredentialsDto;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Users\Domain\Models\User;
+
+final class LoginAction
+{
+    /**
+     * @throws UnauthorizedException
+     */
+    public function execute(CredentialsDto $credentials): User
+    {
+        if (! Auth::attempt($credentials->toArray())) {
+            throw new UnauthorizedException();
+        }
+
+        session()->regenerate();
+
+        /** @var User $user */
+        $user = Auth::user();
+
+        return $user;
+    }
+}

@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Auth;
+use Lightit\Users\Domain\Models\User;
+
+final class LoginByUserAction
+{
+    public function execute(User $user): User
+    {
+        Auth::login($user);
+
+        session()->regenerate();
+
+        return $user;
+    }
+}

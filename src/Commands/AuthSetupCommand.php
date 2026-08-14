@@ -12,6 +12,7 @@ use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\JwtInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Auth\Installers\SanctumCookieInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\AuthDriver;
@@ -61,8 +62,16 @@ class AuthSetupCommand extends Command
                 hint: 'Press [space] to select, [enter] to confirm.'
             );
 
-            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::SanctumApiToken->value, $drivers)) {
+            $sanctumDrivers = array_filter($drivers, fn ($d) => in_array($d, [
+                    AuthDriver::SanctumApiToken->value,
+                    AuthDriver::SanctumCookie->value,
+                ]));
+
+            if (in_array(AuthDriver::Jwt->value, $drivers) && count($sanctumDrivers) > 0) {
                 error('You cannot select both JWT and Sanctum authentication drivers.');
+                $drivers = null;
+            } elseif (count($sanctumDrivers) > 1) {
+                error('You cannot select both Sanctum API Token and Sanctum Cookie drivers simultaneously.');
                 $drivers = null;
             }
         } while (empty($drivers));
@@ -77,6 +86,7 @@ class AuthSetupCommand extends Command
             default: false,
         );
 
+        // OTP requires a token-based driver; SPA cookie sessions handle re-auth differently
         $hasTokenDriver = in_array(AuthDriver::Jwt->value, $drivers) || in_array(AuthDriver::SanctumApiToken->value, $drivers);
 
         $enableOtp = $hasTokenDriver && confirm(
@@ -121,6 +131,7 @@ class AuthSetupCommand extends Command
         $setup = [
             AuthDriver::Jwt->value => fn () => $this->setupJWT(),
             AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
+            AuthDriver::SanctumCookie->value => fn () => $this->setupSanctumCookie(),
             AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
         ];
 
@@ -143,11 +154,22 @@ class AuthSetupCommand extends Command
 
     protected function setupSanctum(): void
     {
-        $this->printBoxedMessage('🛠 Setting up Sanctum...');
+        $this->printBoxedMessage('🛠 Setting up Sanctum API Token...');
 
         $composerInstaller = new ComposerInstaller($this);
         $sanctumInstaller = new SanctumInstaller($this, $composerInstaller);
         $sanctumInstaller->install();
+        $this->printSectionSeparator();
+    }
+
+    protected function setupSanctumCookie(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Sanctum Cookie (SPA)...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $fileManipulator = new FileManipulator($this);
+        $sanctumCookieInstaller = new SanctumCookieInstaller($this, $composerInstaller, $fileManipulator);
+        $sanctumCookieInstaller->install();
         $this->printSectionSeparator();
     }
 
@@ -170,7 +192,9 @@ class AuthSetupCommand extends Command
 
         $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
             ? AuthDriver::SanctumApiToken
-            : AuthDriver::Jwt;
+            : (in_array(AuthDriver::SanctumCookie->value, $drivers)
+                ? AuthDriver::SanctumCookie
+                : AuthDriver::Jwt);
 
         $composerInstaller = new ComposerInstaller($this);
         $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
