@@ -59,8 +59,8 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         $bootstrapPath = base_path('bootstrap/app.php');
 
         $this->fileManipulator->replaceInFile(
-            '->withMiddleware(function (Middleware $middleware) {',
-            '->withMiddleware(function (Middleware $middleware) {' . PHP_EOL
+            '->withMiddleware(function (Middleware $middleware): void {',
+            '->withMiddleware(function (Middleware $middleware): void {' . PHP_EOL
                 . '        $middleware->statefulApi();',
             $bootstrapPath
         );
