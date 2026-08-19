@@ -101,6 +101,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private function copySharedAuthFiles(string $stubsPath): void
     {
         $files = [
+            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
@@ -151,7 +152,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private function copyDriverSpecificFiles(string $stubsPath): void
     {
         $files = [
-            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',

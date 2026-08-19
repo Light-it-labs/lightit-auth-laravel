@@ -103,17 +103,30 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
 
     private function copyAuthFiles(string $stubsPath): void
     {
-        $files = [
-            '/Resources/LoginResource.stub' => 'App/Resources/LoginResource.php',
-            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
+        $sharedStubsPath = __DIR__ . '/../../Stubs/Shared/Auth';
+
+        $sharedFiles = [
             '/DataTransferObjects/CredentialsDto.stub' => 'Domain/DataTransferObjects/CredentialsDto.php',
             '/Requests/LoginRequest.stub' => 'App/Requests/LoginRequest.php',
+        ];
+
+        $driverFiles = [
+            '/Resources/LoginResource.stub' => 'App/Resources/LoginResource.php',
+            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
             '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
             '/Controllers/LogoutController.stub' => 'App/Controllers/LogoutController.php',
             '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
         ];
 
-        foreach ($files as $stub => $destination) {
+        foreach ($sharedFiles as $stub => $destination) {
+            copy(
+                $sharedStubsPath . $stub,
+                base_path("src/Authentication/{$destination}")
+            );
+            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
+        }
+
+        foreach ($driverFiles as $stub => $destination) {
             copy(
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
