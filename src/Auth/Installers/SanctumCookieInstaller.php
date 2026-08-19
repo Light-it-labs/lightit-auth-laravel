@@ -57,6 +57,13 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         $this->composerInstaller->printStep(2, 3, 'Adding EnsureFrontendRequestsAreStateful middleware');
 
         $bootstrapPath = base_path('bootstrap/app.php');
+        $before = (string) file_get_contents($bootstrapPath);
+
+        if (str_contains($before, '$middleware->statefulApi()')) {
+            $this->composerInstaller->printFileCreated('Middleware already present in bootstrap/app.php: statefulApi()');
+
+            return;
+        }
 
         $this->fileManipulator->replaceInFile(
             '->withMiddleware(function (Middleware $middleware): void {',
@@ -64,6 +71,17 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
                 . '        $middleware->statefulApi();',
             $bootstrapPath
         );
+
+        $after = (string) file_get_contents($bootstrapPath);
+
+        if ($before === $after) {
+            $this->command->warn(
+                'Could not inject statefulApi() into bootstrap/app.php automatically. ' .
+                'Please add $middleware->statefulApi() manually inside the withMiddleware() callback.'
+            );
+
+            return;
+        }
 
         $this->composerInstaller->printFileCreated('Middleware added to bootstrap/app.php: statefulApi()');
     }
