@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Closure;
+
+final class IssueAccessTokenIfNoFinalToken
+{
+    // Not used in the SanctumCookie driver — session authentication is
+    // established directly in LoginAction without the token-issuance pipeline.
+    public function handle(LoginContext $context, Closure $next): mixed
+    {
+        return $next($context);
+    }
+}

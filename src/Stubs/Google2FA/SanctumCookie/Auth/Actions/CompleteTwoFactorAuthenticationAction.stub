@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Auth;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class CompleteTwoFactorAuthenticationAction
+{
+    public function __construct(
+        private VerifyOtpAction $verifyOtpAction,
+    ) {
+    }
+
+    public function execute(User $user, string $oneTimePassword): User
+    {
+        $secret = $user->getTwoFactorAuthSecret();
+
+        if (is_null($secret)) {
+            throw new UnauthorizedException(__('google2fa.secret_not_configured'));
+        }
+
+        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+
+        if (! $user->hasTwoFactorAuthenticationEnabled()) {
+            $user->update([
+                TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => now(),
+            ]);
+        }
+
+        Auth::login($user);
+        session()->regenerate();
+
+        return $user;
+    }
+}

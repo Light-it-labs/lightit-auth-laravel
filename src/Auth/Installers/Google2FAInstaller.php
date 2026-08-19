@@ -64,14 +64,38 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->copySharedAuthFiles($sharedStubsPath);
         $this->copyDriverSpecificFiles($driverStubsPath);
+        $this->copySanctumCookieControllerOverrides();
     }
 
     private function resolveDriverStubsPath(): string
     {
         return match ($this->driver) {
             AuthDriver::SanctumApiToken => __DIR__ . '/../../Stubs/Google2FA/Sanctum/Auth',
+            AuthDriver::SanctumCookie => __DIR__ . '/../../Stubs/Google2FA/SanctumCookie/Auth',
             default => __DIR__ . '/../../Stubs/Google2FA/JWT/Auth',
         };
+    }
+
+    private function copySanctumCookieControllerOverrides(): void
+    {
+        if ($this->driver !== AuthDriver::SanctumCookie) {
+            return;
+        }
+
+        $stubsPath = __DIR__ . '/../../Stubs/Google2FA/SanctumCookie/Auth';
+
+        $files = [
+            '/Controllers/LoginController.stub' => 'App/Controllers/LoginController.php',
+            '/Controllers/VerifyRecoveryCodeController.stub' => 'App/Controllers/VerifyRecoveryCodeController.php',
+        ];
+
+        foreach ($files as $stub => $destination) {
+            copy(
+                $stubsPath . $stub,
+                base_path("src/Authentication/{$destination}")
+            );
+            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
+        }
     }
 
     private function copySharedAuthFiles(string $stubsPath): void
