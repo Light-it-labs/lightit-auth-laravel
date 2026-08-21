@@ -17,6 +17,15 @@ describe('TypeScriptPatcher', function (): void {
         rmdir($this->directory);
     });
 
+    $patch = static function (string $path, string $contents): string {
+        file_put_contents($path, $contents);
+
+        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($path))
+            ->toBe(TypeScriptPatchOutcome::Patched);
+
+        return (string) file_get_contents($path);
+    };
+
     $queryClient = <<<'TS'
         import * as Sentry from "@sentry/react";
         import { QueryClient } from "@tanstack/react-query";
@@ -46,25 +55,158 @@ describe('TypeScriptPatcher', function (): void {
 
         TS;
 
-    it('declares the constant after the last import', function () use ($queryClient): void {
-        file_put_contents($this->path, $queryClient);
+    it('patches a multiline list whose last entry carries a trailing comma', function () use (
+        $patch,
+        $queryClient
+    ): void {
+        expect($patch($this->path, $queryClient))->toBe(<<<'TS'
+            import * as Sentry from "@sentry/react";
+            import { QueryClient } from "@tanstack/react-query";
+            import { HttpStatusCode, isAxiosError } from "axios";
+            import { ZodError } from "zod";
 
-        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path))
-            ->toBe(TypeScriptPatchOutcome::Patched);
+            import { env } from "./env";
 
-        expect(file_get_contents($this->path))
-            ->toContain("import { env } from \"./env\";\n\nconst CSRF_TOKEN_MISMATCH = 419;");
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const queryClient = new QueryClient({
+              defaultOptions: {
+                queries: {
+                  retry: (failureCount, error) => {
+                    return error instanceof ZodError ||
+                      (isAxiosError(error) &&
+                        error.response?.status &&
+                        [
+                          HttpStatusCode.Unauthorized,
+                          HttpStatusCode.Forbidden,
+                          HttpStatusCode.NotFound,
+                          CSRF_TOKEN_MISMATCH,
+                        ].includes(error.response.status))
+                      ? false
+                      : failureCount <= 3;
+                  },
+                },
+              },
+            });
+
+            TS);
     });
 
-    it('adds the status to the retry list keeping the surrounding indentation', function () use ($queryClient): void {
-        file_put_contents($this->path, $queryClient);
+    it('patches a multiline list whose last entry has no trailing comma', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
 
-        (new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path);
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound
+              ].includes(error.response.status);
 
-        expect(file_get_contents($this->path))
-            ->toContain(
-                "              HttpStatusCode.NotFound,\n              CSRF_TOKEN_MISMATCH,\n            ].includes"
-            );
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound,
+                CSRF_TOKEN_MISMATCH,
+              ].includes(error.response.status);
+
+            TS);
+    });
+
+    it('patches a collapsed one-line list whose last entry has no trailing comma', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound, CSRF_TOKEN_MISMATCH].includes(error.response.status);
+
+            TS);
+    });
+
+    it('patches a collapsed one-line list whose last entry carries a trailing comma', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound,].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound, CSRF_TOKEN_MISMATCH].includes(error.response.status);
+
+            TS);
+    });
+
+    it('keeps a trailing line comment that already sits behind a comma', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound, // the resource is gone for good
+              ].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound, // the resource is gone for good
+                CSRF_TOKEN_MISMATCH,
+              ].includes(error.response.status);
+
+            TS);
+    });
+
+    it('puts the separating comma before a trailing comment, not inside it', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound // the resource is gone for good
+              ].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) =>
+              [
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.NotFound, // the resource is gone for good
+                CSRF_TOKEN_MISMATCH,
+              ].includes(error.response.status);
+
+            TS);
     });
 
     it('leaves an already patched file untouched', function () use ($queryClient): void {
@@ -77,20 +219,6 @@ describe('TypeScriptPatcher', function (): void {
             ->toBe(TypeScriptPatchOutcome::AlreadyApplied);
 
         expect(file_get_contents($this->path))->toBe($patched);
-    });
-
-    it('survives the retry predicate being collapsed onto one line', function (): void {
-        file_put_contents($this->path, <<<'TS'
-            import { HttpStatusCode } from "axios";
-
-            const retry = (error) => [HttpStatusCode.Unauthorized, HttpStatusCode.NotFound].includes(error.response.status);
-
-            TS);
-
-        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path))
-            ->toBe(TypeScriptPatchOutcome::Patched);
-
-        expect(file_get_contents($this->path))->toContain('CSRF_TOKEN_MISMATCH,');
     });
 
     it('reports the anchor as missing and writes nothing when the retry list is absent', function (): void {
@@ -117,18 +245,21 @@ describe('TypeScriptPatcher', function (): void {
             ->and(TypeScriptPatchOutcome::AlreadyApplied->needsManualStep())->toBeFalse();
     });
 
-    it('does not treat an unrelated 419 as an applied patch', function (): void {
-        file_put_contents($this->path, <<<'TS'
+    it('does not treat an unrelated 419 as an applied patch', function () use ($patch): void {
+        expect($patch($this->path, <<<'TS'
             import { HttpStatusCode } from "axios";
 
             const staleTime = 419;
-            const retry = (error) => [HttpStatusCode.Unauthorized].includes(error.response.status);
+            export const retry = (error) => [HttpStatusCode.Unauthorized].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            const staleTime = 419;
+            export const retry = (error) => [HttpStatusCode.Unauthorized, CSRF_TOKEN_MISMATCH].includes(error.response.status);
 
             TS);
-
-        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path))
-            ->toBe(TypeScriptPatchOutcome::Patched);
-
-        expect(file_get_contents($this->path))->toContain('CSRF_TOKEN_MISMATCH,');
     });
 });

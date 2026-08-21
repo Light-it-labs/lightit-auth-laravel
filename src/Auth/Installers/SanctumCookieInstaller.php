@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\EnvironmentKeys;
 use Lightitlabs\Tools\FileManipulator;
 use RuntimeException;
 
@@ -59,6 +60,7 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly FileManipulator $fileManipulator,
+        private readonly EnvironmentKeys $environmentKeys = new EnvironmentKeys(),
     ) {
     }
 
@@ -317,7 +319,7 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         $added = [];
 
         foreach (explode(PHP_EOL, $block) as $line) {
-            $variable = $this->environmentVariable($line);
+            $variable = $this->environmentKeys->parse($line);
 
             if ($variable === null) {
                 $lines[] = $line;
@@ -327,7 +329,7 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
 
             ['key' => $key, 'value' => $value] = $variable;
 
-            if ($this->environmentKeyExists($current, $key)) {
+            if ($this->environmentKeys->isSet($current, $key)) {
                 $this->command->warn(
                     "Skipped {$key} in {$label}: the key is already present. " .
                     "Cookie auth expects {$key}={$value}."
@@ -363,23 +365,6 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         }
 
         $this->composerInstaller->printFileCreated("Updated {$label}: " . implode(', ', $added));
-    }
-
-    /**
-     * @return array{key: string, value: string}|null
-     */
-    private function environmentVariable(string $line): array|null
-    {
-        if (preg_match('/^([A-Z][A-Z\d_]*)=(.*)$/', trim($line), $matches) !== 1) {
-            return null;
-        }
-
-        return ['key' => $matches[1], 'value' => $matches[2]];
-    }
-
-    private function environmentKeyExists(string $contents, string $key): bool
-    {
-        return preg_match('/^[ \t]*#?[ \t]*' . preg_quote($key, '/') . '[ \t]*=/m', $contents) === 1;
     }
 
     private function printManualSteps(): void
