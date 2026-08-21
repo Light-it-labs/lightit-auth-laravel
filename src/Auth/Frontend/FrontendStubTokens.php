@@ -30,6 +30,8 @@ final class FrontendStubTokens
             'loginRoutePath' => '/login',
             'logoutEndpoint' => 'auth/logout',
             'packageManager' => 'pnpm',
+            'queryClientCheckbox' => 'x',
+            'queryClientStatus' => 'Done automatically.',
             'queryKeyScope' => 'auth',
             'userSchemaFactory' => 'getUserSchema',
             'userSchemaImportPath' => '@/services/users/schemas',

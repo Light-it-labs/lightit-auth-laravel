@@ -65,7 +65,13 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
     {
         $sanctumConfigExisted = file_exists(config_path('sanctum.php'));
 
-        $this->command->call('install:api', $this->apiInstallArguments());
+        if ($this->apiScaffoldingIsInstalled()) {
+            $this->composerInstaller->printConfigPublished(
+                'API scaffolding already installed: skipping install:api.'
+            );
+        } else {
+            $this->command->call('install:api', $this->apiInstallArguments());
+        }
 
         $this->publishSanctumConfig($sanctumConfigExisted);
         $this->publishCorsConfig();
@@ -76,6 +82,26 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         $this->printManualSteps();
 
         $this->composerInstaller->printSuccess('Sanctum Cookie (SPA) Authentication installed successfully!');
+    }
+
+    /**
+     * Re-running `install:api` over a scaffolded app reports "API routes file already exists" as an
+     * error and re-requires Sanctum for nothing, so a second run of this installer looks like it
+     * failed when it did not.
+     */
+    private function apiScaffoldingIsInstalled(): bool
+    {
+        if (! file_exists(base_path('routes/api.php'))) {
+            return false;
+        }
+
+        $bootstrap = base_path('bootstrap/app.php');
+
+        if (! file_exists($bootstrap)) {
+            return false;
+        }
+
+        return preg_match('/^\s*api:/m', (string) file_get_contents($bootstrap)) === 1;
     }
 
     /**

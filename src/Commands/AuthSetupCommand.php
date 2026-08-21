@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendUsageScanner;
+use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
@@ -371,6 +372,7 @@ class AuthSetupCommand extends Command
             new FrontendProjectLocator($manifest),
             $manifest,
             new FrontendUsageScanner(),
+            new TypeScriptPatcher(),
             base_path(),
             $this->frontendPathOption(),
         );
