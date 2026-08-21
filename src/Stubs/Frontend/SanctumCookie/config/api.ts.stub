@@ -1,0 +1,50 @@
+import axios, { type AxiosError, HttpStatusCode } from "axios";
+import { deepCamelKeys } from "string-ts";
+
+import { env } from "./env";
+
+const CSRF_TOKEN_MISMATCH = 419;
+
+export const api = axios.create({
+  baseURL: env.VITE_API_URL,
+  withCredentials: true,
+  withXSRFToken: true,
+  xsrfCookieName: "XSRF-TOKEN",
+  xsrfHeaderName: "X-XSRF-TOKEN",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
+    Accept: "application/json",
+  },
+});
+
+export const ensureCsrf = () => {
+  return api.get("{{ csrfCookieEndpoint }}", {
+    baseURL: env.VITE_API_URL.replace({{ apiSuffixStripRegex }}, ""),
+  });
+};
+
+api.interceptors.response.use(
+  (response) => {
+    response.data = deepCamelKeys(response.data);
+
+    return response;
+  },
+  (error: AxiosError) => {
+    const status = error.response?.status;
+    const requestUrl = error.config?.url ?? "";
+    const isCurrentUserProbe = requestUrl.endsWith("/{{ currentUserEndpoint }}");
+
+    if (
+      (status === HttpStatusCode.Unauthorized || status === CSRF_TOKEN_MISMATCH) &&
+      !isCurrentUserProbe
+    ) {
+      const onLoginScreen = window.location.pathname.startsWith("{{ loginRoutePath }}");
+      if (!onLoginScreen) {
+        window.location.href = "{{ loginRoutePath }}";
+      }
+    }
+
+    return Promise.reject(error);
+  },
+);

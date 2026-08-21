@@ -1,0 +1,33 @@
+import { HttpStatusCode, isAxiosError } from "axios";
+
+import { api, ensureCsrf } from "@/config/api";
+import { getUserSchema } from "@/services/users/schemas";
+import type { User } from "@/services/users/types";
+import type { LoginPayload } from "./types";
+
+const CSRF_TOKEN_MISMATCH = 419;
+
+export const login = async ({ email, password }: LoginPayload) => {
+  await ensureCsrf();
+  await api.post("auth/login", { email, password });
+};
+
+export const logout = async () => {
+  await ensureCsrf();
+  await api.post("auth/logout");
+};
+
+export const getCurrentUser = async (): Promise<User | null> => {
+  try {
+    const response = await api.get("me");
+
+    return getUserSchema().parse(response.data.data);
+  } catch (error) {
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+    if (status === HttpStatusCode.Unauthorized || status === CSRF_TOKEN_MISMATCH) {
+      return null;
+    }
+
+    throw error;
+  }
+};

@@ -12,8 +12,8 @@ use Lightit\Users\Domain\Models\User;
 /**
  * @mixin User
  */
-#[SchemaName('LoginResource')]
-class LoginResource extends JsonResource
+#[SchemaName('AuthenticatedUser')]
+class UserResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
