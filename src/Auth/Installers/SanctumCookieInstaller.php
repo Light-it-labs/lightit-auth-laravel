@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\FileManipulator;
+use RuntimeException;
 
 final class SanctumCookieInstaller implements AuthInstallerInterface
 {
@@ -101,7 +102,7 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
             return false;
         }
 
-        return preg_match('/^\s*api:/m', (string) file_get_contents($bootstrap)) === 1;
+        return str_contains((string) file_get_contents($bootstrap), 'routes/api.php');
     }
 
     /**
@@ -145,7 +146,9 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
             mkdir(config_path(), 0755, true);
         }
 
-        copy($this->stubPath('SanctumCookie/config/sanctum.stub'), config_path('sanctum.php'));
+        if (! copy($this->stubPath('SanctumCookie/config/sanctum.stub'), config_path('sanctum.php'))) {
+            throw new RuntimeException('Could not write config/sanctum.php');
+        }
 
         $this->composerInstaller->printConfigPublished(
             'Config published: config/sanctum.php (includes stateful_domains)'
@@ -436,7 +439,15 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
             return;
         }
 
-        copy($this->stubPath($stub), $destination);
+        $source = $this->stubPath($stub);
+
+        if (! file_exists($source)) {
+            throw new RuntimeException("Missing stub: {$stub}");
+        }
+
+        if (! copy($source, $destination)) {
+            throw new RuntimeException("Could not write {$label}");
+        }
 
         $this->composerInstaller->printFileCreated("Created: {$label}");
     }

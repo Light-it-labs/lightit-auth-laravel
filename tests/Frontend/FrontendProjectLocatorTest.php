@@ -10,7 +10,6 @@ use Lightitlabs\Auth\Installers\SanctumCookieFrontendInstaller;
 $fixtures = __DIR__ . '/../Fixtures/frontend';
 $reactProject = $fixtures . '/react-project';
 $apiProject = $fixtures . '/api-project';
-$laravelForPackage = '/Users/tomassueldo/Documents/repos_local/laravel-for-package';
 
 $locator = static function (): FrontendProjectLocator {
     return new FrontendProjectLocator(new FrontendPackageManifest());
@@ -20,7 +19,6 @@ describe('FrontendProjectLocator', function () use (
     $locator,
     $reactProject,
     $apiProject,
-    $laravelForPackage
 ): void {
     it('accepts an explicit path to a react-template-shaped project', function () use (
         $locator,
@@ -34,19 +32,6 @@ describe('FrontendProjectLocator', function () use (
         $apiProject
     ): void {
         expect($locator()->locate('/tmp/whatever', $apiProject))->toBeNull();
-    });
-
-    it('rejects the real laravel-for-package sandbox', function () use (
-        $locator,
-        $laravelForPackage
-    ): void {
-        if (! is_dir($laravelForPackage)) {
-            $this->markTestSkipped('laravel-for-package sandbox is not checked out here.');
-        }
-
-        expect($locator()->locate('/tmp/whatever', $laravelForPackage))->toBeNull();
-        expect($locator()->rejectionReason($laravelForPackage))
-            ->toContain('package.json');
     });
 
     it('rejects a react dependency that only sits in devDependencies', function () use (

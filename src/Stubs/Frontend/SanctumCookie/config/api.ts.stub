@@ -33,7 +33,8 @@ api.interceptors.response.use(
   (error: AxiosError) => {
     const status = error.response?.status;
     const requestUrl = error.config?.url ?? "";
-    const isCurrentUserProbe = requestUrl.endsWith("/{{ currentUserEndpoint }}");
+    const isCurrentUserProbe =
+      requestUrl.replace(/^\//, "") === "{{ currentUserEndpoint }}";
 
     if (
       (status === HttpStatusCode.Unauthorized || status === CSRF_TOKEN_MISMATCH) &&

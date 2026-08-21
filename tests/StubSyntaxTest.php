@@ -10,7 +10,7 @@ function phpStubPaths(): array
     $stubsPath = realpath(__DIR__ . '/../src/Stubs');
 
     if ($stubsPath === false) {
-        return [];
+        throw new RuntimeException('src/Stubs is not readable; the stub suite would silently validate nothing.');
     }
 
     $files = new RecursiveIteratorIterator(

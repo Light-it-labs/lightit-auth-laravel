@@ -108,11 +108,27 @@ describe('TypeScriptPatcher', function (): void {
             ->toBe(TypeScriptPatchOutcome::Missing);
     });
 
-    it('marks only the unrecoverable outcomes as needing a manual step', function (): void {
+    it('needs a manual step for every outcome that did not land the change', function (): void {
         expect(TypeScriptPatchOutcome::AnchorNotFound->needsManualStep())->toBeTrue()
             ->and(TypeScriptPatchOutcome::Failed->needsManualStep())->toBeTrue()
+            ->and(TypeScriptPatchOutcome::Corrupted->needsManualStep())->toBeTrue()
+            ->and(TypeScriptPatchOutcome::Missing->needsManualStep())->toBeTrue()
             ->and(TypeScriptPatchOutcome::Patched->needsManualStep())->toBeFalse()
-            ->and(TypeScriptPatchOutcome::AlreadyApplied->needsManualStep())->toBeFalse()
-            ->and(TypeScriptPatchOutcome::Missing->needsManualStep())->toBeFalse();
+            ->and(TypeScriptPatchOutcome::AlreadyApplied->needsManualStep())->toBeFalse();
+    });
+
+    it('does not treat an unrelated 419 as an applied patch', function (): void {
+        file_put_contents($this->path, <<<'TS'
+            import { HttpStatusCode } from "axios";
+
+            const staleTime = 419;
+            const retry = (error) => [HttpStatusCode.Unauthorized].includes(error.response.status);
+
+            TS);
+
+        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path))
+            ->toBe(TypeScriptPatchOutcome::Patched);
+
+        expect(file_get_contents($this->path))->toContain('CSRF_TOKEN_MISMATCH,');
     });
 });

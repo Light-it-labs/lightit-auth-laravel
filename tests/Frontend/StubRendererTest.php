@@ -12,6 +12,10 @@ $writeStub = static function (string $contents): string {
 };
 
 describe('StubRenderer', function () use ($writeStub): void {
+    afterEach(function (): void {
+        array_map('unlink', glob(sys_get_temp_dir() . '/lightit-stub-*.stub') ?: []);
+    });
+
     it('substitutes spaced and unspaced placeholders', function () use ($writeStub): void {
         $stub = $writeStub('{{ alpha }} and {{beta}}');
 

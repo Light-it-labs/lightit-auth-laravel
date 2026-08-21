@@ -43,26 +43,28 @@ final class TypeScriptPatcher
         }
 
         if (file_put_contents($path, $patched) === false) {
-            return TypeScriptPatchOutcome::Failed;
+            return $this->restore($path, $original);
         }
 
-        // Reading back guards against a partial write leaving the consumer with a file that no
-        // longer parses; the original bytes are the only rollback this package has.
         $written = file_get_contents($path);
 
         if ($written === false || ! $this->alreadyPatched($written)) {
-            file_put_contents($path, $original);
-
-            return TypeScriptPatchOutcome::Failed;
+            return $this->restore($path, $original);
         }
 
         return TypeScriptPatchOutcome::Patched;
     }
 
+    private function restore(string $path, string $original): TypeScriptPatchOutcome
+    {
+        return file_put_contents($path, $original) === false
+            ? TypeScriptPatchOutcome::Corrupted
+            : TypeScriptPatchOutcome::Failed;
+    }
+
     private function alreadyPatched(string $contents): bool
     {
-        return str_contains($contents, self::CONSTANT_NAME)
-            || preg_match('/\b419\b/', $contents) === 1;
+        return str_contains($contents, self::CONSTANT_NAME);
     }
 
     private function insertConstant(string $contents): string|null
@@ -87,7 +89,7 @@ final class TypeScriptPatcher
         }
 
         return substr($contents, 0, $insertAt)
-            . PHP_EOL . PHP_EOL . self::CONSTANT_DECLARATION
+            . "\n\n" . self::CONSTANT_DECLARATION
             . substr($contents, $insertAt);
     }
 
@@ -108,7 +110,7 @@ final class TypeScriptPatcher
         }
 
         $replacement = rtrim($text, " \t\n\r")
-            . PHP_EOL . $this->lastEntryIndentation($text) . self::CONSTANT_NAME . ','
+            . "\n" . $this->lastEntryIndentation($text) . self::CONSTANT_NAME . ','
             . $this->trailingWhitespace($text);
 
         return substr_replace($contents, $replacement, $offset, strlen($text));
@@ -117,7 +119,7 @@ final class TypeScriptPatcher
     private function lastEntryIndentation(string $entries): string
     {
         $lines = array_filter(
-            explode(PHP_EOL, rtrim($entries)),
+            explode("\n", rtrim($entries)),
             static fn (string $line): bool => trim($line) !== ''
         );
 

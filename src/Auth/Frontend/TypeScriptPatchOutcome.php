@@ -11,9 +11,10 @@ enum TypeScriptPatchOutcome
     case AnchorNotFound;
     case Missing;
     case Failed;
+    case Corrupted;
 
     public function needsManualStep(): bool
     {
-        return $this === self::AnchorNotFound || $this === self::Failed;
+        return $this !== self::Patched && $this !== self::AlreadyApplied;
     }
 }

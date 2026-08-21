@@ -167,7 +167,9 @@ final class SanctumCookieFrontendInstaller implements AuthInstallerInterface
     private function patchQueryClient(string $root): TypeScriptPatchOutcome
     {
         $relative = 'src/config/query-client.ts';
-        $outcome = $this->patcher->addCsrfMismatchToRetryList($root . '/' . $relative);
+        $outcome = $this->patcher->addCsrfMismatchToRetryList(
+            $this->locator->resolveDestination($root, $relative)
+        );
 
         match ($outcome) {
             TypeScriptPatchOutcome::Patched => $this->command->info(
@@ -178,6 +180,9 @@ final class SanctumCookieFrontendInstaller implements AuthInstallerInterface
             ),
             TypeScriptPatchOutcome::Missing => $this->command->warn(
                 "Skipped {$relative}: the file does not exist."
+            ),
+            TypeScriptPatchOutcome::Corrupted => $this->command->error(
+                "Failed to patch {$relative} and could not restore it. Check the file before running the app."
             ),
             TypeScriptPatchOutcome::AnchorNotFound, TypeScriptPatchOutcome::Failed => $this->command->warn(
                 "Could not patch {$relative} automatically. " . self::TODO_FILE . ' carries the change.'
@@ -192,6 +197,14 @@ final class SanctumCookieFrontendInstaller implements AuthInstallerInterface
      */
     private function queryClientTokens(TypeScriptPatchOutcome $outcome): array
     {
+        if ($outcome === TypeScriptPatchOutcome::Missing) {
+            return [
+                'queryClientCheckbox' => ' ',
+                'queryClientStatus' => 'No `src/config/query-client.ts` was found, so nothing was changed. '
+                    . 'Add 419 to whichever module owns your retry policy.',
+            ];
+        }
+
         return $outcome->needsManualStep()
             ? ['queryClientCheckbox' => ' ', 'queryClientStatus' => self::QUERY_CLIENT_MANUAL]
             : ['queryClientCheckbox' => 'x', 'queryClientStatus' => self::QUERY_CLIENT_DONE];
