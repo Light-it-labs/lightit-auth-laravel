@@ -13,7 +13,6 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
-use Lightitlabs\Auth\Installers\JwtInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\SanctumCookieFrontendInstaller;
@@ -64,8 +63,7 @@ class AuthSetupCommand extends Command
         );
 
         // OTP requires a token-based driver; SPA cookie sessions handle re-auth differently
-        $hasTokenDriver = in_array(AuthDriver::Jwt, $drivers, true)
-            || in_array(AuthDriver::SanctumApiToken, $drivers, true);
+        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken, $drivers, true);
 
         $enableOtp = $hasTokenDriver && confirm(
             label: 'Would you like to enable OTP (one-time password)?',
@@ -267,10 +265,6 @@ class AuthSetupCommand extends Command
             AuthDriver::SanctumCookie,
         ], true));
 
-        if (in_array(AuthDriver::Jwt, $drivers, true) && $sanctumDrivers !== []) {
-            return 'You cannot select both JWT and Sanctum authentication drivers.';
-        }
-
         if (count($sanctumDrivers) > 1) {
             return 'You cannot select both Sanctum API Token and Sanctum Cookie drivers simultaneously.';
         }
@@ -328,7 +322,6 @@ class AuthSetupCommand extends Command
     protected function setupDrivers(array $drivers): void
     {
         $setup = [
-            AuthDriver::Jwt->value => fn () => $this->setupJWT(),
             AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
             AuthDriver::SanctumCookie->value => fn () => $this->setupSanctumCookie(),
             AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
@@ -337,17 +330,6 @@ class AuthSetupCommand extends Command
         foreach ($drivers as $driver) {
             $setup[$driver->value]();
         }
-    }
-
-    protected function setupJWT(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up JWT...');
-
-        $composerInstaller = new ComposerInstaller($this);
-        $fileManipulator = new FileManipulator($this);
-        $jwtInstaller = new JwtInstaller($this, $composerInstaller, $fileManipulator);
-        $jwtInstaller->install();
-        $this->printSectionSeparator();
     }
 
     protected function setupSanctum(): void
@@ -428,7 +410,7 @@ class AuthSetupCommand extends Command
         $driver = match (true) {
             in_array(AuthDriver::SanctumApiToken, $drivers, true) => AuthDriver::SanctumApiToken,
             in_array(AuthDriver::SanctumCookie, $drivers, true) => AuthDriver::SanctumCookie,
-            default => AuthDriver::Jwt,
+            default => AuthDriver::GoogleSso,
         };
 
         $composerInstaller = new ComposerInstaller($this);
