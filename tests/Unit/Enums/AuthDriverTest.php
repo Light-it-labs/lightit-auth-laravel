@@ -10,12 +10,11 @@ describe('AuthDriver', function (): void {
     });
 
     it('resolves every driver from its cli slug', function (): void {
-        expect(AuthDriver::slugs())->toBe(['jwt', 'sanctum-token', 'sanctum-cookie', 'google-sso']);
+        expect(AuthDriver::slugs())->toBe(['sanctum-token', 'sanctum-cookie', 'google-sso']);
     });
 
     it('maps slugs to display labels', function (): void {
         expect(AuthDriver::options())->toBe([
-            'jwt' => 'JWT',
             'sanctum-token' => 'Sanctum API Token',
             'sanctum-cookie' => 'Sanctum Cookie (SPA)',
             'google-sso' => 'Google SSO',

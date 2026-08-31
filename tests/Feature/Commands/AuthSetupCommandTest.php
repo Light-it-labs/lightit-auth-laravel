@@ -18,12 +18,6 @@ describe('auth:setup driver resolution', function (): void {
             ->assertFailed();
     });
 
-    it('fails when jwt and a sanctum driver are requested together', function (): void {
-        $this->artisan('auth:setup', ['--driver' => ['jwt', 'sanctum-cookie'], '--no-interaction' => true])
-            ->expectsOutputToContain('You cannot select both')
-            ->assertFailed();
-    });
-
     it('fails when both sanctum drivers are requested in one comma separated value', function (): void {
         $this->artisan('auth:setup', ['--driver' => ['sanctum-token,sanctum-cookie'], '--no-interaction' => true])
             ->expectsOutputToContain('You cannot select both')
