@@ -6,7 +6,6 @@ namespace Lightitlabs\Enums;
 
 enum AuthDriver: string
 {
-    case Jwt = 'jwt';
     case SanctumApiToken = 'sanctum-token';
     case SanctumCookie = 'sanctum-cookie';
     case GoogleSso = 'google-sso';
@@ -14,7 +13,6 @@ enum AuthDriver: string
     public function label(): string
     {
         return match ($this) {
-            self::Jwt => 'JWT',
             self::SanctumApiToken => 'Sanctum API Token',
             self::SanctumCookie => 'Sanctum Cookie (SPA)',
             self::GoogleSso => 'Google SSO',
