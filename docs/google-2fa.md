@@ -73,7 +73,7 @@ class UnauthorizedException extends HttpException
 
 #### 5. Configure the authentication guard
 
-Follow the guard configuration from your chosen driver — see [JWT setup](jwt.md#3-update-environment-and-config) or [Sanctum setup](sanctum.md#3-update-environment-and-config).
+Follow the guard configuration from your chosen driver — see [Sanctum setup](sanctum.md#3-update-environment-and-config).
 
 #### 6. Define 2FA-related routes
 
