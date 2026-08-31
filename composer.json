@@ -1,6 +1,6 @@
 {
     "name": "light-it-labs/lightit-auth-laravel",
-    "description": "A comprehensive authentication package for Laravel projects, designed to streamline the implementation of various authentication strategies. This package supports JWT-based authentication, Google SSO, Laravel Sanctum, 2FA, OTP, and role-permission systems with standardized examples for seamless integration into your projects.",
+    "description": "A comprehensive authentication package for Laravel projects, designed to streamline the implementation of various authentication strategies. This package supports Google SSO, Laravel Sanctum, 2FA, OTP, and role-permission systems with standardized examples for seamless integration into your projects.",
     "keywords": [
         "Light-it Labs",
         "php",
@@ -9,7 +9,6 @@
         "auth",
         "laravel auth",
         "laravel authentication",
-        "jwt",
         "sanctum",
         "google sso",
         "2fa",
@@ -46,9 +45,6 @@
         "illuminate/contracts": "^11.0||^12.0||^13.0",
         "spatie/laravel-package-tools": "^1.16"
     },
-    "suggest": {
-        "php-open-source-saver/jwt-auth": "Required when using the JWT authentication driver (^2.0)."
-    },
     "require-dev": {
         "larastan/larastan": "^2.9||^3.0",
         "laravel/pint": "^1.14",
@@ -57,7 +53,6 @@
         "pestphp/pest": "^3.0",
         "pestphp/pest-plugin-arch": "^3.0",
         "pestphp/pest-plugin-laravel": "^3.0",
-        "php-open-source-saver/jwt-auth": "^2.0",
         "phpstan/extension-installer": "^1.3||^2.0",
         "phpstan/phpstan-deprecation-rules": "^1.1||^2.0",
         "phpstan/phpstan-phpunit": "^1.3||^2.0",
