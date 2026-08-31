@@ -395,8 +395,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
-        $jwtInstaller->install();
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller);
+        $googleSSOInstaller->install();
         $this->printSectionSeparator();
     }
 
