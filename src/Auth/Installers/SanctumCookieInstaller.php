@@ -8,13 +8,17 @@ use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\EnvironmentKeys;
 use Lightitlabs\Tools\FileManipulator;
+use Lightitlabs\Tools\RouteFileRegistrar;
+use Lightitlabs\Tools\RouteRegistrationOutcome;
 use RuntimeException;
 
 final class SanctumCookieInstaller implements AuthInstallerInterface
 {
     private const TOTAL_STEPS = 7;
 
-    private const ROUTES_MARKER = '// lightit-auth: authentication routes';
+    private const ROUTES_LABEL = 'authentication';
+
+    private const ROUTES_FILE_NAME = 'auth.php';
 
     private const CONTROLLER_NAMESPACE = 'Lightit\Authentication\App\Controllers';
 
@@ -61,6 +65,7 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
         private readonly ComposerInstaller $composerInstaller,
         private readonly FileManipulator $fileManipulator,
         private readonly EnvironmentKeys $environmentKeys = new EnvironmentKeys(),
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
     ) {
     }
 
@@ -247,8 +252,8 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
 
         $this->writeStub(
             'SanctumCookie/routes/auth.stub',
-            $routesDirectory . '/auth.php',
-            'routes/auth.php'
+            $routesDirectory . '/' . self::ROUTES_FILE_NAME,
+            'routes/' . self::ROUTES_FILE_NAME
         );
 
         $this->requireAuthRoutes($routesDirectory . '/api.php');
@@ -256,40 +261,29 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
 
     private function requireAuthRoutes(string $path): void
     {
-        if (! file_exists($path)) {
-            $this->command->warn(
+        $outcome = $this->routeFileRegistrar->register($path, self::ROUTES_FILE_NAME, self::ROUTES_LABEL);
+        $requireStatement = $this->routeFileRegistrar->requireStatement(self::ROUTES_FILE_NAME);
+
+        match ($outcome) {
+            RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
+                "Updated routes/api.php: {$requireStatement}"
+            ),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
+                'Authentication routes already required in routes/api.php'
+            ),
+            RouteRegistrationOutcome::ParentMissing => $this->command->warn(
                 'Could not find routes/api.php. ' .
-                "Please add require __DIR__.'/auth.php'; to your API route file manually."
-            );
-
-            return;
-        }
-
-        $before = (string) file_get_contents($path);
-
-        if (str_contains($before, self::ROUTES_MARKER)) {
-            $this->composerInstaller->printFileCreated('Authentication routes already required in routes/api.php');
-
-            return;
-        }
-
-        file_put_contents(
-            $path,
-            rtrim($before) . PHP_EOL . PHP_EOL
-                . self::ROUTES_MARKER . PHP_EOL
-                . "require __DIR__.'/auth.php';" . PHP_EOL
-        );
-
-        if (! str_contains((string) file_get_contents($path), self::ROUTES_MARKER)) {
-            $this->command->warn(
-                "Could not append require __DIR__.'/auth.php'; to routes/api.php automatically. " .
+                "Please add {$requireStatement} to your API route file manually."
+            ),
+            RouteRegistrationOutcome::Failed => $this->command->warn(
+                "Could not append {$requireStatement} to routes/api.php automatically. " .
                 'Please add it manually.'
-            );
-
-            return;
-        }
-
-        $this->composerInstaller->printFileCreated("Updated routes/api.php: require __DIR__.'/auth.php';");
+            ),
+            RouteRegistrationOutcome::Corrupted => $this->command->error(
+                "routes/api.php was left in an inconsistent state while adding {$requireStatement}. " .
+                'Please inspect the file.'
+            ),
+        };
     }
 
     private function appendEnvironmentVariables(): void
@@ -394,19 +388,12 @@ final class SanctumCookieInstaller implements AuthInstallerInterface
 
     private function warnAboutShadowedRoutes(): void
     {
-        $path = base_path('routes/api.php');
+        $shadowed = $this->routeFileRegistrar->shadowedRoutes(
+            base_path('routes/api.php'),
+            self::GENERATED_ROUTE_PATTERNS
+        );
 
-        if (! file_exists($path)) {
-            return;
-        }
-
-        $contents = (string) file_get_contents($path);
-
-        foreach (self::GENERATED_ROUTE_PATTERNS as $route => $pattern) {
-            if (preg_match($pattern, $contents) !== 1) {
-                continue;
-            }
-
+        foreach ($shadowed as $route) {
             $this->command->warn(
                 "routes/api.php already declares {$route} above the generated require. " .
                 'RouteCollection keys routes by method and URI, so the generated declaration ' .
