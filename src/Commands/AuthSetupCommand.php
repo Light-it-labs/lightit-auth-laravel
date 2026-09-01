@@ -76,6 +76,10 @@ class AuthSetupCommand extends Command
         );
 
         try {
+            // setupDrivers() must run before setup2FA(): Google2FAInstaller deliberately
+            // overwrites the LoginController/VerifyRecoveryCodeController that
+            // SanctumCookieInstaller wrote with 2FA-aware versions. See
+            // Google2FAInstaller::overwriteSanctumCookieControllersWithTwoFactorVersions().
             $this->setupDrivers($drivers);
 
             if ($enable2FA) {
