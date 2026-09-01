@@ -9,6 +9,7 @@ on:
       - 'phpunit.xml.dist'
       - 'composer.json'
       - 'composer.lock'
+      - 'tests/Fixtures/frontend/**'
 
 jobs:
   test:
@@ -54,3 +55,27 @@ jobs:
 
       - name: Execute tests
         run: vendor/bin/pest --ci
+
+  typescript:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    name: TypeScript check
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/Fixtures/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tests/Fixtures/frontend
+        run: npm ci
+
+      - name: Type-check generated frontend fixtures
+        working-directory: tests/Fixtures/frontend
+        run: npx tsc --noEmit -p tsconfig.json
