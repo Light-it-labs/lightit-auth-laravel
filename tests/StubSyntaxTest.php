@@ -2,19 +2,21 @@
 
 declare(strict_types=1);
 
+const STUB_SCAN_EXCLUDED_DIRECTORIES = ['/vendor/', '/.git/', '/node_modules/'];
+
 /**
  * @return list<string>
  */
 function phpStubPaths(): array
 {
-    $stubsPath = realpath(__DIR__ . '/../src/Stubs');
+    $packageRoot = realpath(__DIR__ . '/..');
 
-    if ($stubsPath === false) {
-        throw new RuntimeException('src/Stubs is not readable; the stub suite would silently validate nothing.');
+    if ($packageRoot === false) {
+        throw new RuntimeException('Package root is not readable; the stub suite would silently validate nothing.');
     }
 
     $files = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($stubsPath, FilesystemIterator::SKIP_DOTS)
+        new RecursiveDirectoryIterator($packageRoot, FilesystemIterator::SKIP_DOTS)
     );
 
     $paths = [];
@@ -25,11 +27,19 @@ function phpStubPaths(): array
             continue;
         }
 
-        if (! str_starts_with((string) file_get_contents($file->getPathname()), '<?php')) {
+        $pathname = $file->getPathname();
+
+        foreach (STUB_SCAN_EXCLUDED_DIRECTORIES as $excludedDirectory) {
+            if (str_contains($pathname, $excludedDirectory)) {
+                continue 2;
+            }
+        }
+
+        if (! str_starts_with((string) file_get_contents($pathname), '<?php')) {
             continue;
         }
 
-        $paths[] = substr($file->getPathname(), strlen($stubsPath) + 1);
+        $paths[] = substr($pathname, strlen($packageRoot) + 1);
     }
 
     sort($paths);
@@ -39,7 +49,7 @@ function phpStubPaths(): array
 
 function readStub(string $relativePath): string
 {
-    return (string) file_get_contents(__DIR__ . '/../src/Stubs/' . $relativePath);
+    return (string) file_get_contents(__DIR__ . '/../' . $relativePath);
 }
 
 dataset('phpStubs', function (): Generator {
