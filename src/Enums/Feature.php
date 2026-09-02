@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Enums;
 
-enum AuthDriver: string
+enum Feature: string
 {
-    case SanctumApiToken = 'sanctum-token';
-    case SanctumCookie = 'sanctum-cookie';
-    case GoogleSso = 'google-sso';
+    case TwoFactorAuthentication = 'two-factor-authentication';
+    case RolesAndPermissions = 'roles-and-permissions';
+    case Otp = 'otp';
+    case ForgotPassword = 'forgot-password';
 
     public function label(): string
     {
         return match ($this) {
-            self::SanctumApiToken => 'Sanctum API Token',
-            self::SanctumCookie => 'Sanctum Cookie (SPA)',
-            self::GoogleSso => 'Google SSO',
+            self::TwoFactorAuthentication => 'Two-Factor Authentication',
+            self::RolesAndPermissions => 'Roles and Permissions',
+            self::Otp => 'OTP (one-time password)',
+            self::ForgotPassword => 'Forgot Password flow',
         };
     }
 
