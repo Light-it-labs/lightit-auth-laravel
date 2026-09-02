@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
+use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
 
 $fixturePath = static function (string $relative): string {
@@ -18,7 +19,7 @@ describe('frontend stub rendering', function () use ($fixturePath, $stubPath): v
         string $stub,
         string $fixture,
     ) use ($fixturePath, $stubPath): void {
-        $rendered = (new StubRenderer)->render($stubPath($stub), FrontendStubTokens::defaults());
+        $rendered = (new StubRenderer)->render($stubPath($stub), FrontendStubTokens::defaults(), new OriginMarker('0.0.0-test'));
 
         expect($rendered)->toBe(file_get_contents($fixturePath($fixture)));
     })->with([

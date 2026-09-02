@@ -13,7 +13,7 @@ final class StubRenderer
     /**
      * @param array<string, string> $tokens
      */
-    public function render(string $stubPath, array $tokens): string
+    public function render(string $stubPath, array $tokens, ?OriginMarker $originMarker = null): string
     {
         $contents = @file_get_contents($stubPath);
 
@@ -29,15 +29,25 @@ final class StubRenderer
             );
         }
 
-        return $rendered;
+        if ($originMarker === null) {
+            return $rendered;
+        }
+
+        $marker = $originMarker->forStub($stubPath);
+
+        $prefix = str_ends_with($stubPath, '.md.stub')
+            ? "<!-- {$marker} -->\n\n"
+            : "// {$marker}\n\n";
+
+        return $prefix . $rendered;
     }
 
     /**
      * @param array<string, string> $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
+    public function renderTo(string $stubPath, string $destination, array $tokens, ?OriginMarker $originMarker = null): void
     {
-        $rendered = $this->render($stubPath, $tokens);
+        $rendered = $this->render($stubPath, $tokens, $originMarker);
 
         $directory = \dirname($destination);
 
