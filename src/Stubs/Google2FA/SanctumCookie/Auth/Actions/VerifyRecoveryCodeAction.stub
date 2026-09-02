@@ -8,20 +8,20 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifyRecoveryCodeDto;
-use Lightit\Shared\App\Exceptions\Http\UnauthorizedException;
+use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class VerifyRecoveryCodeAction
 {
     /**
-     * @throws UnauthorizedException
+     * @throws UnauthenticatedException
      */
     public function execute(User $user, string $suppliedCode): VerifyRecoveryCodeDto
     {
         $hashedCodes = $user->getRecoveryCodes();
 
         if ($hashedCodes === []) {
-            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+            throw new UnauthenticatedException(__('google2fa.invalid_recovery_code'));
         }
 
         $matchIndex = -1;
@@ -35,7 +35,7 @@ final readonly class VerifyRecoveryCodeAction
         }
 
         if ($matchIndex === -1) {
-            throw new UnauthorizedException(__('google2fa.invalid_recovery_code'));
+            throw new UnauthenticatedException(__('google2fa.invalid_recovery_code'));
         }
 
         unset($hashedCodes[$matchIndex]);
