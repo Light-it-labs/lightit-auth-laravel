@@ -1,0 +1,13 @@
+{
+  "name": "lightit-auth-laravel-frontend-typecheck",
+  "private": true,
+  "description": "Dev-only tooling to type-check the generated frontend TypeScript fixtures in CI. Not a real project — versions mirror tests/Fixtures/frontend/react-project/package.json.",
+  "devDependencies": {
+    "@lukemorales/query-key-factory": "^1.3.4",
+    "@tanstack/react-query": "^5.91.2",
+    "axios": "^1.13.5",
+    "string-ts": "^2.3.1",
+    "typescript": "^5.9.3",
+    "zod": "^4.1.13"
+  }
+}
