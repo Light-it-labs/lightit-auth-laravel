@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class GoogleSSOInstaller implements AuthInstallerInterface
 {
@@ -18,6 +19,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -59,7 +61,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->stubCopier->copy(
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
@@ -80,7 +82,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
             mkdir($sharedDir, 0755, true);
         }
 
-        copy($sharedStubPath, $sharedDestPath);
+        $this->stubCopier->copy($sharedStubPath, $sharedDestPath);
         $this->composerInstaller->printFileCreated(
             'Created: src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php'
         );
