@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class ForgotPasswordInstaller implements AuthInstallerInterface
 {
@@ -18,6 +19,7 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
 
     public function __construct(
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -57,7 +59,7 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->stubCopier->copy(
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );

@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class SanctumInstaller implements AuthInstallerInterface
 {
@@ -20,6 +21,7 @@ final class SanctumInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -66,7 +68,7 @@ final class SanctumInstaller implements AuthInstallerInterface
         ];
 
         foreach ($sharedFiles as $stub => $destination) {
-            copy(
+            $this->stubCopier->copy(
                 $sharedStubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
@@ -74,7 +76,7 @@ final class SanctumInstaller implements AuthInstallerInterface
         }
 
         foreach ($driverFiles as $stub => $destination) {
-            copy(
+            $this->stubCopier->copy(
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
