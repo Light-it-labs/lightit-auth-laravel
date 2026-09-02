@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use RuntimeException;
 
 final class SanctumInstaller implements AuthInstallerInterface
 {
@@ -61,10 +62,12 @@ final class SanctumInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
-            );
+            $target = base_path("src/Authentication/{$destination}");
+
+            if (! copy($stubsPath . $stub, $target)) {
+                throw new RuntimeException("Could not write {$target}");
+            }
+
             $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
