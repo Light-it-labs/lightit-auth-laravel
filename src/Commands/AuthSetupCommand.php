@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
+use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
@@ -15,6 +18,7 @@ use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Enums\LoginMethod;
+use Lightitlabs\Tools\StubRenderer;
 use Throwable;
 
 use function Laravel\Prompts\multiselect;
@@ -177,6 +181,26 @@ class AuthSetupCommand extends Command
         $composerInstaller = new ComposerInstaller($this);
         $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->setup2FAFrontend();
+    }
+
+    protected function setup2FAFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up 2FA frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new Google2FAFrontendInstaller(
+            $this,
+            new StubRenderer,
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 
