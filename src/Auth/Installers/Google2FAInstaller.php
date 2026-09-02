@@ -6,8 +6,6 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Tools\RouteFileRegistrar;
-use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
 
 final class Google2FAInstaller implements AuthInstallerInterface
@@ -27,8 +25,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
-        private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
     public function install(): void
@@ -115,13 +111,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             );
             $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
-    }
-
-    private function writeStubOrFail(string $source, string $destination, string $label): void
-    {
-        $this->stubCopier->copy($source, $destination);
-
-        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 
     private function publishConfiguration(): void
