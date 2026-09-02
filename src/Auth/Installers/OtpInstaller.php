@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class OtpInstaller implements AuthInstallerInterface
 {
@@ -20,6 +21,7 @@ final class OtpInstaller implements AuthInstallerInterface
 
     public function __construct(
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -64,7 +66,7 @@ final class OtpInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->stubCopier->copy(
                 $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
@@ -80,7 +82,7 @@ final class OtpInstaller implements AuthInstallerInterface
         $timestamp = date('Y_m_d_His');
         $destination = "database/migrations/{$timestamp}_create_otps_table.php";
 
-        copy(
+        $this->stubCopier->copy(
             $stub,
             base_path($destination)
         );
@@ -95,7 +97,7 @@ final class OtpInstaller implements AuthInstallerInterface
             mkdir(config_path(), 0755, true);
         }
 
-        copy(
+        $this->stubCopier->copy(
             __DIR__ . '/../../Stubs/Otp/config/otp.stub',
             config_path('otp.php')
         );
