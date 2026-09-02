@@ -5,27 +5,18 @@ declare(strict_types=1);
 namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
-use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
-use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
-use Lightitlabs\Auth\Frontend\FrontendUsageScanner;
-use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
-use Lightitlabs\Auth\Installers\SanctumCookieFrontendInstaller;
-use Lightitlabs\Auth\Installers\SanctumCookieInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
-use Lightitlabs\Enums\AuthDriver;
-use Lightitlabs\Tools\FileManipulator;
-use Lightitlabs\Tools\StubRenderer;
-use Symfony\Component\Console\Input\InputOption;
+use Lightitlabs\Enums\Feature;
+use Lightitlabs\Enums\LoginMethod;
 use Throwable;
-use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
+
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
@@ -46,259 +37,72 @@ class AuthSetupCommand extends Command
     {
         $this->printBanner();
 
-        $drivers = $this->resolveDrivers();
-
-        if ($drivers === null) {
-            return self::FAILURE;
-        }
-
-        $enable2FA = confirm(
-            label: 'Would you like to enable Two-Factor Authentication?',
-            default: false,
-        );
-
-        $enableRolesAndPermissions = confirm(
-            label: 'Would you like to enable Roles and Permissions?',
-            default: false,
-        );
-
-        // OTP requires a token-based driver; SPA cookie sessions handle re-auth differently
-        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken, $drivers, true);
-
-        $enableOtp = $hasTokenDriver && confirm(
-            label: 'Would you like to enable OTP (one-time password)?',
-            default: false,
-        );
-
-        $enableForgotPassword = confirm(
-            label: 'Would you like to enable the Forgot Password flow?',
-            default: false,
-        );
+        $loginMethods = $this->resolveLoginMethods();
+        $features = $this->resolveFeatures();
 
         try {
-            $this->setupDrivers($drivers);
-
-            if ($enable2FA) {
-                $this->setup2FA($drivers);
-            }
-
-            if ($enableRolesAndPermissions) {
-                $this->setupRolesAndPermissions();
-            }
-
-            if ($enableOtp) {
-                $this->setupOtp();
-            }
-
-            if ($enableForgotPassword) {
-                $this->setupForgotPassword();
-            }
-
-            if ($this->shouldSetupFrontend($drivers)) {
-                $this->setupFrontend();
-            }
+            $this->setupLoginMethods($loginMethods);
+            $this->setupFeatures($features);
         } catch (Throwable $exception) {
-            $this->printFailure('Authentication setup failed: ' . $exception->getMessage());
-            $this->printReproducibleCommand($drivers);
+            $this->printFailure('Authentication setup failed: '.$exception->getMessage());
 
             return self::FAILURE;
         }
 
         $this->printSuccess('Authentication setup completed!');
-        $this->printReproducibleCommand($drivers);
 
         return self::SUCCESS;
     }
 
     /**
-     * @return list<InputOption>
-     */
-    protected function getOptions(): array
-    {
-        return [
-            new InputOption(
-                name: 'driver',
-                mode: InputOption::VALUE_REQUIRED|InputOption::VALUE_IS_ARRAY,
-                description: 'Authentication driver slug. Repeatable and comma-separated.',
-                suggestedValues: AuthDriver::slugs(),
-            ),
-            new InputOption(
-                name: 'frontend-path',
-                mode: InputOption::VALUE_REQUIRED,
-                description: 'Path to the React project root.',
-            ),
-            new InputOption(
-                name: 'skip-frontend',
-                mode: InputOption::VALUE_NONE,
-                description: 'Do not generate the frontend authentication layer.',
-            ),
-        ];
-    }
-
-    /**
-     * @return list<AuthDriver>|null
-     */
-    private function resolveDrivers(): array|null
-    {
-        $requested = $this->requestedDriverSlugs();
-
-        if ($requested !== []) {
-            return $this->driversFromSlugs($requested);
-        }
-
-        if (! $this->canPrompt()) {
-            error('The --driver option is required when running without interaction.');
-            $this->printValidDrivers();
-
-            return null;
-        }
-
-        return $this->promptForDrivers();
-    }
-
-    /**
-     * Mirrors the condition Laravel uses to decide whether prompts render
-     * interactively, so this guard can never disagree with the prompt itself.
-     */
-    private function canPrompt(): bool
-    {
-        return $this->input->isInteractive()
-            && defined('STDIN')
-            && stream_isatty(STDIN);
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function requestedDriverSlugs(): array
-    {
-        /** @var list<string> $requested */
-        $requested = $this->option('driver');
-
-        $slugs = [];
-
-        foreach ($requested as $value) {
-            foreach (explode(',', $value) as $candidate) {
-                $slug = mb_strtolower(trim($candidate));
-
-                if ($slug !== '') {
-                    $slugs[] = $slug;
-                }
-            }
-        }
-
-        return array_values(array_unique($slugs));
-    }
-
-    /**
-     * @param list<string> $slugs
+     * Password is always enabled and cannot be deselected - it is added to the
+     * result regardless of what the multiselect returns, so SSO-only is never
+     * expressible.
      *
-     * @return list<AuthDriver>|null
+     * @return list<LoginMethod>
      */
-    private function driversFromSlugs(array $slugs): array|null
+    protected function resolveLoginMethods(): array
     {
-        $drivers = [];
+        $selected = array_filter(
+            multiselect(
+                label: 'Select login methods',
+                options: LoginMethod::options(),
+                default: [LoginMethod::Password->value],
+                hint: 'Password is always enabled. Press [space] to add Google SSO, [enter] to confirm.',
+            ),
+            'is_string'
+        );
 
-        foreach ($slugs as $slug) {
-            $driver = AuthDriver::tryFrom($slug);
+        $methods = array_values(array_map(
+            static fn (string $slug): LoginMethod => LoginMethod::from($slug),
+            $selected,
+        ));
 
-            if ($driver === null) {
-                error(sprintf('Unknown authentication driver "%s".', $slug));
-                $this->printValidDrivers();
-
-                return null;
-            }
-
-            $drivers[] = $driver;
+        if (! in_array(LoginMethod::Password, $methods, true)) {
+            array_unshift($methods, LoginMethod::Password);
         }
 
-        $conflict = self::driverConflict($drivers);
-
-        if ($conflict !== null) {
-            error($conflict);
-
-            return null;
-        }
-
-        return $drivers;
+        return $methods;
     }
 
     /**
-     * @return list<AuthDriver>
+     * @return list<Feature>
      */
-    private function promptForDrivers(): array
+    protected function resolveFeatures(): array
     {
-        do {
-            $selected = array_filter(
-                multiselect(
-                    label: 'Select authentication drivers',
-                    options: AuthDriver::options(),
-                    required: true,
-                    hint: 'Press [space] to select, [enter] to confirm.'
-                ),
-                'is_string'
-            );
+        $selected = array_filter(
+            multiselect(
+                label: 'Select optional features',
+                options: Feature::options(),
+                hint: 'Press [space] to select, [enter] to confirm.',
+            ),
+            'is_string'
+        );
 
-            $drivers = array_values(array_map(
-                static fn (string $slug): AuthDriver => AuthDriver::from($slug),
-                $selected,
-            ));
-
-            $conflict = self::driverConflict($drivers);
-
-            if ($conflict !== null) {
-                error($conflict);
-                $drivers = [];
-            }
-        } while ($drivers === []);
-
-        return $drivers;
-    }
-
-    /**
-     * @param list<AuthDriver> $drivers
-     */
-    private static function driverConflict(array $drivers): string|null
-    {
-        $sanctumDrivers = array_filter($drivers, static fn (AuthDriver $driver): bool => in_array($driver, [
-            AuthDriver::SanctumApiToken,
-            AuthDriver::SanctumCookie,
-        ], true));
-
-        if (count($sanctumDrivers) > 1) {
-            return 'You cannot select both Sanctum API Token and Sanctum Cookie drivers simultaneously.';
-        }
-
-        return null;
-    }
-
-    private function printValidDrivers(): void
-    {
-        $this->line('Valid drivers: ' . implode(', ', AuthDriver::slugs()));
-    }
-
-    /**
-     * @param list<AuthDriver> $drivers
-     */
-    private function printReproducibleCommand(array $drivers): void
-    {
-        $slugs = implode(',', array_map(static fn (AuthDriver $driver): string => $driver->value, $drivers));
-
-        $command = "php artisan auth:setup --driver={$slugs}";
-
-        $frontendPath = $this->option('frontend-path');
-
-        if (is_string($frontendPath) && $frontendPath !== '') {
-            $command .= " --frontend-path={$frontendPath}";
-        }
-
-        if ($this->option('skip-frontend') === true) {
-            $command .= ' --skip-frontend';
-        }
-
-        $this->line('');
-        $this->line("\e[0;35mRun this again unattended:\e[0m");
-        $this->line("{$command} -n");
+        return array_values(array_map(
+            static fn (string $slug): Feature => Feature::from($slug),
+            $selected,
+        ));
     }
 
     private function printBanner(): void
@@ -317,18 +121,17 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param list<AuthDriver> $drivers
+     * @param  list<LoginMethod>  $methods
      */
-    protected function setupDrivers(array $drivers): void
+    protected function setupLoginMethods(array $methods): void
     {
         $setup = [
-            AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
-            AuthDriver::SanctumCookie->value => fn () => $this->setupSanctumCookie(),
-            AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
+            LoginMethod::Password->value => fn () => $this->setupSanctum(),
+            LoginMethod::GoogleSso->value => fn () => $this->setupGoogleSSO(),
         ];
 
-        foreach ($drivers as $driver) {
-            $setup[$driver->value]();
+        foreach ($methods as $method) {
+            $setup[$method->value]();
         }
     }
 
@@ -339,54 +142,6 @@ class AuthSetupCommand extends Command
         $composerInstaller = new ComposerInstaller($this);
         $sanctumInstaller = new SanctumInstaller($this, $composerInstaller);
         $sanctumInstaller->install();
-        $this->printSectionSeparator();
-    }
-
-    protected function setupFrontend(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up React frontend (cookie auth)...');
-
-        $manifest = new FrontendPackageManifest();
-
-        $frontendInstaller = new SanctumCookieFrontendInstaller(
-            $this,
-            new StubRenderer(),
-            new FrontendProjectLocator($manifest),
-            $manifest,
-            new FrontendUsageScanner(),
-            new TypeScriptPatcher(),
-            base_path(),
-            $this->frontendPathOption(),
-        );
-
-        $frontendInstaller->install();
-        $this->printSectionSeparator();
-    }
-
-    /**
-     * @param list<AuthDriver> $drivers
-     */
-    private function shouldSetupFrontend(array $drivers): bool
-    {
-        return in_array(AuthDriver::SanctumCookie, $drivers, true)
-            && $this->option('skip-frontend') !== true;
-    }
-
-    private function frontendPathOption(): string|null
-    {
-        $path = $this->option('frontend-path');
-
-        return is_string($path) && $path !== '' ? $path : null;
-    }
-
-    protected function setupSanctumCookie(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up Sanctum Cookie (SPA)...');
-
-        $composerInstaller = new ComposerInstaller($this);
-        $fileManipulator = new FileManipulator($this);
-        $sanctumCookieInstaller = new SanctumCookieInstaller($this, $composerInstaller, $fileManipulator);
-        $sanctumCookieInstaller->install();
         $this->printSectionSeparator();
     }
 
@@ -401,20 +156,26 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param list<AuthDriver> $drivers
+     * @param  list<Feature>  $features
      */
-    protected function setup2FA(array $drivers): void
+    protected function setupFeatures(array $features): void
+    {
+        foreach ($features as $feature) {
+            match ($feature) {
+                Feature::TwoFactorAuthentication => $this->setup2FA(),
+                Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
+                Feature::Otp => $this->setupOtp(),
+                Feature::ForgotPassword => $this->setupForgotPassword(),
+            };
+        }
+    }
+
+    protected function setup2FA(): void
     {
         $this->printBoxedMessage('🛠 Setting up 2FA...');
 
-        $driver = match (true) {
-            in_array(AuthDriver::SanctumApiToken, $drivers, true) => AuthDriver::SanctumApiToken,
-            in_array(AuthDriver::SanctumCookie, $drivers, true) => AuthDriver::SanctumCookie,
-            default => AuthDriver::GoogleSso,
-        };
-
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
     }

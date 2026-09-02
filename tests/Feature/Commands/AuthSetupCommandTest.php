@@ -3,53 +3,41 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use Lightitlabs\Enums\Feature;
 use Lightitlabs\Tests\Fixtures\FakeAuthSetupCommand;
+use Symfony\Component\Console\Exception\InvalidOptionException;
 
-describe('auth:setup driver resolution', function (): void {
-    it('fails naming the missing flag when run without interaction and without a driver', function (): void {
-        $this->artisan('auth:setup', ['--no-interaction' => true])
-            ->expectsOutputToContain('--driver')
-            ->assertFailed();
-    });
-
-    it('fails on an unknown driver slug', function (): void {
-        $this->artisan('auth:setup', ['--driver' => ['bogus-driver'], '--no-interaction' => true])
-            ->expectsOutputToContain('Unknown authentication driver')
-            ->assertFailed();
-    });
-
-    it('fails when both sanctum drivers are requested in one comma separated value', function (): void {
-        $this->artisan('auth:setup', ['--driver' => ['sanctum-token,sanctum-cookie'], '--no-interaction' => true])
-            ->expectsOutputToContain('You cannot select both')
-            ->assertFailed();
+describe('auth:setup removed --driver flag', function (): void {
+    it('fails legibly rather than silently when the removed --driver flag is passed', function (): void {
+        expect(fn () => $this->artisan('auth:setup', ['--driver' => 'sanctum-token']))
+            ->toThrow(InvalidOptionException::class, 'The "--driver" option does not exist.');
     });
 });
 
 describe('auth:setup exit codes', function (): void {
-    it('succeeds and prints the reproducible invocation in canonical slugs', function (): void {
-        Artisan::registerCommand(new FakeAuthSetupCommand());
+    it('succeeds with the default login method and no optional features', function (): void {
+        Artisan::registerCommand(new FakeAuthSetupCommand);
 
-        $this->artisan('auth:setup-fake', [
-            '--driver' => [' Sanctum-Cookie '],
-            '--frontend-path' => '../react-template',
-        ])
-            ->expectsConfirmation('Would you like to enable Two-Factor Authentication?', 'no')
-            ->expectsConfirmation('Would you like to enable Roles and Permissions?', 'no')
-            ->expectsConfirmation('Would you like to enable the Forgot Password flow?', 'no')
-            ->expectsOutputToContain(
-                'php artisan auth:setup --driver=sanctum-cookie --frontend-path=../react-template -n'
-            )
-            ->assertSuccessful();
+        $this->artisan('auth:setup-fake')->assertSuccessful();
     });
 
     it('fails when an installer throws', function (): void {
         Artisan::registerCommand(new FakeAuthSetupCommand(installerThrows: true));
 
-        $this->artisan('auth:setup-fake', ['--driver' => ['sanctum-cookie']])
-            ->expectsConfirmation('Would you like to enable Two-Factor Authentication?', 'no')
-            ->expectsConfirmation('Would you like to enable Roles and Permissions?', 'no')
-            ->expectsConfirmation('Would you like to enable the Forgot Password flow?', 'no')
+        $this->artisan('auth:setup-fake')
             ->expectsOutputToContain('the installer exploded')
             ->assertFailed();
+    });
+});
+
+describe('auth:setup feature wiring', function (): void {
+    it('wires every Feature case to a handler', function (): void {
+        Artisan::registerCommand($fake = new FakeAuthSetupCommand(features: Feature::cases()));
+
+        $this->artisan('auth:setup-fake')->assertSuccessful();
+
+        expect($fake->invokedFeatures)->toEqualCanonicalizing(
+            array_map(static fn (Feature $feature): string => $feature->value, Feature::cases())
+        );
     });
 });

@@ -6,7 +6,7 @@ use Lightitlabs\Tools\EnvironmentKeys;
 
 describe('EnvironmentKeys', function (): void {
     beforeEach(function (): void {
-        $this->keys = new EnvironmentKeys();
+        $this->keys = new EnvironmentKeys;
     });
 
     it('does not find a key that is absent', function (): void {
@@ -27,7 +27,7 @@ describe('EnvironmentKeys', function (): void {
     });
 
     it('ignores the production examples the installer writes into its own block', function (): void {
-        // Verbatim from Stubs/SanctumCookie/env.stub - these once suppressed the real variables.
+        // A commented-out example block an installer might append - these once suppressed the real variables.
         $block = <<<'ENV'
             # Production: SPA on example.com, API on api.example.com.
             #   SESSION_DOMAIN=.example.com

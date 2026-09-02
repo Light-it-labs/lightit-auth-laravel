@@ -3,15 +3,14 @@
 declare(strict_types=1);
 
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
-use Lightitlabs\Auth\Installers\SanctumCookieFrontendInstaller;
 use Lightitlabs\Tools\StubRenderer;
 
 $fixturePath = static function (string $relative): string {
-    return __DIR__ . '/../Fixtures/frontend/expected/' . $relative;
+    return __DIR__.'/../Fixtures/frontend/expected/'.$relative;
 };
 
 $stubPath = static function (string $relative): string {
-    return SanctumCookieFrontendInstaller::stubDirectory() . '/' . $relative;
+    return __DIR__.'/../../src/Stubs/Frontend/SanctumCookie/'.$relative;
 };
 
 describe('frontend stub rendering', function () use ($fixturePath, $stubPath): void {
@@ -19,7 +18,7 @@ describe('frontend stub rendering', function () use ($fixturePath, $stubPath): v
         string $stub,
         string $fixture,
     ) use ($fixturePath, $stubPath): void {
-        $rendered = (new StubRenderer())->render($stubPath($stub), FrontendStubTokens::defaults());
+        $rendered = (new StubRenderer)->render($stubPath($stub), FrontendStubTokens::defaults());
 
         expect($rendered)->toBe(file_get_contents($fixturePath($fixture)));
     })->with([
@@ -35,7 +34,7 @@ describe('frontend stub rendering', function () use ($fixturePath, $stubPath): v
 
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
         $stubs = glob($stubPath('{,*/,*/*/}*.stub'), \GLOB_BRACE);
-        $renderer = new StubRenderer();
+        $renderer = new StubRenderer;
 
         expect($stubs)->toHaveCount(8);
 
