@@ -6,6 +6,9 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\RouteFileRegistrar;
+use Lightitlabs\Tools\RouteRegistrationOutcome;
+use Lightitlabs\Tools\StubCopier;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -23,8 +26,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-    ) {
-    }
+        private readonly StubCopier $stubCopier,
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly string $apiRoutesPath = 'routes/api.php',
+    ) {}
 
     public function install(): void
     {
@@ -112,6 +117,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
     }
 
+    private function writeStubOrFail(string $source, string $destination, string $label): void
+    {
+        $this->stubCopier->copy($source, $destination);
+
+        $this->composerInstaller->printFileCreated("Created: {$label}");
+    }
+
     private function publishConfiguration(): void
     {
         $this->composerInstaller->printStep(2, 5, 'Publishing configuration');
@@ -128,7 +140,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
-        copy(
+        $this->stubCopier->copy(
             $stub,
             base_path($destination)
         );
@@ -143,8 +155,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(config_path(), 0755, true);
         }
 
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
+        $this->stubCopier->copy(
+            __DIR__.'/../../Stubs/Google2FA/config/google2fa.stub',
             config_path('google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
@@ -157,8 +169,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
         }
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
+        $this->stubCopier->copy(
+            __DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub',
             lang_path('en/google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
