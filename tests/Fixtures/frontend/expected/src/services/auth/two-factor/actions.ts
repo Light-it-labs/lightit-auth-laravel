@@ -1,0 +1,40 @@
+import { useMutation } from "@tanstack/react-query";
+
+import type { UseMutationProps } from "@/services/types";
+import {
+  completeTwoFactor,
+  disableTwoFactor,
+  regenerateRecoveryCodes,
+  requestTwoFactorReset,
+  resetTwoFactor,
+  setupTwoFactor,
+  verifyRecoveryCode,
+} from "./api";
+
+export const useSetupTwoFactor = (props?: UseMutationProps<typeof setupTwoFactor>) => {
+  return useMutation({ mutationFn: setupTwoFactor, ...props });
+};
+
+export const useCompleteTwoFactor = (props?: UseMutationProps<typeof completeTwoFactor>) => {
+  return useMutation({ mutationFn: completeTwoFactor, ...props });
+};
+
+export const useVerifyRecoveryCode = (props?: UseMutationProps<typeof verifyRecoveryCode>) => {
+  return useMutation({ mutationFn: verifyRecoveryCode, ...props });
+};
+
+export const useRequestTwoFactorReset = (props?: UseMutationProps<typeof requestTwoFactorReset>) => {
+  return useMutation({ mutationFn: requestTwoFactorReset, ...props });
+};
+
+export const useResetTwoFactor = (props?: UseMutationProps<typeof resetTwoFactor>) => {
+  return useMutation({ mutationFn: resetTwoFactor, ...props });
+};
+
+export const useDisableTwoFactor = (props?: UseMutationProps<typeof disableTwoFactor>) => {
+  return useMutation({ mutationFn: disableTwoFactor, ...props });
+};
+
+export const useRegenerateRecoveryCodes = (props?: UseMutationProps<typeof regenerateRecoveryCodes>) => {
+  return useMutation({ mutationFn: regenerateRecoveryCodes, ...props });
+};
