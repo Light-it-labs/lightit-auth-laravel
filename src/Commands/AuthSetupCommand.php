@@ -14,6 +14,7 @@ use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\AuthDriver;
+
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\multiselect;
 
@@ -85,7 +86,7 @@ class AuthSetupCommand extends Command
         $this->setupDrivers($drivers);
 
         if ($enable2FA) {
-            $this->setup2FA($drivers);
+            $this->setup2FA();
         }
 
         if ($enableRolesAndPermissions) {
@@ -95,7 +96,7 @@ class AuthSetupCommand extends Command
         if ($enableOtp) {
             $this->setupOtp();
         }
-        
+
         if ($enableForgotPassword) {
             $this->setupForgotPassword();
         }
@@ -106,7 +107,7 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<string> $drivers
+     * @param  array<string>  $drivers
      */
     protected function setupDrivers(array $drivers): void
     {
@@ -141,19 +142,12 @@ class AuthSetupCommand extends Command
         $this->printSectionSeparator();
     }
 
-    /**
-     * @param array<string> $drivers
-     */
-    protected function setup2FA(array $drivers): void
+    protected function setup2FA(): void
     {
         $this->printBoxedMessage('🛠 Setting up 2FA...');
 
-        $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
-            ? AuthDriver::SanctumApiToken
-            : AuthDriver::GoogleSso;
-
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
     }
