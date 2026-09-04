@@ -51,25 +51,49 @@ describe('GoogleSSO frontend stub rendering', function () use ($fixturePath, $st
     });
 
     it('posts the field named `token`, not `idToken`, matching GoogleLoginRequest::TOKEN', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/sso/google/api.ts')))
+        $marker = new OriginMarker(GOOGLE_SSO_GOLDEN_TEST_MARKER_VERSION);
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/sso/google/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+            $marker,
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/sso/google/api.ts')))
             ->toContain('googleSsoApi.post("auth/google", { token: idToken })')
             ->not->toContain('{ idToken })');
     });
 
     it('does not attach a manual Authorization header, unlike the two-factor exchange endpoints', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/sso/google/api.ts')))
+        $marker = new OriginMarker(GOOGLE_SSO_GOLDEN_TEST_MARKER_VERSION);
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/sso/google/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+            $marker,
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/sso/google/api.ts')))
             ->not->toContain('Authorization')
             ->not->toContain('bearer(');
     });
 
     it('spells the provenance marker so cspell can tokenize it', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('AUTH-GOOGLE-SSO-FRONTEND-TODO.md')))
+        $marker = new OriginMarker(GOOGLE_SSO_GOLDEN_TEST_MARKER_VERSION);
+        $rendered = (new StubRenderer)->render(
+            $stubPath('AUTH-GOOGLE-SSO-FRONTEND-TODO.md.stub'),
+            FrontendStubTokens::defaults(),
+            $marker,
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('AUTH-GOOGLE-SSO-FRONTEND-TODO.md')))
             ->toContain('light-it')
             ->not->toContain('lightit');
     });
