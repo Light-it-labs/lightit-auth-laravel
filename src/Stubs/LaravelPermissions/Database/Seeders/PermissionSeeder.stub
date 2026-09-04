@@ -14,8 +14,11 @@ class PermissionSeeder extends Seeder
     {
         $permissions = PermissionManagement::getPermissions();
 
-        foreach ($permissions as $permission => $data) {
-            Permission::firstOrCreate(['name' => $permission]);
+        foreach ($permissions as $name => $data) {
+            $permission = Permission::firstWhere('name', $name) ?? new Permission();
+            $permission->name = $name;
+            $permission->group = $data['group'];
+            $permission->saveOrFail();
         }
     }
 }
