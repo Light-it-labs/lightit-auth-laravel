@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateUserRolesRequest extends FormRequest
+{
+    public const string ROLE_NAMES = 'role_names';
+
+    // Authorization is enforced by the route-level PermissionMiddleware, not this FormRequest.
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    public function rules(): array
+    {
+        return [
+            self::ROLE_NAMES => ['required', 'array'],
+            self::ROLE_NAMES.'.*' => ['required', 'string', 'exists:roles,name'],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getRoleNames(): array
+    {
+        /** @var list<string> $roleNames */
+        $roleNames = $this->input(self::ROLE_NAMES, []);
+
+        return $roleNames;
+    }
+}

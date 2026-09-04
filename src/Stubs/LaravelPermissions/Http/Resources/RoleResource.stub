@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Spatie\Permission\Models\Role;
+
+/**
+ * @mixin Role
+ */
+#[SchemaName('Role')]
+class RoleResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'name' => $this->name,
+            'description' => $this->description,
+            'permissions' => $this->permissions->pluck('name')->all(),
+        ];
+    }
+}
