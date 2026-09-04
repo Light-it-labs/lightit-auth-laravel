@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\StartPasskeyRegistrationController;
+use Lightit\Authentication\App\Controllers\StorePasskeyController;
+
+/*
+|--------------------------------------------------------------------------
+| Passkey (WebAuthn) Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('passkeys')
+    ->middleware('auth:sanctum')
+    ->group(static function (): void {
+        Route::post('registration-options', StartPasskeyRegistrationController::class);
+        Route::post('/', StorePasskeyController::class);
+    });
