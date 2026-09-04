@@ -25,7 +25,13 @@ function phpStubPaths(): array
             continue;
         }
 
-        if (! str_starts_with((string) file_get_contents($file->getPathname()), '<?php')) {
+        $contents = file_get_contents($file->getPathname());
+
+        if ($contents === false) {
+            throw new RuntimeException("Unable to read stub file: {$file->getPathname()}");
+        }
+
+        if (! str_starts_with($contents, '<?php')) {
             continue;
         }
 
