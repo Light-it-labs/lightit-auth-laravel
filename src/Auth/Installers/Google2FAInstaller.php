@@ -33,6 +33,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
     public function install(): void
@@ -205,7 +206,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         };
 
         $outcome = $this->routeFileRegistrar->register(
-            base_path('routes/api.php'),
+            base_path($this->apiRoutesPath),
             self::ROUTES_FILE_NAME,
             self::ROUTES_LABEL
         );
@@ -213,21 +214,21 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         match ($outcome) {
             RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
-                "Updated routes/api.php: {$requireStatement}"
+                "Updated {$this->apiRoutesPath}: {$requireStatement}"
             ),
             RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
-                'Two-factor authentication routes already required in routes/api.php'
+                "Two-factor authentication routes already required in {$this->apiRoutesPath}"
             ),
             RouteRegistrationOutcome::ParentMissing => $this->command->warn(
-                'Could not find routes/api.php. '
+                "Could not find {$this->apiRoutesPath}. "
                 ."Please add {$requireStatement} to your API route file manually."
             ),
             RouteRegistrationOutcome::Failed => $this->command->warn(
-                "Could not append {$requireStatement} to routes/api.php automatically. "
+                "Could not append {$requireStatement} to {$this->apiRoutesPath} automatically. "
                 .'Please add it manually.'
             ),
             RouteRegistrationOutcome::Corrupted => $this->command->error(
-                "routes/api.php was left in an inconsistent state while adding {$requireStatement}. "
+                "{$this->apiRoutesPath} was left in an inconsistent state while adding {$requireStatement}. "
                 .'Please inspect the file.'
             ),
         };
