@@ -1,0 +1,174 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Services;
+
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Users\Domain\Models\User;
+use Symfony\Component\Serializer\SerializerInterface;
+use Webauthn\AttestationStatement\AttestationStatementSupportManager;
+use Webauthn\AttestationStatement\NoneAttestationStatementSupport;
+use Webauthn\AuthenticatorAssertionResponse;
+use Webauthn\AuthenticatorAssertionResponseValidator;
+use Webauthn\AuthenticatorAttestationResponse;
+use Webauthn\AuthenticatorAttestationResponseValidator;
+use Webauthn\AuthenticatorSelectionCriteria;
+use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
+use Webauthn\CredentialRecord;
+use Webauthn\Denormalizer\WebauthnSerializerFactory;
+use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialCreationOptions;
+use Webauthn\PublicKeyCredentialDescriptor;
+use Webauthn\PublicKeyCredentialParameters;
+use Webauthn\PublicKeyCredentialRequestOptions;
+use Webauthn\PublicKeyCredentialRpEntity;
+use Webauthn\PublicKeyCredentialUserEntity;
+
+/**
+ * The only generated file that imports anything from `Webauthn\`. Every ceremony
+ * step - building creation/request options, verifying an attestation or an
+ * assertion - is confined here, so a future upgrade of web-auth/webauthn-lib
+ * (the published 5.x -> 6.0 migration guide already exists) touches one file.
+ *
+ * `CredentialRecord` is used throughout rather than `PublicKeyCredentialSource`:
+ * the installed 5.3.8 release deprecates `PublicKeyCredentialSource` in favour of
+ * `CredentialRecord` and will remove it in 6.0.
+ */
+final class PasskeyCeremonyService
+{
+    /**
+     * COSE algorithm identifiers this generator asks the authenticator to use:
+     * ES256 (-7) and RS256 (-257), matching the library's own default algorithm
+     * manager.
+     */
+    private const ALGORITHMS = [-7, -257];
+
+    private readonly SerializerInterface $serializer;
+
+    private readonly CeremonyStepManagerFactory $ceremonyStepManagerFactory;
+
+    public function __construct()
+    {
+        $attestationStatementSupportManager = new AttestationStatementSupportManager();
+        $attestationStatementSupportManager->add(new NoneAttestationStatementSupport());
+
+        $this->serializer = (new WebauthnSerializerFactory($attestationStatementSupportManager))->create();
+
+        $this->ceremonyStepManagerFactory = new CeremonyStepManagerFactory();
+        /** @var array<int, string> $allowedOrigins */
+        $allowedOrigins = Config::array('passkeys.allowed_origins');
+        $this->ceremonyStepManagerFactory->setAllowedOrigins($allowedOrigins);
+    }
+
+    public function relyingParty(): PublicKeyCredentialRpEntity
+    {
+        return PublicKeyCredentialRpEntity::create(
+            name: (string) Config::get('passkeys.relying_party.name'),
+            id: Config::string('passkeys.relying_party.id'),
+        );
+    }
+
+    public function serializer(): SerializerInterface
+    {
+        return $this->serializer;
+    }
+
+    /**
+     * @param  list<PublicKeyCredentialDescriptor>  $excludeCredentials
+     */
+    public function creationOptionsFor(User $user, array $excludeCredentials): PublicKeyCredentialCreationOptions
+    {
+        return new PublicKeyCredentialCreationOptions(
+            rp: $this->relyingParty(),
+            user: PublicKeyCredentialUserEntity::create(
+                name: (string) $user->email,
+                id: random_bytes(32),
+                displayName: (string) $user->name,
+            ),
+            challenge: random_bytes(32),
+            pubKeyCredParams: array_map(
+                static fn (int $algorithm): PublicKeyCredentialParameters => PublicKeyCredentialParameters::createPk($algorithm),
+                self::ALGORITHMS,
+            ),
+            authenticatorSelection: AuthenticatorSelectionCriteria::create(
+                userVerification: AuthenticatorSelectionCriteria::USER_VERIFICATION_REQUIREMENT_REQUIRED,
+                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_REQUIRED,
+            ),
+            excludeCredentials: $excludeCredentials,
+            timeout: Config::integer('passkeys.timeout'),
+        );
+    }
+
+    /**
+     * @param  list<PublicKeyCredentialDescriptor>  $allowCredentials
+     */
+    public function requestOptions(array $allowCredentials = []): PublicKeyCredentialRequestOptions
+    {
+        return new PublicKeyCredentialRequestOptions(
+            challenge: random_bytes(32),
+            rpId: Config::string('passkeys.relying_party.id'),
+            allowCredentials: $allowCredentials,
+            userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
+            timeout: Config::integer('passkeys.timeout'),
+        );
+    }
+
+    /**
+     * Deviates from the original design surface by taking the request host
+     * explicitly: `AuthenticatorAttestationResponseValidator::check()` requires it
+     * and there is no ambient request context this service should reach for on
+     * its own.
+     */
+    public function verifyAttestation(
+        string $json,
+        PublicKeyCredentialCreationOptions $options,
+        string $host,
+    ): CredentialRecord {
+        /** @var PublicKeyCredential $credential */
+        $credential = $this->serializer->deserialize($json, PublicKeyCredential::class, 'json');
+
+        if (! $credential->response instanceof AuthenticatorAttestationResponse) {
+            throw new PasskeyCeremonyFailedException('The submitted credential is not an attestation response.');
+        }
+
+        return AuthenticatorAttestationResponseValidator::create(
+            $this->ceremonyStepManagerFactory->creationCeremony()
+        )->check($credential->response, $options, $host);
+    }
+
+    public function verifyAssertion(
+        string $json,
+        PublicKeyCredentialRequestOptions $options,
+        CredentialRecord $stored,
+        string $host,
+    ): CredentialRecord {
+        /** @var PublicKeyCredential $credential */
+        $credential = $this->serializer->deserialize($json, PublicKeyCredential::class, 'json');
+
+        if (! $credential->response instanceof AuthenticatorAssertionResponse) {
+            throw new PasskeyCeremonyFailedException('The submitted credential is not an assertion response.');
+        }
+
+        return AuthenticatorAssertionResponseValidator::create(
+            $this->ceremonyStepManagerFactory->requestCeremony()
+        )->check($stored, $credential->response, $options, $host, $stored->userHandle);
+    }
+
+    /**
+     * @return list<PublicKeyCredentialDescriptor>
+     */
+    public function descriptorsFor(int $userId): array
+    {
+        return Passkey::query()
+            ->where('user_id', $userId)
+            ->get()
+            ->map(static fn (Passkey $passkey): PublicKeyCredentialDescriptor => PublicKeyCredentialDescriptor::create(
+                type: PublicKeyCredentialDescriptor::CREDENTIAL_TYPE_PUBLIC_KEY,
+                id: (string) $passkey->credential_id,
+            ))
+            ->all();
+    }
+}
