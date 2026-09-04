@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -106,12 +107,21 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->writeStubOrFail(
                 $stubsPath.$stub,
-                base_path("src/Authentication/{$destination}")
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
+    }
+
+    private function writeStubOrFail(string $source, string $destination, string $label): void
+    {
+        if (! copy($source, $destination)) {
+            throw new RuntimeException("Failed to copy stub to {$label}");
+        }
+
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 
     private function publishConfiguration(): void
