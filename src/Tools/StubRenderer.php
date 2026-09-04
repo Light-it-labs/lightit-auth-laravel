@@ -10,6 +10,8 @@ final class StubRenderer
 {
     private const LEFTOVER_TOKEN_PATTERN = '/\{\{\s*[a-z][a-zA-Z]*\s*\}\}/';
 
+    private const PHP_HEADER = "<?php\n\n";
+
     /**
      * @param  array<string, string>  $tokens
      */
@@ -58,13 +60,26 @@ final class StubRenderer
         }
     }
 
+    /**
+     * A PHP file's `<?php` opening tag must stay the first bytes in the file — any
+     * text before it is emitted as literal output the moment the file is
+     * `require`d. A plain prepend is only safe for non-PHP output (`.ts`, `.md`);
+     * for rendered PHP the marker has to land just after the opening tag, mirroring
+     * `StubCopier`'s identical handling of the same constraint.
+     */
     private function withMarker(string $rendered, string $stubPath, OriginMarker $marker): string
     {
-        $comment = str_ends_with($stubPath, '.md.stub')
-            ? "<!-- {$marker->forStub($stubPath)} -->"
-            : "// {$marker->forStub($stubPath)}";
+        $comment = $marker->forStub($stubPath);
 
-        return "{$comment}\n\n{$rendered}";
+        if (str_ends_with($stubPath, '.md.stub')) {
+            return "<!-- {$comment} -->\n\n{$rendered}";
+        }
+
+        if (str_starts_with($rendered, self::PHP_HEADER)) {
+            return self::PHP_HEADER."// {$comment}\n\n".substr($rendered, strlen(self::PHP_HEADER));
+        }
+
+        return "// {$comment}\n\n{$rendered}";
     }
 
     /**
