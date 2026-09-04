@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Enums\AuthDriver;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -116,11 +117,11 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->writeStubIfMissing(
                 $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 
@@ -135,11 +136,11 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->writeStubIfMissing(
                 $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 
@@ -159,10 +160,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
-        copy(
-            $stub,
-            base_path($destination)
-        );
+        if (file_exists(base_path($destination))) {
+            $this->composerInstaller->printMigrationCreated("Skipped {$destination}: the file already exists.");
+
+            return;
+        }
+
+        $this->overwriteStub($stub, base_path($destination));
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
@@ -174,10 +178,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(config_path(), 0755, true);
         }
 
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
-            config_path('google2fa.php')
-        );
+        $destination = config_path('google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped config/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->overwriteStub(__DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
     }
 
@@ -188,10 +197,43 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
         }
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
-            lang_path('en/google2fa.php')
-        );
+
+        $destination = lang_path('en/google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped lang/en/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->overwriteStub(__DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
+    }
+
+    /**
+     * Skip-and-report if the destination already exists; throw if the stub itself is missing
+     * or the copy fails.
+     */
+    private function writeStubIfMissing(string $source, string $destination, string $label): void
+    {
+        if (file_exists($destination)) {
+            $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
+
+            return;
+        }
+
+        $this->overwriteStub($source, $destination);
+        $this->composerInstaller->printFileCreated("Created: {$label}");
+    }
+
+    private function overwriteStub(string $source, string $destination): void
+    {
+        if (! file_exists($source)) {
+            throw new RuntimeException("Missing stub: {$source}");
+        }
+
+        if (! copy($source, $destination)) {
+            throw new RuntimeException("Could not write {$destination}");
+        }
     }
 }
