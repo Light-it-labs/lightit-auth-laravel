@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Container\Attributes\RouteParameter;
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Users\Domain\Models\User;
+
+final class DeletePasskeyRequest extends FormRequest
+{
+    public function __construct(
+        #[CurrentUser]
+        private readonly User $user,
+        #[RouteParameter('passkey')]
+        private readonly Passkey $passkey,
+    ) {
+        parent::__construct();
+    }
+
+    /**
+     * Ownership is enforced here, not in the action, so a passkey belonging
+     * to someone else never reaches `DeletePasskeyAction`.
+     */
+    public function authorize(): bool
+    {
+        return $this->passkey->user_id === $this->user->id;
+    }
+
+    public function rules(): array
+    {
+        return [];
+    }
+}

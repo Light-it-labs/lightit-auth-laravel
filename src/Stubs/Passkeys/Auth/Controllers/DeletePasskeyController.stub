@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\DeletePasskeyRequest;
+use Lightit\Authentication\Domain\Actions\DeletePasskeyAction;
+use Lightit\Authentication\Domain\Models\Passkey;
+
+final readonly class DeletePasskeyController
+{
+    public function __invoke(
+        Passkey $passkey,
+        DeletePasskeyRequest $request,
+        DeletePasskeyAction $deletePasskeyAction,
+    ): JsonResponse {
+        $deletePasskeyAction->execute($passkey);
+
+        return response()->json(status: JsonResponse::HTTP_NO_CONTENT);
+    }
+}

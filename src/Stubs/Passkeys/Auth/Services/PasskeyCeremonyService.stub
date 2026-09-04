@@ -207,6 +207,36 @@ final class PasskeyCeremonyService
     }
 
     /**
+     * The login ceremony is usernameless: the submitted assertion's raw
+     * credential id is the only way to resolve which stored `Passkey` to
+     * verify against, before `verifyAssertion()` can even be called. Decoding
+     * it is a webauthn-wire-format concern, so it stays here rather than
+     * leaking `Webauthn\` knowledge into `PasskeyLoginAction`.
+     */
+    public function rawCredentialIdFor(string $assertionJson): string
+    {
+        /** @var PublicKeyCredential $credential */
+        $credential = $this->serializer->deserialize($assertionJson, PublicKeyCredential::class, 'json');
+
+        return $credential->rawId;
+    }
+
+    /**
+     * Reconstructs the `CredentialRecord` `CompletePasskeyRegistrationAction`
+     * serialized into `Passkey::$credential`, so `verifyAssertion()` has a
+     * `$stored` to check the submitted assertion against.
+     */
+    public function credentialRecordFor(Passkey $passkey): CredentialRecord
+    {
+        /** @var CredentialRecord */
+        return $this->serializer->deserialize(
+            json_encode($passkey->credential, JSON_THROW_ON_ERROR),
+            CredentialRecord::class,
+            'json',
+        );
+    }
+
+    /**
      * @return list<PublicKeyCredentialDescriptor>
      */
     public function descriptorsFor(int $userId): array
