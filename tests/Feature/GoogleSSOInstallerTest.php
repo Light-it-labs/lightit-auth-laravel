@@ -186,6 +186,22 @@ describe('GoogleSSOInstaller route and service provider registration', function 
                 ->toBe($customizedProvider);
         });
 
+        it('leaves bootstrap/providers.php untouched and warns instead of claiming success when it has no `return [` anchor', function (): void {
+            file_put_contents(
+                $this->tempBase.'/bootstrap/providers.php',
+                "<?php\n\nreturn array(\n    App\\Providers\\AppServiceProvider::class,\n);\n"
+            );
+
+            runGoogleSsoInstallerStep(
+                fakeGoogleSsoCommand($this->app, 'google-sso-service-provider-no-anchor-test'),
+                'registerServiceProvider'
+            );
+
+            expect(file_get_contents($this->tempBase.'/bootstrap/providers.php'))->toBe(
+                "<?php\n\nreturn array(\n    App\\Providers\\AppServiceProvider::class,\n);\n"
+            );
+        });
+
         it('still copies the config and provider files when bootstrap/providers.php does not exist', function (): void {
             unlink($this->tempBase.'/bootstrap/providers.php');
 
