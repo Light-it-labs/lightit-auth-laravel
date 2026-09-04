@@ -133,7 +133,11 @@ describe('PermissionCatalog consistency with rendered PHP stubs', function (): v
             ['permissionConstants' => $catalog->toTypeScriptConstants()]
         );
 
-        preg_match_all("/: '([^']+)',/", $rendered, $matches);
+        // Tolerant of whitespace and either quote style: this only needs to
+        // extract permission-name leaf values, not certify formatting, so it
+        // must not be brittle to a non-semantic change in the TS renderer's
+        // quote style or spacing.
+        preg_match_all('/:\s*[\'"]([^\'"]+)[\'"],/', $rendered, $matches);
 
         $renderedNames = $matches[1];
         sort($renderedNames);
