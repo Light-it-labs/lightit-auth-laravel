@@ -11,6 +11,7 @@ describe('Feature', function (): void {
             'roles-and-permissions',
             'otp',
             'forgot-password',
+            'passkeys',
         ]);
     });
 
@@ -20,6 +21,7 @@ describe('Feature', function (): void {
             'roles-and-permissions' => 'Roles and Permissions',
             'otp' => 'OTP (one-time password)',
             'forgot-password' => 'Forgot Password flow',
+            'passkeys' => 'Passkeys (WebAuthn)',
         ]);
     });
 
