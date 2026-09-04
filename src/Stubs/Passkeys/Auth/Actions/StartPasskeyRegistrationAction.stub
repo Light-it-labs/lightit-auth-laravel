@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Cache;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class StartPasskeyRegistrationAction
+{
+    private const CACHE_KEY_PREFIX = 'passkey:registration:';
+
+    private const CACHE_TTL_MINUTES = 5;
+
+    public function __construct(
+        private PasskeyCeremonyService $ceremonyService,
+    ) {
+    }
+
+    /**
+     * The serialized options are cached under the user's own id, single-use, and
+     * read back with `Cache::pull()` in `CompletePasskeyRegistrationAction` - a
+     * challenge answered twice is a replay.
+     */
+    public function execute(User $user): string
+    {
+        $options = $this->ceremonyService->creationOptionsFor(
+            $user,
+            $this->ceremonyService->descriptorsFor($user->id),
+        );
+
+        $json = $this->ceremonyService->serializer()->serialize($options, 'json');
+
+        Cache::put(self::CACHE_KEY_PREFIX.$user->id, $json, now()->addMinutes(self::CACHE_TTL_MINUTES));
+
+        return $json;
+    }
+}

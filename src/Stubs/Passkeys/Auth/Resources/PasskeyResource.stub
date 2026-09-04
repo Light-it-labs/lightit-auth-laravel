@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Lightit\Authentication\Domain\Models\Passkey;
+
+/**
+ * The `credential` column is never exposed here - it holds the serialized public
+ * key material and sign counter, and nothing outside `PasskeyCeremonyService`
+ * needs to read it.
+ *
+ * @mixin Passkey
+ */
+#[SchemaName('Passkey')]
+class PasskeyResource extends JsonResource
+{
+    /**
+     * @return array{id: int, name: string, created_at: string|null, last_used_at: string|null}
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'created_at' => $this->created_at?->toIso8601String(),
+            'last_used_at' => $this->last_used_at?->toIso8601String(),
+        ];
+    }
+}
