@@ -13,8 +13,10 @@ use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
-use Lightitlabs\Enums\AuthDriver;
-use function Laravel\Prompts\confirm;
+use Lightitlabs\Enums\Feature;
+use Lightitlabs\Enums\LoginMethod;
+use Throwable;
+
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
@@ -45,59 +47,16 @@ class AuthSetupCommand extends Command
         $this->output->writeln("\e[0;35mroles, and permissions setup in Laravel boilerplates.\e[0m");
         $this->output->writeln('');
 
-        $driversValues = array_map(
-            fn ($v) => $v->value,
-            AuthDriver::cases()
-        );
+        $loginMethods = $this->resolveLoginMethods();
+        $features = $this->resolveFeatures();
 
-        do {
-            $drivers = multiselect(
-                label: 'Select authentication drivers',
-                options: $driversValues,
-                required: true,
-                hint: 'Press [space] to select, [enter] to confirm.'
-            );
-        } while (empty($drivers));
+        try {
+            $this->setupLoginMethods($loginMethods);
+            $this->setupFeatures($features);
+        } catch (Throwable $exception) {
+            $this->printFailure('Authentication setup failed: '.$exception->getMessage());
 
-        $enable2FA = confirm(
-            label: 'Would you like to enable Two-Factor Authentication?',
-            default: false,
-        );
-
-        $enableRolesAndPermissions = confirm(
-            label: 'Would you like to enable Roles and Permissions?',
-            default: false,
-        );
-
-        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken->value, $drivers);
-
-        $enableOtp = $hasTokenDriver && confirm(
-            label: 'Would you like to enable OTP (one-time password)?',
-            default: false,
-        );
-
-        $enableForgotPassword = confirm(
-            label: 'Would you like to enable the Forgot Password flow?',
-            default: false,
-        );
-
-        /** @var array<string> $drivers */
-        $this->setupDrivers($drivers);
-
-        if ($enable2FA) {
-            $this->setup2FA($drivers);
-        }
-
-        if ($enableRolesAndPermissions) {
-            $this->setupRolesAndPermissions();
-        }
-
-        if ($enableOtp) {
-            $this->setupOtp();
-        }
-        
-        if ($enableForgotPassword) {
-            $this->setupForgotPassword();
+            return self::FAILURE;
         }
 
         $this->printSuccess('Authentication setup completed!');
@@ -106,18 +65,68 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<string> $drivers
+     * Password is always enabled and cannot be deselected - it is added to the
+     * result regardless of what the multiselect returns, so SSO-only is never
+     * expressible.
+     *
+     * @return list<LoginMethod>
      */
-    protected function setupDrivers(array $drivers): void
+    protected function resolveLoginMethods(): array
+    {
+        $selected = array_filter(
+            multiselect(
+                label: 'Select login methods',
+                options: LoginMethod::options(),
+                default: [LoginMethod::Password->value],
+                hint: 'Password is always enabled. Press [space] to add Google SSO, [enter] to confirm.',
+            ),
+            'is_string'
+        );
+
+        $methods = array_values(array_map(
+            static fn (string $slug): LoginMethod => LoginMethod::from($slug),
+            $selected,
+        ));
+
+        if (! in_array(LoginMethod::Password, $methods, true)) {
+            array_unshift($methods, LoginMethod::Password);
+        }
+
+        return $methods;
+    }
+
+    /**
+     * @return list<Feature>
+     */
+    protected function resolveFeatures(): array
+    {
+        $selected = array_filter(
+            multiselect(
+                label: 'Select optional features',
+                options: Feature::options(),
+                hint: 'Press [space] to select, [enter] to confirm.',
+            ),
+            'is_string'
+        );
+
+        return array_values(array_map(
+            static fn (string $slug): Feature => Feature::from($slug),
+            $selected,
+        ));
+    }
+
+    /**
+     * @param  list<LoginMethod>  $methods
+     */
+    protected function setupLoginMethods(array $methods): void
     {
         $setup = [
-            AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
-            AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
+            LoginMethod::Password->value => fn () => $this->setupSanctum(),
+            LoginMethod::GoogleSso->value => fn () => $this->setupGoogleSSO(),
         ];
 
-        foreach ($drivers as $driver) {
-            $key = AuthDriver::from($driver)->value;
-            $setup[$key]();
+        foreach ($methods as $method) {
+            $setup[$method->value]();
         }
     }
 
@@ -142,18 +151,26 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<string> $drivers
+     * @param  list<Feature>  $features
      */
-    protected function setup2FA(array $drivers): void
+    protected function setupFeatures(array $features): void
+    {
+        foreach ($features as $feature) {
+            match ($feature) {
+                Feature::TwoFactorAuthentication => $this->setup2FA(),
+                Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
+                Feature::Otp => $this->setupOtp(),
+                Feature::ForgotPassword => $this->setupForgotPassword(),
+            };
+        }
+    }
+
+    protected function setup2FA(): void
     {
         $this->printBoxedMessage('🛠 Setting up 2FA...');
 
-        $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
-            ? AuthDriver::SanctumApiToken
-            : AuthDriver::GoogleSso;
-
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
     }

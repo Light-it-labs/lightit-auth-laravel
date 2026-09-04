@@ -6,7 +6,6 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Enums\AuthDriver;
 use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
@@ -25,9 +24,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-        private readonly AuthDriver $driver,
-    ) {
-    }
+    ) {}
 
     public function install(): void
     {
@@ -60,26 +57,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
-        $sharedStubsPath = __DIR__ . '/../../Stubs/Google2FA/Auth';
-        $driverStubsPath = $this->resolveDriverStubsPath();
-
-        $this->copySharedAuthFiles($sharedStubsPath);
-        $this->copyDriverSpecificFiles($driverStubsPath);
+        $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
     }
 
-    private function resolveDriverStubsPath(): string
-    {
-        return match ($this->driver) {
-            AuthDriver::SanctumApiToken => __DIR__ . '/../../Stubs/Google2FA/Sanctum/Auth',
-            AuthDriver::GoogleSso => throw new RuntimeException(
-                'Two-Factor Authentication is not supported with the Google SSO driver alone.'
-            ),
-        };
-    }
-
-    private function copySharedAuthFiles(string $stubsPath): void
+    private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
+            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
+            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
+            '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
+            '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
+            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
@@ -119,31 +107,21 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
+            $this->writeStubOrFail(
+                $stubsPath.$stub,
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 
-    private function copyDriverSpecificFiles(string $stubsPath): void
+    private function writeStubOrFail(string $source, string $destination, string $label): void
     {
-        $files = [
-            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
-            '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
-            '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
-            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
-        ];
-
-        foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
-            );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
+        if (! copy($source, $destination)) {
+            throw new RuntimeException("Failed to copy stub to {$label}");
         }
+
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 
     private function publishConfiguration(): void
@@ -159,7 +137,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(3, 5, 'Copying migration files');
 
-        $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
+        $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
         copy(
@@ -178,7 +156,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         copy(
-            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
+            __DIR__.'/../../Stubs/Google2FA/config/google2fa.stub',
             config_path('google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
@@ -192,7 +170,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(lang_path('en'), 0755, true);
         }
         copy(
-            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
+            __DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub',
             lang_path('en/google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
