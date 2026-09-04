@@ -72,4 +72,9 @@ final class FakeAuthSetupCommand extends AuthSetupCommand
     {
         $this->invokedFeatures[] = Feature::ForgotPassword->value;
     }
+
+    protected function setupPasskeys(): void
+    {
+        $this->invokedFeatures[] = Feature::Passkeys->value;
+    }
 }
