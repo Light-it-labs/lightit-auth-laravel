@@ -195,6 +195,7 @@ class AuthSetupCommand extends Command
         $frontendInstaller = new Google2FAFrontendInstaller(
             $this,
             new StubRenderer,
+            OriginMarker::resolved(),
             new FrontendProjectLocator($manifest),
             $manifest,
             base_path(),

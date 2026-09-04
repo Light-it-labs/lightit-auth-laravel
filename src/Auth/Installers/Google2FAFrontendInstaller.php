@@ -9,6 +9,7 @@ use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
 use RuntimeException;
 
@@ -33,6 +34,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly StubRenderer $stubRenderer,
+        private readonly OriginMarker $originMarker,
         private readonly FrontendProjectLocator $locator,
         private readonly FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
@@ -80,7 +82,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->command->warn("Overwriting: {$relative}");
         }
 
-        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens);
+        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens, $this->originMarker);
 
         $this->command->line("Created: {$relative}");
     }
