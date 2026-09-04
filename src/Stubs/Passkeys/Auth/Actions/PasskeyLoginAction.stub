@@ -1,0 +1,71 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Http\Request;
+use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class PasskeyLoginAction
+{
+    public function __construct(
+        private PasskeyCeremonyService $ceremonyService,
+        private LoginByUserAction $loginByUserAction,
+        private Request $request,
+    ) {
+    }
+
+    public function execute(PasskeyLoginDto $dto): LoginDto
+    {
+        $options = $this->ceremonyService->pullLoginRequestOptions($dto->ceremonyId);
+
+        if ($options === null) {
+            throw new PasskeyCeremonyFailedException(
+                message: 'The login challenge has expired.',
+                status: 410,
+                errorCode: 'passkey_challenge_expired',
+            );
+        }
+
+        $credentialJson = json_encode($dto->credential, JSON_THROW_ON_ERROR);
+        $credentialId = $this->ceremonyService->rawCredentialIdFor($credentialJson);
+
+        /** @var Passkey|null $passkey */
+        $passkey = Passkey::query()->where('credential_id', $credentialId)->first();
+
+        if ($passkey === null) {
+            throw new PasskeyCeremonyFailedException(
+                message: 'The passkey was not recognised.',
+                status: 422,
+                errorCode: 'passkey_not_recognised',
+            );
+        }
+
+        // Same verification path registration completion uses.
+        $credentialRecord = $this->ceremonyService->verifyAssertion(
+            $credentialJson,
+            $options,
+            $this->ceremonyService->credentialRecordFor($passkey),
+            $this->request->getHost(),
+        );
+
+        $passkey->credential = json_decode(
+            $this->ceremonyService->serializer()->serialize($credentialRecord, 'json'),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+        $passkey->last_used_at = now();
+        $passkey->saveOrFail();
+
+        /** @var User $user */
+        $user = $passkey->user;
+
+        return $this->loginByUserAction->execute($user);
+    }
+}
