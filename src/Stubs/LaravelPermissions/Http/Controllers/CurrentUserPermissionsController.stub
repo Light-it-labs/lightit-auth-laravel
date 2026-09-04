@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class CurrentUserPermissionsController
+{
+    public function __invoke(Request $request): JsonResponse
+    {
+        return response()->json([
+            'roles' => $request->user()->roles->pluck('name')->all(),
+            'permissions' => $request->user()->getAllPermissions()->pluck('name')->all(),
+        ]);
+    }
+}
