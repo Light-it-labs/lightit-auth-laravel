@@ -9,15 +9,12 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
-use Lightitlabs\Auth\Installers\JwtInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\AuthDriver;
-use Lightitlabs\Tools\FileManipulator;
 use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
@@ -60,11 +57,6 @@ class AuthSetupCommand extends Command
                 required: true,
                 hint: 'Press [space] to select, [enter] to confirm.'
             );
-
-            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::SanctumApiToken->value, $drivers)) {
-                error('You cannot select both JWT and Sanctum authentication drivers.');
-                $drivers = null;
-            }
         } while (empty($drivers));
 
         $enable2FA = confirm(
@@ -77,7 +69,7 @@ class AuthSetupCommand extends Command
             default: false,
         );
 
-        $hasTokenDriver = in_array(AuthDriver::Jwt->value, $drivers) || in_array(AuthDriver::SanctumApiToken->value, $drivers);
+        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken->value, $drivers);
 
         $enableOtp = $hasTokenDriver && confirm(
             label: 'Would you like to enable OTP (one-time password)?',
@@ -119,7 +111,6 @@ class AuthSetupCommand extends Command
     protected function setupDrivers(array $drivers): void
     {
         $setup = [
-            AuthDriver::Jwt->value => fn () => $this->setupJWT(),
             AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
             AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
         ];
@@ -128,17 +119,6 @@ class AuthSetupCommand extends Command
             $key = AuthDriver::from($driver)->value;
             $setup[$key]();
         }
-    }
-
-    protected function setupJWT(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up JWT...');
-
-        $composerInstaller = new ComposerInstaller($this);
-        $fileManipulator = new FileManipulator($this);
-        $jwtInstaller = new JwtInstaller($this, $composerInstaller, $fileManipulator);
-        $jwtInstaller->install();
-        $this->printSectionSeparator();
     }
 
     protected function setupSanctum(): void
@@ -156,8 +136,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
-        $jwtInstaller->install();
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller);
+        $googleSSOInstaller->install();
         $this->printSectionSeparator();
     }
 
@@ -170,7 +150,7 @@ class AuthSetupCommand extends Command
 
         $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
             ? AuthDriver::SanctumApiToken
-            : AuthDriver::Jwt;
+            : AuthDriver::GoogleSso;
 
         $composerInstaller = new ComposerInstaller($this);
         $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
