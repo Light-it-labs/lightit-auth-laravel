@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
+use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
 
 final class FakeGoogle2FAFrontendCommand extends Command
@@ -26,6 +27,7 @@ final class FakeGoogle2FAFrontendCommand extends Command
         $installer = new Google2FAFrontendInstaller(
             $this,
             new StubRenderer,
+            new OriginMarker('0.0.0-test'),
             new FrontendProjectLocator($manifest),
             $manifest,
             sys_get_temp_dir().'/lightit-2fa-laravel-root',
