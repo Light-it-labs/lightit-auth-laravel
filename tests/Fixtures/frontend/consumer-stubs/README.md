@@ -2,10 +2,12 @@
 
 The generated auth TypeScript in `../expected/src` imports a handful of modules
 this package never generates — `env`, `i18n`, `services/types`,
-`services/users/schemas`, `services/users/types`, and `config/query-client`.
-Every real consuming project already has these (they come from the React
-starter template this package targets), so the golden fixtures assume they
-exist and don't ship them.
+`services/users/schemas`, `services/users/types`, `services/auth/factories`,
+and `config/query-client`. Every real consuming project already has these
+(they come from the React starter template this package targets, or — for
+`services/auth/factories` — from whichever current-user query the consumer's
+own auth setup already provides), so the golden fixtures assume they exist and
+don't ship them.
 
 These files are minimal, hand-written stand-ins for that assumed contract —
 just enough shape to let `tsc` resolve the imports and check the generated

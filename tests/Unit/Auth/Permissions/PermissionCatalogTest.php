@@ -123,4 +123,26 @@ describe('PermissionCatalog consistency with rendered PHP stubs', function (): v
 
         expect($rendered)->toBe($expected);
     });
+
+    it('renders exactly the catalog\'s permission names as TypeScript constants, in both directions', function (): void {
+        $catalog = new PermissionCatalog;
+        $renderer = new StubRenderer;
+
+        $rendered = $renderer->render(
+            __DIR__.'/../../../../src/Stubs/Frontend/LaravelPermissions/services/permissions/constants.ts.stub',
+            ['permissionConstants' => $catalog->toTypeScriptConstants()]
+        );
+
+        preg_match_all("/: '([^']+)',/", $rendered, $matches);
+
+        $renderedNames = $matches[1];
+        sort($renderedNames);
+
+        $catalogNames = array_keys(PermissionCatalog::entries());
+        sort($catalogNames);
+
+        // Both directions: nothing in the catalog is missing from the rendered
+        // TypeScript constants, and nothing rendered exists outside the catalog.
+        expect($renderedNames)->toBe($catalogNames);
+    });
 });
