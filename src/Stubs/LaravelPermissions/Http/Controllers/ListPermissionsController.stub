@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Shared\Permissions\App\Resources\PermissionResource;
+use Lightit\Shared\Permissions\Domain\Actions\ListPermissionsAction;
+
+class ListPermissionsController
+{
+    public function __invoke(ListPermissionsAction $listPermissionsAction): JsonResponse
+    {
+        return PermissionResource::collection($listPermissionsAction->execute())->response();
+    }
+}

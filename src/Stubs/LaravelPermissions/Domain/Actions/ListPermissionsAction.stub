@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\Domain\Actions;
+
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Permission;
+
+final class ListPermissionsAction
+{
+    /**
+     * @return Collection<int, Permission>
+     */
+    public function execute(): Collection
+    {
+        return Permission::query()->get();
+    }
+}

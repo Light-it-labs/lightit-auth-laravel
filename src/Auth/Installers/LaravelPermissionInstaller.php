@@ -8,16 +8,23 @@ use Illuminate\Console\Command;
 use Lightitlabs\Auth\Permissions\PermissionCatalog;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\RouteFileRegistrar;
+use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubRenderer;
 
 final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
+    private const ROUTES_LABEL = 'roles and permissions';
+
+    private const ROUTES_FILE_NAME = 'roles.php';
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubRenderer $stubRenderer,
         private readonly OriginMarker $originMarker,
         private readonly PermissionCatalog $permissionCatalog = new PermissionCatalog,
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
     ) {}
 
     public function install(): void
@@ -34,13 +41,14 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->clearCacheConfig();
         $this->copyMigrations();
         $this->copyPackageFiles();
+        $this->registerRoutes();
 
         $this->composerInstaller->printSuccess('Laravel Permissions installed successfully!');
     }
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(1, 4, 'Copying config files');
+        $this->composerInstaller->printStep(1, 5, 'Copying config files');
 
         $source = base_path('vendor/spatie/laravel-permission/config/permission.php');
         $destination = config_path('permission.php');
@@ -57,14 +65,14 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function clearCacheConfig(): void
     {
-        $this->composerInstaller->printStep(2, 4, 'Clearing cache config files');
+        $this->composerInstaller->printStep(2, 5, 'Clearing cache config files');
 
         $this->command->call('optimize:clear');
     }
 
     private function copyMigrations(): void
     {
-        $this->composerInstaller->printStep(3, 4, 'Copying Laravel Permission migration files');
+        $this->composerInstaller->printStep(3, 5, 'Copying Laravel Permission migration files');
 
         // Both migrations are named from a single captured instant so the additive
         // migration (+1s) always sorts after Spatie's table-creation migration
@@ -133,7 +141,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function copyPackageFiles(): void
     {
-        $this->composerInstaller->printStep(4, 4, 'Copying permission structure');
+        $this->composerInstaller->printStep(4, 5, 'Copying permission structure');
 
         $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
@@ -158,6 +166,18 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             '/Roles/RoleManagement.stub' => [$srcBase, '/Shared/Roles/RoleManagement.php'],
             '/Database/Seeders/PermissionSeeder.stub' => [$seederBase, '/PermissionSeeder.php'],
             '/Database/Seeders/RoleSeeder.stub' => [$seederBase, '/RoleSeeder.php'],
+            '/Http/Controllers/ListRolesController.stub' => [$srcBase, '/Shared/Permissions/App/Controllers/ListRolesController.php'],
+            '/Http/Controllers/ListPermissionsController.stub' => [$srcBase, '/Shared/Permissions/App/Controllers/ListPermissionsController.php'],
+            '/Http/Controllers/ListPermissionGroupsController.stub' => [$srcBase, '/Shared/Permissions/App/Controllers/ListPermissionGroupsController.php'],
+            '/Http/Controllers/UpdateUserRolesController.stub' => [$srcBase, '/Shared/Permissions/App/Controllers/UpdateUserRolesController.php'],
+            '/Http/Requests/UpdateUserRolesRequest.stub' => [$srcBase, '/Shared/Permissions/App/Requests/UpdateUserRolesRequest.php'],
+            '/Http/Resources/RoleResource.stub' => [$srcBase, '/Shared/Permissions/App/Resources/RoleResource.php'],
+            '/Http/Resources/PermissionResource.stub' => [$srcBase, '/Shared/Permissions/App/Resources/PermissionResource.php'],
+            '/Http/Resources/PermissionGroupResource.stub' => [$srcBase, '/Shared/Permissions/App/Resources/PermissionGroupResource.php'],
+            '/Domain/Actions/ListRolesAction.stub' => [$srcBase, '/Shared/Permissions/Domain/Actions/ListRolesAction.php'],
+            '/Domain/Actions/ListPermissionsAction.stub' => [$srcBase, '/Shared/Permissions/Domain/Actions/ListPermissionsAction.php'],
+            '/Domain/Actions/ListPermissionGroupsAction.stub' => [$srcBase, '/Shared/Permissions/Domain/Actions/ListPermissionGroupsAction.php'],
+            '/Domain/Actions/SyncUserRolesAction.stub' => [$srcBase, '/Shared/Permissions/Domain/Actions/SyncUserRolesAction.php'],
         ];
 
         foreach ($tokenisedFiles as $stub => [$basePath, $relativeTarget, $tokens]) {
@@ -169,5 +189,67 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             $this->stubRenderer->renderTo($stubsPath.$stub, "{$basePath}/{$relativeTarget}", [], $this->originMarker);
             $this->composerInstaller->printFileCreated("Created: {$relativeTarget}");
         }
+    }
+
+    private function registerRoutes(): void
+    {
+        $this->composerInstaller->printStep(5, 5, 'Registering routes');
+
+        if (! is_dir(base_path('routes'))) {
+            mkdir(base_path('routes'), 0755, true);
+        }
+
+        $this->writeStubIfMissing(
+            __DIR__.'/../../Stubs/LaravelPermissions/routes/roles.stub',
+            base_path('routes/'.self::ROUTES_FILE_NAME),
+            'routes/'.self::ROUTES_FILE_NAME
+        );
+
+        $outcome = $this->routeFileRegistrar->register(
+            base_path('routes/api.php'),
+            self::ROUTES_FILE_NAME,
+            self::ROUTES_LABEL
+        );
+        $requireStatement = $this->routeFileRegistrar->requireStatement(self::ROUTES_FILE_NAME);
+
+        match ($outcome) {
+            RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
+                "Updated routes/api.php: {$requireStatement}"
+            ),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
+                'Roles and permissions routes already required in routes/api.php'
+            ),
+            RouteRegistrationOutcome::ParentMissing => $this->command->warn(
+                'Could not find routes/api.php. '
+                ."Please add {$requireStatement} to your API route file manually."
+            ),
+            RouteRegistrationOutcome::Failed => $this->command->warn(
+                "Could not append {$requireStatement} to routes/api.php automatically. "
+                .'Please add it manually.'
+            ),
+            RouteRegistrationOutcome::Corrupted => $this->command->error(
+                "routes/api.php was left in an inconsistent state while adding {$requireStatement}. "
+                .'Please inspect the file.'
+            ),
+        };
+    }
+
+    /**
+     * Skip-and-report if the destination already exists, mirroring
+     * Google2FAInstaller::registerRoutes() — unlike copyPackageFiles()'s
+     * unconditional overwrite, a generated route file is the one output a
+     * consumer is expected to hand-edit afterwards, so re-running `auth:setup`
+     * must not clobber it.
+     */
+    private function writeStubIfMissing(string $source, string $destination, string $label): void
+    {
+        if (file_exists($destination)) {
+            $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
+
+            return;
+        }
+
+        $this->stubRenderer->renderTo($source, $destination, [], $this->originMarker);
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 }
