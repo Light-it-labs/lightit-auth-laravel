@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Lightit\Shared\Permissions;
 
-class UserPermissions
+class RolePermissions
 {
-    {{ userPermissionConstants }}
+    {{ rolePermissionConstants }}
 
     public static function all(): array
     {
