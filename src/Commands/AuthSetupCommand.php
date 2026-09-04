@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
