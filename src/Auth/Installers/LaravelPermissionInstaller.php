@@ -5,17 +5,20 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
+use Lightitlabs\Auth\Permissions\PermissionCatalog;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\StubRenderer;
 
 final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-        private readonly StubCopier $stubCopier,
-    ) {
-    }
+        private readonly StubRenderer $stubRenderer,
+        private readonly OriginMarker $originMarker,
+        private readonly PermissionCatalog $permissionCatalog = new PermissionCatalog,
+    ) {}
 
     public function install(): void
     {
@@ -29,7 +32,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
         $this->copyConfigFile();
         $this->clearCacheConfig();
-        $this->copyMigration();
+        $this->copyMigrations();
         $this->copyPackageFiles();
 
         $this->composerInstaller->printSuccess('Laravel Permissions installed successfully!');
@@ -59,10 +62,21 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->command->call('optimize:clear');
     }
 
-    private function copyMigration(): void
+    private function copyMigrations(): void
     {
-        $this->composerInstaller->printStep(3, 4, 'Copying Laravel Permission migration file');
+        $this->composerInstaller->printStep(3, 4, 'Copying Laravel Permission migration files');
 
+        // Both migrations are named from a single captured instant so the additive
+        // migration (+1s) always sorts after Spatie's table-creation migration
+        // (+0s), even when both run within the same second.
+        $now = time();
+
+        $this->copySpatieMigration($now);
+        $this->copyAdditiveMigration($now);
+    }
+
+    private function copySpatieMigration(int $now): void
+    {
         $source = base_path('vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub');
 
         if (! file_exists($source)) {
@@ -71,51 +85,89 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             return;
         }
 
-        $timestamp = date('Y_m_d_His');
-        $filename = "{$timestamp}_create_permission_tables.php";
-        $relativePath = "database/migrations/{$filename}";
-        $destination = base_path($relativePath);
+        if ($this->migrationAlreadyExists('*_create_permission_tables.php')) {
+            $this->composerInstaller->printMigrationCreated(
+                'Skipped: a create_permission_tables migration already exists.'
+            );
 
-        copy($source, $destination);
+            return;
+        }
+
+        $filename = date('Y_m_d_His', $now).'_create_permission_tables.php';
+        $relativePath = "database/migrations/{$filename}";
+
+        copy($source, base_path($relativePath));
 
         $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}");
+    }
+
+    private function copyAdditiveMigration(int $now): void
+    {
+        if ($this->migrationAlreadyExists('*_add_group_to_permissions_and_description_to_roles.php')) {
+            $this->composerInstaller->printMigrationCreated(
+                'Skipped: an add_group_to_permissions_and_description_to_roles migration already exists.'
+            );
+
+            return;
+        }
+
+        $filename = date('Y_m_d_His', $now + 1).'_add_group_to_permissions_and_description_to_roles.php';
+        $relativePath = "database/migrations/{$filename}";
+
+        $this->stubRenderer->renderTo(
+            __DIR__.'/../../Stubs/LaravelPermissions/Database/Migrations/add_group_to_permissions_and_description_to_roles.stub',
+            base_path($relativePath),
+            [],
+            $this->originMarker
+        );
+
+        $this->composerInstaller->printMigrationCreated("Migration created: {$relativePath}");
+    }
+
+    private function migrationAlreadyExists(string $suffixPattern): bool
+    {
+        $matches = glob(base_path("database/migrations/{$suffixPattern}"));
+
+        return $matches !== false && $matches !== [];
     }
 
     private function copyPackageFiles(): void
     {
         $this->composerInstaller->printStep(4, 4, 'Copying permission structure');
 
-        $stubsPath = __DIR__ . '/../../Stubs/LaravelPermissions';
+        $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
         $seederBase = base_path('database/seeders');
 
-        $files = [
-            '/Permissions/UserPermissions.stub' => [$srcBase, '/Shared/Permissions/UserPermissions.php'],
-            '/Permissions/PermissionManagement.stub' => [$srcBase, '/Shared/Permissions/PermissionManagement.php'],
-            '/Roles/RoleManagement.stub' => [$srcBase, '/Shared/Roles/RoleManagement.php'],
+        $tokenisedFiles = [
+            '/Permissions/UserPermissions.stub' => [
+                $srcBase, '/Shared/Permissions/UserPermissions.php',
+                ['userPermissionConstants' => $this->permissionCatalog->toPhpConstants('UserPermissions')],
+            ],
+            '/Permissions/RolePermissions.stub' => [
+                $srcBase, '/Shared/Permissions/RolePermissions.php',
+                ['rolePermissionConstants' => $this->permissionCatalog->toPhpConstants('RolePermissions')],
+            ],
+            '/Permissions/PermissionManagement.stub' => [
+                $srcBase, '/Shared/Permissions/PermissionManagement.php',
+                ['permissionRegistry' => $this->permissionCatalog->toPhpRegistry()],
+            ],
+        ];
 
+        $plainFiles = [
+            '/Roles/RoleManagement.stub' => [$srcBase, '/Shared/Roles/RoleManagement.php'],
             '/Database/Seeders/PermissionSeeder.stub' => [$seederBase, '/PermissionSeeder.php'],
             '/Database/Seeders/RoleSeeder.stub' => [$seederBase, '/RoleSeeder.php'],
         ];
 
-        foreach ($files as $stub => [$basePath, $relativeTarget]) {
-            $targetPath = "{$basePath}/{$relativeTarget}";
-
-            $this->ensureDirectoryExists(dirname($targetPath));
-
-            $this->stubCopier->copy(
-                $stubsPath . $stub,
-                $targetPath
-            );
-
+        foreach ($tokenisedFiles as $stub => [$basePath, $relativeTarget, $tokens]) {
+            $this->stubRenderer->renderTo($stubsPath.$stub, "{$basePath}/{$relativeTarget}", $tokens, $this->originMarker);
             $this->composerInstaller->printFileCreated("Created: {$relativeTarget}");
         }
-    }
 
-    private function ensureDirectoryExists(string $path): void
-    {
-        if (! is_dir($path)) {
-            mkdir($path, 0755, true);
+        foreach ($plainFiles as $stub => [$basePath, $relativeTarget]) {
+            $this->stubRenderer->renderTo($stubsPath.$stub, "{$basePath}/{$relativeTarget}", [], $this->originMarker);
+            $this->composerInstaller->printFileCreated("Created: {$relativeTarget}");
         }
     }
 }

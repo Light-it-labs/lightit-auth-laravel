@@ -10,6 +10,8 @@ final class StubRenderer
 {
     private const LEFTOVER_TOKEN_PATTERN = '/\{\{\s*[a-z][a-zA-Z]*\s*\}\}/';
 
+    private const PHP_HEADER = "<?php\n\n";
+
     /**
      * @param  array<string, string>  $tokens
      */
@@ -35,9 +37,13 @@ final class StubRenderer
     /**
      * @param  array<string, string>  $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
+    public function renderTo(string $stubPath, string $destination, array $tokens, ?OriginMarker $marker = null): void
     {
         $rendered = $this->render($stubPath, $tokens);
+
+        if ($marker !== null) {
+            $rendered = $this->withMarker($rendered, $stubPath, $marker);
+        }
 
         $directory = \dirname($destination);
 
@@ -49,6 +55,29 @@ final class StubRenderer
             throw new RuntimeException("Unable to write file: {$destination}");
         }
     }
+
+    /**
+     * A PHP file's `<?php` opening tag must stay the first bytes in the file — any
+     * text before it is emitted as literal output the moment the file is
+     * `require`d. A plain prepend is only safe for non-PHP output (`.ts`, `.md`);
+     * for rendered PHP the marker has to land just after the opening tag, mirroring
+     * `StubCopier`'s identical handling of the same constraint.
+     */
+    private function withMarker(string $rendered, string $stubPath, OriginMarker $marker): string
+    {
+        $comment = $marker->forStub($stubPath);
+
+        if (str_ends_with($stubPath, '.md.stub')) {
+            return "<!-- {$comment} -->\n\n{$rendered}";
+        }
+
+        if (str_starts_with($rendered, self::PHP_HEADER)) {
+            return self::PHP_HEADER."// {$comment}\n\n".substr($rendered, strlen(self::PHP_HEADER));
+        }
+
+        return "// {$comment}\n\n{$rendered}";
+    }
+
 
     /**
      * strtr() is deliberate: it is a single longest-match-first pass, so a token

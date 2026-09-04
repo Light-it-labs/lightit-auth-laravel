@@ -15,6 +15,7 @@ use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubRenderer;
 
 use function Laravel\Prompts\multiselect;
 
@@ -117,8 +118,12 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
-        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
+        $laravelPermission = new LaravelPermissionInstaller(
+            $this,
+            $composerInstaller,
+            new StubRenderer,
+            OriginMarker::resolved(),
+        );
         $laravelPermission->install();
         $this->printSectionSeparator();
     }
