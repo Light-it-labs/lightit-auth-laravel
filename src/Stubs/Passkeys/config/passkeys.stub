@@ -1,0 +1,33 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    /*
+     * The relying party identity presented to the browser's WebAuthn API.
+     *
+     * `id` must be the origin's own host, or a registrable parent domain of it —
+     * never a sibling host. If the frontend and API live on different
+     * subdomains (e.g. app.example.com and api.example.com), `id` must be the
+     * shared parent domain (example.com). Getting this wrong surfaces as a
+     * browser SecurityError with no authenticator prompt at all.
+     */
+    'relying_party' => [
+        'id' => env('PASSKEY_RP_ID', 'localhost'),
+        'name' => env('PASSKEY_RP_NAME', env('APP_NAME', 'Laravel')),
+    ],
+
+    /*
+     * Origins allowed to complete a ceremony. Must be full origins, including
+     * scheme and port (e.g. "https://app.example.com"), never a bare host —
+     * a bare host is normalised rather than treated as a wildcard.
+     */
+    'allowed_origins' => array_filter(explode(',', (string) env('PASSKEY_ALLOWED_ORIGINS', ''))),
+
+    /*
+     * Ceremony timeout, in milliseconds.
+     */
+    'timeout' => (int) env('PASSKEY_TIMEOUT_MS', 60000),
+
+];

@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Lightit\Users\Domain\Models\User;
+
+final class Passkey extends Model
+{
+    public $timestamps = false;
+
+    protected $guarded = [
+        'id',
+    ];
+
+    protected $casts = [
+        'credential' => 'array',
+        'created_at' => 'immutable_datetime',
+        'last_used_at' => 'immutable_datetime',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}
