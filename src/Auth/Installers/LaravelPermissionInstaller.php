@@ -7,7 +7,10 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Permissions\PermissionCatalog;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\CurrentUserResourceLocator;
 use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\PhpResourcePatcher;
+use Lightitlabs\Tools\PhpResourcePatchOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubRenderer;
@@ -18,6 +21,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private const ROUTES_FILE_NAME = 'roles.php';
 
+    private const ESCAPE_HATCH_ROUTES_LABEL = 'current user permissions';
+
+    private const ESCAPE_HATCH_ROUTES_FILE_NAME = 'roles-me.php';
+
+    private const TODO_FILE = 'ROLES-PERMISSIONS-TODO.md';
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
@@ -25,6 +34,8 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         private readonly OriginMarker $originMarker,
         private readonly PermissionCatalog $permissionCatalog = new PermissionCatalog,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly CurrentUserResourceLocator $currentUserResourceLocator = new CurrentUserResourceLocator,
+        private readonly PhpResourcePatcher $phpResourcePatcher = new PhpResourcePatcher,
     ) {}
 
     public function install(): void
@@ -42,13 +53,14 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->copyMigrations();
         $this->copyPackageFiles();
         $this->registerRoutes();
+        $this->patchCurrentUserResource();
 
         $this->composerInstaller->printSuccess('Laravel Permissions installed successfully!');
     }
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(1, 5, 'Copying config files');
+        $this->composerInstaller->printStep(1, 6, 'Copying config files');
 
         $source = base_path('vendor/spatie/laravel-permission/config/permission.php');
         $destination = config_path('permission.php');
@@ -65,14 +77,14 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function clearCacheConfig(): void
     {
-        $this->composerInstaller->printStep(2, 5, 'Clearing cache config files');
+        $this->composerInstaller->printStep(2, 6, 'Clearing cache config files');
 
         $this->command->call('optimize:clear');
     }
 
     private function copyMigrations(): void
     {
-        $this->composerInstaller->printStep(3, 5, 'Copying Laravel Permission migration files');
+        $this->composerInstaller->printStep(3, 6, 'Copying Laravel Permission migration files');
 
         // Both migrations are named from a single captured instant so the additive
         // migration (+1s) always sorts after Spatie's table-creation migration
@@ -141,7 +153,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function copyPackageFiles(): void
     {
-        $this->composerInstaller->printStep(4, 5, 'Copying permission structure');
+        $this->composerInstaller->printStep(4, 6, 'Copying permission structure');
 
         $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
@@ -193,7 +205,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function registerRoutes(): void
     {
-        $this->composerInstaller->printStep(5, 5, 'Registering routes');
+        $this->composerInstaller->printStep(5, 6, 'Registering routes');
 
         if (! is_dir(base_path('routes'))) {
             mkdir(base_path('routes'), 0755, true);
@@ -232,6 +244,134 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
                 .'Please inspect the file.'
             ),
         };
+    }
+
+    /**
+     * Per §4/G4 of the design doc, this is the primary path, not a fallback: no
+     * package driver has ever generated a current-user resource, so every install
+     * either patches a file this package did not author, or falls back to a
+     * generated `GET /me/permissions` route.
+     */
+    private function patchCurrentUserResource(): void
+    {
+        $this->composerInstaller->printStep(6, 6, 'Patching the current-user resource');
+
+        $resourcePath = $this->currentUserResourceLocator->locate(base_path());
+
+        $currentUserPatchStatus = $resourcePath !== null
+            ? $this->patchExistingResource($resourcePath)
+            : $this->generateEscapeHatch();
+
+        $this->writeTodo($currentUserPatchStatus);
+    }
+
+    private function patchExistingResource(string $resourcePath): string
+    {
+        $outcome = $this->phpResourcePatcher->addRolesAndPermissions($resourcePath);
+        $relative = $this->relativeToBasePath($resourcePath);
+
+        if ($outcome->needsManualStep()) {
+            $this->command->warn(
+                "Could not patch {$relative} automatically ({$outcome->name}). "
+                .'Add the snippet from '.self::TODO_FILE.' manually.'
+            );
+        } else {
+            $this->composerInstaller->printFileCreated(
+                $outcome === PhpResourcePatchOutcome::Patched
+                    ? "Patched {$relative} with roles and permissions."
+                    : "{$relative} already carries the roles and permissions patch."
+            );
+        }
+
+        return match ($outcome) {
+            PhpResourcePatchOutcome::Patched => "- [x] `{$relative}` was patched automatically and now includes the snippet below.",
+            PhpResourcePatchOutcome::AlreadyApplied => "- [x] `{$relative}` already carries the roles and permissions patch below.",
+            PhpResourcePatchOutcome::KeyAlreadyPresent => "- [ ] `{$relative}` already declares a `roles` or `permissions` key with a "
+                .'different shape - nothing was changed automatically. Reconcile it with the snippet below by hand.',
+            PhpResourcePatchOutcome::AnchorNotFound,
+            PhpResourcePatchOutcome::Missing,
+            PhpResourcePatchOutcome::Failed,
+            PhpResourcePatchOutcome::Corrupted => "- [ ] `{$relative}` was found but could not be patched automatically "
+                ."({$outcome->name}). Add the snippet below to its `toArray()` yourself.",
+        };
+    }
+
+    private function generateEscapeHatch(): string
+    {
+        $this->stubRenderer->renderTo(
+            __DIR__.'/../../Stubs/LaravelPermissions/Http/Controllers/CurrentUserPermissionsController.stub',
+            base_path('src/Shared/Permissions/App/Controllers/CurrentUserPermissionsController.php'),
+            [],
+            $this->originMarker
+        );
+        $this->composerInstaller->printFileCreated(
+            'Created: src/Shared/Permissions/App/Controllers/CurrentUserPermissionsController.php'
+        );
+
+        $this->writeStubIfMissing(
+            __DIR__.'/../../Stubs/LaravelPermissions/routes/roles-me.stub',
+            base_path('routes/'.self::ESCAPE_HATCH_ROUTES_FILE_NAME),
+            'routes/'.self::ESCAPE_HATCH_ROUTES_FILE_NAME
+        );
+
+        $this->registerEscapeHatchRoute();
+
+        return '- [ ] No current-user resource was found. A fallback route was generated instead: '
+            .'`GET /me/permissions` (see `routes/roles-me.php`). Prefer patching your own current-user '
+            .'resource and removing the fallback once you do - add the snippet below to its `toArray()`.';
+    }
+
+    private function registerEscapeHatchRoute(): void
+    {
+        $outcome = $this->routeFileRegistrar->register(
+            base_path('routes/api.php'),
+            self::ESCAPE_HATCH_ROUTES_FILE_NAME,
+            self::ESCAPE_HATCH_ROUTES_LABEL
+        );
+        $requireStatement = $this->routeFileRegistrar->requireStatement(self::ESCAPE_HATCH_ROUTES_FILE_NAME);
+
+        match ($outcome) {
+            RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
+                "Updated routes/api.php: {$requireStatement}"
+            ),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
+                'Current user permissions routes already required in routes/api.php'
+            ),
+            RouteRegistrationOutcome::ParentMissing => $this->command->warn(
+                'Could not find routes/api.php. '
+                ."Please add {$requireStatement} to your API route file manually."
+            ),
+            RouteRegistrationOutcome::Failed => $this->command->warn(
+                "Could not append {$requireStatement} to routes/api.php automatically. "
+                .'Please add it manually.'
+            ),
+            RouteRegistrationOutcome::Corrupted => $this->command->error(
+                "routes/api.php was left in an inconsistent state while adding {$requireStatement}. "
+                .'Please inspect the file.'
+            ),
+        };
+    }
+
+    private function writeTodo(string $currentUserPatchStatus): void
+    {
+        $this->stubRenderer->renderTo(
+            __DIR__.'/../../Stubs/LaravelPermissions/ROLES-PERMISSIONS-TODO.md.stub',
+            base_path(self::TODO_FILE),
+            [
+                'currentUserPatchStatus' => $currentUserPatchStatus,
+                'manualSnippet' => $this->phpResourcePatcher->manualSnippet(),
+            ],
+            $this->originMarker
+        );
+
+        $this->composerInstaller->printFileCreated('Created: '.self::TODO_FILE);
+    }
+
+    private function relativeToBasePath(string $path): string
+    {
+        $base = rtrim(base_path(), '/\\').\DIRECTORY_SEPARATOR;
+
+        return str_starts_with($path, $base) ? substr($path, \strlen($base)) : $path;
     }
 
     /**
