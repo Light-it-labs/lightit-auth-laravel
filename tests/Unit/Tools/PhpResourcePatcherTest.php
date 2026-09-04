@@ -220,6 +220,63 @@ describe('PhpResourcePatcher', function (): void {
             PHP);
     });
 
+    it('does not treat the marker appearing outside the return array as already applied', function (): void {
+        $markerOutsideReturnArray = <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace App\Http\Resources;
+
+            use Illuminate\Http\Request;
+            use Illuminate\Http\Resources\Json\JsonResource;
+
+            // lightit-auth: roles and permissions
+            // (mentioned here in a class-level comment, not inside toArray()'s return array)
+            class UserResource extends JsonResource
+            {
+                public function toArray(Request $request): array
+                {
+                    return [
+                        'id' => $this->id,
+                    ];
+                }
+            }
+
+            PHP;
+        file_put_contents($this->path, $markerOutsideReturnArray);
+
+        expect((new PhpResourcePatcher)->addRolesAndPermissions($this->path))
+            ->toBe(PhpResourcePatchOutcome::Patched);
+
+        expect((string) file_get_contents($this->path))->toBe(<<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace App\Http\Resources;
+
+            use Illuminate\Http\Request;
+            use Illuminate\Http\Resources\Json\JsonResource;
+
+            // lightit-auth: roles and permissions
+            // (mentioned here in a class-level comment, not inside toArray()'s return array)
+            class UserResource extends JsonResource
+            {
+                public function toArray(Request $request): array
+                {
+                    return [
+                        // lightit-auth: roles and permissions
+                        'roles' => $this->roles->pluck('name')->all(),
+                        'permissions' => $this->getAllPermissions()->pluck('name')->all(),
+                        'id' => $this->id,
+                    ];
+                }
+            }
+
+            PHP);
+    });
+
     it('reports the same text it applies', function () use ($userResource): void {
         file_put_contents($this->path, $userResource);
         $patcher = new PhpResourcePatcher;
