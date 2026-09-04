@@ -43,7 +43,7 @@ final class PhpResourcePatcher
             return PhpResourcePatchOutcome::Failed;
         }
 
-        if ($this->alreadyPatched($original)) {
+        if ($this->landedInReturnArray($original)) {
             return PhpResourcePatchOutcome::AlreadyApplied;
         }
 
@@ -99,11 +99,6 @@ final class PhpResourcePatcher
             : PhpResourcePatchOutcome::Failed;
     }
 
-    private function alreadyPatched(string $contents): bool
-    {
-        return str_contains($contents, self::MARKER);
-    }
-
     /**
      * @param  array{open: int, close: int}  $bounds
      */
@@ -118,7 +113,10 @@ final class PhpResourcePatcher
      * The written file has to prove the marker landed inside the specific array we
      * targeted, not just "somewhere in the file" — mirroring
      * `TypeScriptPatcher::landedInRetryList()`'s reasoning for PHP, backed by a real
-     * tokenizer instead of a hand-rolled scanner.
+     * tokenizer instead of a hand-rolled scanner. Checks every occurrence of the
+     * marker, not just the first: an unrelated mention of the marker text earlier
+     * in the file (a docblock, another comment) must not shadow the one that
+     * actually landed inside the return array.
      */
     private function landedInReturnArray(string $contents): bool
     {
@@ -136,11 +134,22 @@ final class PhpResourcePatcher
             return false;
         }
 
-        $markerOffset = strpos($contents, self::MARKER);
+        return $this->hasMarkerWithin($contents, $bounds);
+    }
 
-        return $markerOffset !== false
-            && $markerOffset > $bounds['open']
-            && $markerOffset < $bounds['close'];
+    /**
+     * Searching from `$bounds['open']` skips any marker occurrence before the
+     * return array entirely, so the first hit found (if any) is necessarily the
+     * earliest one at-or-after the array opened — checking that single hit against
+     * `close` is enough, no need to scan every occurrence in the file.
+     *
+     * @param  array{open: int, close: int}  $bounds
+     */
+    private function hasMarkerWithin(string $contents, array $bounds): bool
+    {
+        $markerOffset = strpos($contents, self::MARKER, $bounds['open']);
+
+        return $markerOffset !== false && $markerOffset < $bounds['close'];
     }
 
     private function parses(string $contents): bool
