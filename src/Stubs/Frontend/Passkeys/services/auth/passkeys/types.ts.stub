@@ -1,0 +1,43 @@
+export type Passkey = {
+  id: number;
+  name: string;
+  createdAt: string | null;
+  lastUsedAt: string | null;
+};
+
+export type PasskeyCreationOptions = PublicKeyCredentialCreationOptionsJSON;
+
+export type PasskeyRequestOptions = {
+  ceremonyId: string;
+  publicKey: PublicKeyCredentialRequestOptionsJSON;
+};
+
+export type PasskeyLoginResult = {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+};
+
+export type PasskeyCeremonyErrorReason =
+  | "already_registered"
+  | "cancelled_or_timed_out"
+  | "security_error"
+  | "unknown";
+
+export type PasskeyCeremonyError = {
+  reason: PasskeyCeremonyErrorReason;
+  domExceptionName: string | null;
+  message: string;
+};
+
+// WebAuthn is a secure-context-only API. Checking `isSecureContext` alongside
+// `PublicKeyCredential` turns a misconfigured HTTP-over-custom-TLD dev origin
+// into a clean "not supported" branch instead of a raw TypeError on a missing
+// browser API.
+export const isPasskeySupported = (): boolean => {
+  return (
+    typeof window !== "undefined" &&
+    window.isSecureContext &&
+    typeof window.PublicKeyCredential !== "undefined"
+  );
+};
