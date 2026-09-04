@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
 use Lightit\Authentication\Domain\Models\Passkey;
@@ -45,6 +46,17 @@ final class PasskeyCeremonyService
      * manager.
      */
     private const ALGORITHMS = [-7, -257];
+
+    /**
+     * Login is usernameless, so - unlike registration's per-user cache key -
+     * there is no natural key to cache the challenge under until an opaque
+     * `ceremony_id` is minted for it. The cache key never carries a user
+     * identity: `cacheLoginRequestOptions()`/`pullLoginRequestOptions()`
+     * are the only place that ID is generated or consumed.
+     */
+    private const LOGIN_CACHE_KEY_PREFIX = 'passkey:login:';
+
+    private const LOGIN_CACHE_TTL_MINUTES = 5;
 
     private readonly SerializerInterface $serializer;
 
@@ -114,6 +126,43 @@ final class PasskeyCeremonyService
             userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
             timeout: Config::integer('passkeys.timeout'),
         );
+    }
+
+    /**
+     * Mints an opaque ceremony id and caches the serialized request options
+     * under it, single-use, for `pullLoginRequestOptions()` to read back. A
+     * challenge answered twice is a replay, the same rule registration's own
+     * cache follows.
+     */
+    public function cacheLoginRequestOptions(PublicKeyCredentialRequestOptions $options): string
+    {
+        $ceremonyId = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+
+        Cache::put(
+            self::LOGIN_CACHE_KEY_PREFIX.$ceremonyId,
+            $this->serializer->serialize($options, 'json'),
+            now()->addMinutes(self::LOGIN_CACHE_TTL_MINUTES),
+        );
+
+        return $ceremonyId;
+    }
+
+    /**
+     * Reads back and invalidates the request options cached under
+     * `$ceremonyId` via `Cache::pull()` - missing or already-consumed returns
+     * `null`, which the caller maps to a 410 `passkey_challenge_expired`.
+     */
+    public function pullLoginRequestOptions(string $ceremonyId): PublicKeyCredentialRequestOptions|null
+    {
+        /** @var string|null $json */
+        $json = Cache::pull(self::LOGIN_CACHE_KEY_PREFIX.$ceremonyId);
+
+        if ($json === null) {
+            return null;
+        }
+
+        /** @var PublicKeyCredentialRequestOptions */
+        return $this->serializer->deserialize($json, PublicKeyCredentialRequestOptions::class, 'json');
     }
 
     /**
