@@ -170,11 +170,21 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->fileManipulator->replaceInFile(
+        $registered = $this->fileManipulator->replaceInFile(
             'return [',
             'return ['.PHP_EOL.'    \\'.self::GOOGLE_CLIENT_SERVICE_PROVIDER.'::class,',
             $providersPath
         );
+
+        if (! $registered) {
+            $this->command->warn(
+                'Could not find a return [ array in bootstrap/providers.php. '
+                .'Please register '.self::GOOGLE_CLIENT_SERVICE_PROVIDER.' manually.'
+            );
+
+            return;
+        }
+
         $this->composerInstaller->printFileCreated(
             'Updated bootstrap/providers.php: registered '.self::GOOGLE_CLIENT_SERVICE_PROVIDER
         );
