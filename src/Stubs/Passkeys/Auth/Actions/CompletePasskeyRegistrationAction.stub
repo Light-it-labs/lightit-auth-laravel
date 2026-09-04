@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Lightit\Authentication\Domain\DataTransferObjects\StorePasskeyDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Users\Domain\Models\User;
+use Webauthn\PublicKeyCredentialCreationOptions;
+
+final readonly class CompletePasskeyRegistrationAction
+{
+    private const CACHE_KEY_PREFIX = 'passkey:registration:';
+
+    public function __construct(
+        private PasskeyCeremonyService $ceremonyService,
+        private Request $request,
+    ) {
+    }
+
+    public function execute(User $user, StorePasskeyDto $dto): Passkey
+    {
+        /** @var string|null $optionsJson */
+        $optionsJson = Cache::pull(self::CACHE_KEY_PREFIX.$user->id);
+
+        if ($optionsJson === null) {
+            throw new PasskeyCeremonyFailedException(
+                message: 'The registration challenge has expired.',
+                status: 410,
+                errorCode: 'passkey_challenge_expired',
+            );
+        }
+
+        /** @var PublicKeyCredentialCreationOptions $options */
+        $options = $this->ceremonyService->serializer()->deserialize(
+            $optionsJson,
+            PublicKeyCredentialCreationOptions::class,
+            'json',
+        );
+
+        $credentialRecord = $this->ceremonyService->verifyAttestation(
+            json_encode($dto->credential, JSON_THROW_ON_ERROR),
+            $options,
+            $this->request->getHost(),
+        );
+
+        $passkey = new Passkey();
+        $passkey->user_id = $user->id;
+        $passkey->name = $dto->name;
+        $passkey->credential_id = $credentialRecord->publicKeyCredentialId;
+        $passkey->credential = json_decode(
+            $this->ceremonyService->serializer()->serialize($credentialRecord, 'json'),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+        $passkey->saveOrFail();
+
+        return $passkey;
+    }
+}

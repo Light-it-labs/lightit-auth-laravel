@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * Unwrapped, and deliberately NOT re-cased to snake_case: the key casing here is
+ * the raw WebAuthn wire format `PublicKeyCredential.parseCreationOptionsFromJSON()`
+ * expects, fixed by the browser API rather than by this package's own convention.
+ */
+#[SchemaName('PasskeyCreationOptions')]
+class PasskeyCreationOptionsResource extends JsonResource
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        /** @var array<string, mixed> $options */
+        $options = json_decode((string) $this->resource, true, flags: JSON_THROW_ON_ERROR);
+
+        return $options;
+    }
+}
