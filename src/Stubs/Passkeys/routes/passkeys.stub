@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\DeletePasskeyController;
+use Lightit\Authentication\App\Controllers\ListPasskeysController;
+use Lightit\Authentication\App\Controllers\PasskeyLoginController;
+use Lightit\Authentication\App\Controllers\StartPasskeyLoginController;
 use Lightit\Authentication\App\Controllers\StartPasskeyRegistrationController;
 use Lightit\Authentication\App\Controllers\StorePasskeyController;
 
@@ -12,9 +16,18 @@ use Lightit\Authentication\App\Controllers\StorePasskeyController;
 |--------------------------------------------------------------------------
 */
 
+Route::prefix('auth/passkey')
+    ->middleware('throttle:6,1')
+    ->group(static function (): void {
+        Route::post('options', StartPasskeyLoginController::class);
+        Route::post('/', PasskeyLoginController::class);
+    });
+
 Route::prefix('passkeys')
     ->middleware('auth:sanctum')
     ->group(static function (): void {
         Route::post('registration-options', StartPasskeyRegistrationController::class);
+        Route::get('/', ListPasskeysController::class);
         Route::post('/', StorePasskeyController::class);
+        Route::delete('{passkey}', DeletePasskeyController::class);
     });

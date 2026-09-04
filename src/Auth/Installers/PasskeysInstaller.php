@@ -6,9 +6,11 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubRenderer;
 
 final class PasskeysInstaller implements AuthInstallerInterface
 {
@@ -27,6 +29,8 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private const ROUTES_FILE_NAME = 'passkeys.php';
 
+    private const TODO_FILE = 'AUTH-PASSKEYS-TODO.md';
+
     /**
      * Patterns a pre-existing `passkeys`/`auth/passkey` route in the consumer's
      * own routes file would match. Detected before appending the generated
@@ -41,13 +45,19 @@ final class PasskeysInstaller implements AuthInstallerInterface
         'auth/passkey' => '/(?:Route::|->)(?:get|post|put|patch|delete)\(\s*[\'"]\/?auth\/passkey/',
     ];
 
+    private readonly OriginMarker $originMarker;
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
         private readonly string $apiRoutesPath = 'routes/api.php',
-    ) {}
+        private readonly StubRenderer $stubRenderer = new StubRenderer,
+        ?OriginMarker $originMarker = null,
+    ) {
+        $this->originMarker = $originMarker ?? OriginMarker::resolved();
+    }
 
     public function install(): void
     {
@@ -61,13 +71,14 @@ final class PasskeysInstaller implements AuthInstallerInterface
         $this->copyConfigFile();
         $this->copyMigration();
         $this->registerRoutes();
+        $this->copyTodoDoc();
 
         $this->composerInstaller->printSuccess('Passkeys (WebAuthn) installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 4, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 5, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -85,13 +96,26 @@ final class PasskeysInstaller implements AuthInstallerInterface
             '/Services/PasskeyCeremonyService.stub' => 'Domain/Services/PasskeyCeremonyService.php',
             '/Exceptions/PasskeyCeremonyFailedException.stub' => 'Domain/Exceptions/PasskeyCeremonyFailedException.php',
             '/DataTransferObjects/StorePasskeyDto.stub' => 'Domain/DataTransferObjects/StorePasskeyDto.php',
+            '/DataTransferObjects/PasskeyLoginDto.stub' => 'Domain/DataTransferObjects/PasskeyLoginDto.php',
+            '/DataTransferObjects/PasskeyLoginOptionsDto.stub' => 'Domain/DataTransferObjects/PasskeyLoginOptionsDto.php',
             '/Actions/StartPasskeyRegistrationAction.stub' => 'Domain/Actions/StartPasskeyRegistrationAction.php',
             '/Actions/CompletePasskeyRegistrationAction.stub' => 'Domain/Actions/CompletePasskeyRegistrationAction.php',
+            '/Actions/StartPasskeyLoginAction.stub' => 'Domain/Actions/StartPasskeyLoginAction.php',
+            '/Actions/PasskeyLoginAction.stub' => 'Domain/Actions/PasskeyLoginAction.php',
+            '/Actions/ListPasskeysAction.stub' => 'Domain/Actions/ListPasskeysAction.php',
+            '/Actions/DeletePasskeyAction.stub' => 'Domain/Actions/DeletePasskeyAction.php',
             '/Requests/StorePasskeyRequest.stub' => 'App/Requests/StorePasskeyRequest.php',
+            '/Requests/PasskeyLoginRequest.stub' => 'App/Requests/PasskeyLoginRequest.php',
+            '/Requests/DeletePasskeyRequest.stub' => 'App/Requests/DeletePasskeyRequest.php',
             '/Resources/PasskeyResource.stub' => 'App/Resources/PasskeyResource.php',
             '/Resources/PasskeyCreationOptionsResource.stub' => 'App/Resources/PasskeyCreationOptionsResource.php',
+            '/Resources/PasskeyRequestOptionsResource.stub' => 'App/Resources/PasskeyRequestOptionsResource.php',
             '/Controllers/StartPasskeyRegistrationController.stub' => 'App/Controllers/StartPasskeyRegistrationController.php',
             '/Controllers/StorePasskeyController.stub' => 'App/Controllers/StorePasskeyController.php',
+            '/Controllers/StartPasskeyLoginController.stub' => 'App/Controllers/StartPasskeyLoginController.php',
+            '/Controllers/PasskeyLoginController.stub' => 'App/Controllers/PasskeyLoginController.php',
+            '/Controllers/ListPasskeysController.stub' => 'App/Controllers/ListPasskeysController.php',
+            '/Controllers/DeletePasskeyController.stub' => 'App/Controllers/DeletePasskeyController.php',
         ];
 
         foreach ($files as $stub => $destination) {
@@ -112,7 +136,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(2, 4, 'Copying config file');
+        $this->composerInstaller->printStep(2, 5, 'Copying config file');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -127,7 +151,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 4, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 5, 'Copying migration files');
 
         if (glob(base_path('database/migrations/*_create_passkeys_table.php')) !== []) {
             $this->composerInstaller->printMigrationCreated(
@@ -150,7 +174,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private function registerRoutes(): void
     {
-        $this->composerInstaller->printStep(4, 4, 'Registering routes');
+        $this->composerInstaller->printStep(4, 5, 'Registering routes');
 
         if (! is_dir(base_path('routes'))) {
             mkdir(base_path('routes'), 0755, true);
@@ -197,6 +221,25 @@ final class PasskeysInstaller implements AuthInstallerInterface
                 .'Please inspect the file.'
             ),
         };
+    }
+
+    private function copyTodoDoc(): void
+    {
+        $this->composerInstaller->printStep(5, 5, 'Copying manual-steps TODO');
+
+        $destination = base_path(self::TODO_FILE);
+
+        if (file_exists($destination)) {
+            $this->command->warn('Overwriting: '.self::TODO_FILE);
+        }
+
+        $this->stubRenderer->renderTo(
+            __DIR__.'/../../Stubs/Passkeys/'.self::TODO_FILE.'.stub',
+            $destination,
+            [],
+            $this->originMarker,
+        );
+        $this->composerInstaller->printFileCreated('Created: '.self::TODO_FILE);
     }
 
     /**
