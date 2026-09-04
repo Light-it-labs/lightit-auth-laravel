@@ -6,8 +6,6 @@ import { deepCamelKeys } from "string-ts";
 import { env } from "@/config/env";
 import type { GoogleLoginPayload, GoogleLoginResponse } from "./types";
 
-// This call establishes the session, so unlike the two-factor exchange
-// endpoints there is no existing access or challenge token to attach.
 const googleSsoApi = axios.create({
   baseURL: env.VITE_API_URL,
   headers: {

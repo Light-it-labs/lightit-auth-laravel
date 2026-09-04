@@ -28,13 +28,9 @@ describe('GoogleSSOFrontendInstaller', function (): void {
             'src/services/auth/sso/google/actions.ts',
             'AUTH-GOOGLE-SSO-FRONTEND-TODO.md',
         ] as $relative) {
-            expect($this->root.'/'.$relative)->toBeFile();
+            expect(file_get_contents($this->root.'/'.$relative))
+                ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
         }
-
-        expect(file_get_contents($this->root.'/src/services/auth/sso/google/api.ts'))
-            ->toBe(file_get_contents(
-                __DIR__.'/../Fixtures/frontend/expected/src/services/auth/sso/google/api.ts'
-            ));
     });
 
     it('reports every dependency already installed when the fixture project has them all', function (): void {
