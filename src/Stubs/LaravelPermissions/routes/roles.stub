@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Shared\Permissions\App\Controllers\ListPermissionGroupsController;
+use Lightit\Shared\Permissions\App\Controllers\ListPermissionsController;
+use Lightit\Shared\Permissions\App\Controllers\ListRolesController;
+use Lightit\Shared\Permissions\App\Controllers\UpdateUserRolesController;
+use Lightit\Shared\Permissions\RolePermissions;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+
+/*
+|--------------------------------------------------------------------------
+| Roles and Permissions Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth:sanctum')
+    ->group(static function (): void {
+        Route::get('roles', ListRolesController::class)
+            ->middleware(PermissionMiddleware::using(RolePermissions::READ_ROLE));
+
+        Route::prefix('permissions')
+            ->group(static function (): void {
+                Route::get('/', ListPermissionsController::class)
+                    ->middleware(PermissionMiddleware::using(RolePermissions::READ_PERMISSION));
+                Route::get('groups', ListPermissionGroupsController::class)
+                    ->middleware(PermissionMiddleware::using(RolePermissions::READ_PERMISSION));
+            });
+
+        Route::put('users/{user}/roles', UpdateUserRolesController::class)
+            ->middleware(PermissionMiddleware::using(RolePermissions::ASSIGN_ROLE));
+    });

@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\Domain\Actions;
+
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Permission;
+
+final class ListPermissionGroupsAction
+{
+    /**
+     * @return Collection<int, object{group: string, permissions: Collection<int, Permission>}>
+     */
+    public function execute(): Collection
+    {
+        return Permission::query()->get()
+            ->groupBy('group')
+            ->map(static fn (Collection $permissions, string $group): object => (object) [
+                'group' => $group,
+                'permissions' => $permissions->values(),
+            ])
+            ->values();
+    }
+}
