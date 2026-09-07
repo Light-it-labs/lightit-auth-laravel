@@ -49,12 +49,19 @@ final class PasskeysInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 2, 'Copying migration files');
 
-        if (glob(base_path('database/migrations/*_create_passkeys_table.php')) !== []) {
+        // glob() returns false (not []) when the directory is missing or unreadable;
+        // treating that as "already exists" would silently skip a migration the
+        // consumer actually needs.
+        if ((glob(base_path('database/migrations/*_create_passkeys_table.php')) ?: []) !== []) {
             $this->composerInstaller->printMigrationCreated(
                 'Skipped: a create_passkeys_table migration already exists.'
             );
 
             return;
+        }
+
+        if (! is_dir(base_path('database/migrations'))) {
+            mkdir(base_path('database/migrations'), 0755, true);
         }
 
         $stub = __DIR__.'/../../Stubs/Passkeys/database/migrations/create_passkeys_table.stub';
