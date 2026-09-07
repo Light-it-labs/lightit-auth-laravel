@@ -10,6 +10,7 @@ enum Feature: string
     case RolesAndPermissions = 'roles-and-permissions';
     case Otp = 'otp';
     case ForgotPassword = 'forgot-password';
+    case Passkeys = 'passkeys';
 
     public function label(): string
     {
@@ -18,6 +19,7 @@ enum Feature: string
             self::RolesAndPermissions => 'Roles and Permissions',
             self::Otp => 'OTP (one-time password)',
             self::ForgotPassword => 'Forgot Password flow',
+            self::Passkeys => 'Passkeys (WebAuthn)',
         };
     }
 

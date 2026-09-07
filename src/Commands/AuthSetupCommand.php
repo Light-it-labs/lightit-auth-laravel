@@ -14,6 +14,7 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
@@ -169,6 +170,7 @@ class AuthSetupCommand extends Command
                 Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
                 Feature::Otp => $this->setupOtp(),
                 Feature::ForgotPassword => $this->setupForgotPassword(),
+                Feature::Passkeys => $this->setupPasskeys(),
             };
         }
     }
@@ -235,6 +237,17 @@ class AuthSetupCommand extends Command
         $stubCopier = new StubCopier(OriginMarker::resolved());
         $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller, $stubCopier);
         $forgotPasswordInstaller->install();
+        $this->printSectionSeparator();
+    }
+
+    protected function setupPasskeys(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Passkeys...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $passkeysInstaller = new PasskeysInstaller($this, $composerInstaller, $stubCopier);
+        $passkeysInstaller->install();
         $this->printSectionSeparator();
     }
 }
