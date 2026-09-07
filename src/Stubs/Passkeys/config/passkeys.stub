@@ -23,7 +23,7 @@ return [
      * scheme and port (e.g. "https://app.example.com"), never a bare host —
      * a bare host is normalised rather than treated as a wildcard.
      */
-    'allowed_origins' => array_filter(explode(',', (string) env('PASSKEY_ALLOWED_ORIGINS', ''))),
+    'allowed_origins' => array_filter(array_map('trim', explode(',', (string) env('PASSKEY_ALLOWED_ORIGINS', '')))),
 
     /*
      * Ceremony timeout, in milliseconds.
