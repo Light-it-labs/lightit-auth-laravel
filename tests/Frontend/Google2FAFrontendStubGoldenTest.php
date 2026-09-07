@@ -42,9 +42,15 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
     });
 
     it('routes the two adaptations from idr-front at the package\'s own paths, not idr-front\'s', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/two-factor/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
             ->toContain('"2fa/verify-recovery-code"')
             ->toContain('"2fa/regenerate-recovery-codes"')
             ->not->toContain('auth/verify-recovery-code')
@@ -52,17 +58,29 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
     });
 
     it('attaches a manual Authorization header per call instead of a shared authenticated client', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/two-factor/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
             ->toContain('Authorization: `Bearer ${token}`')
             ->not->toContain('withCredentials');
     });
 
     it('spells the provenance marker so cspell can tokenize it', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('AUTH-2FA-FRONTEND-TODO.md')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('AUTH-2FA-FRONTEND-TODO.md.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('AUTH-2FA-FRONTEND-TODO.md')))
             ->toContain('light-it')
             ->not->toContain('lightit');
     });
