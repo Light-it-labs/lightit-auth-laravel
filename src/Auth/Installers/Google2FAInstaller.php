@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Enums\AuthDriver;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -70,7 +71,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         return match ($this->driver) {
             AuthDriver::SanctumApiToken => __DIR__ . '/../../Stubs/Google2FA/Sanctum/Auth',
-            default => __DIR__ . '/../../Stubs/Google2FA/JWT/Auth',
+            AuthDriver::GoogleSso => throw new RuntimeException(
+                'Two-Factor Authentication is not supported with the Google SSO driver alone.'
+            ),
         };
     }
 

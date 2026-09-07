@@ -5,8 +5,6 @@
 Laravel Auth Package simplifies authentication, authorization, roles and permissions setup for Laravel applications.
 Supporting the following packages
 
-[//]: # (- [PHP-Open-Source-Saver/jwt-auth]&#40;https://github.com/PHP-Open-Source-Saver/jwt-auth&#41;)
-
 [//]: # (- [Laravel Sanctum &#40;Api Token Authentication&#41;]&#40;https://laravel.com/docs/12.x/sanctum&#41;)
 
 [//]: # (- [Google SSO]&#40;https://github.com/googleapis/google-api-php-client&#41;)
@@ -18,7 +16,6 @@ Supporting the following packages
 ## Contents
 
 - [Installation](#installation)
-- [JWT](docs/jwt.md)
 - [Sanctum](docs/sanctum.md)
 - [Google SSO](docs/google-sso.md)
 - [Google 2FA](docs/google-2fa.md)
