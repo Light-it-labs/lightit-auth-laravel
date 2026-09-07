@@ -91,13 +91,13 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
             throw new RuntimeException(
-                'Rejected --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
+                'Rejected frontend path: '.$this->locator->rejectionReason($this->frontendPath)
             );
         }
 
         $this->command->warn(
             'No React project found next to the application. Skipping the passkeys frontend step. '
-            .'Pass an explicit frontend path to generate it manually.'
+            .'Run auth:setup from a directory with a sibling React project to generate it.'
         );
     }
 
