@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Illuminate\Http\Request;
 use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
@@ -17,7 +16,6 @@ final readonly class PasskeyLoginAction
     public function __construct(
         private PasskeyCeremonyService $ceremonyService,
         private LoginByUserAction $loginByUserAction,
-        private Request $request,
     ) {
     }
 
@@ -34,7 +32,9 @@ final readonly class PasskeyLoginAction
         }
 
         $credentialJson = json_encode($dto->credential, JSON_THROW_ON_ERROR);
-        $credentialId = $this->ceremonyService->rawCredentialIdFor($credentialJson);
+        $credentialId = $this->ceremonyService->encodeCredentialId(
+            $this->ceremonyService->rawCredentialIdFor($credentialJson)
+        );
 
         /** @var Passkey|null $passkey */
         $passkey = Passkey::query()->where('credential_id', $credentialId)->first();
@@ -52,7 +52,7 @@ final readonly class PasskeyLoginAction
             $credentialJson,
             $options,
             $this->ceremonyService->credentialRecordFor($passkey),
-            $this->request->getHost(),
+            $this->ceremonyService->relyingParty()->id,
         );
 
         $passkey->credential = json_decode(

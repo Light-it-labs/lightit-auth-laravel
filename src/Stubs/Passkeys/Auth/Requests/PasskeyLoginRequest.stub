@@ -16,7 +16,10 @@ final class PasskeyLoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            self::CEREMONY_ID => ['required', 'string'],
+            // Matches the unpadded base64url shape cacheLoginRequestOptions()
+            // mints (32 random bytes -> 43 characters): the value is concatenated
+            // directly into a cache key, so it is validated before it gets there.
+            self::CEREMONY_ID => ['required', 'string', 'regex:/^[A-Za-z0-9_-]{43}$/'],
             self::CREDENTIAL => ['required', 'array'],
         ];
     }
