@@ -45,7 +45,14 @@ function phpStubPaths(): array
 
 function readStub(string $relativePath): string
 {
-    return (string) file_get_contents(__DIR__.'/../src/Stubs/'.$relativePath);
+    $path = __DIR__.'/../src/Stubs/'.$relativePath;
+    $contents = file_get_contents($path);
+
+    if ($contents === false) {
+        throw new RuntimeException("Unable to read stub file: {$path}");
+    }
+
+    return $contents;
 }
 
 dataset('phpStubs', function (): Generator {
