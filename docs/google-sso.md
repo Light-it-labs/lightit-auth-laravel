@@ -5,7 +5,7 @@ This module enables authentication via Google accounts using [googleapis/google-
 > [!NOTE]
 > Google SSO integration relies on Google's Identity Platform. Your frontend must handle the OAuth flow and provide a valid ID token to your API.
 
-> The actual access token issued by your backend follows the auth driver selected during `auth:setup` (Sanctum API Token or Sanctum Cookie).
+> The actual access token issued by your backend follows the auth driver selected during `auth:setup` (Sanctum API Token).
 
 ### Setup
 
