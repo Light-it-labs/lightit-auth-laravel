@@ -1,6 +1,6 @@
-import { useMutation, useQuery, type UseQueryOptions } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
-import type { UseMutationProps } from "@/services/types";
+import type { UseMutationProps, UseQueryProps } from "@/services/types";
 import {
   createPasskey,
   createPasskeyCredential,
@@ -16,7 +16,7 @@ import type { Passkey, PasskeyLoginResult } from "./types";
 
 export const usePasskeys = (
   { token }: { token: string },
-  props?: Omit<UseQueryOptions<Passkey[], Error>, "queryKey" | "queryFn">,
+  props?: UseQueryProps<{ queryFn: typeof listPasskeys }>,
 ) => {
   return useQuery({
     queryKey: ["{{ queryKeyScope }}", "passkeys"],
