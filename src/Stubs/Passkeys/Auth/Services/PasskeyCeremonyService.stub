@@ -61,6 +61,15 @@ final class PasskeyCeremonyService
 
     private const LOGIN_CACHE_TTL_MINUTES = 5;
 
+    /**
+     * Matches the unpadded base64url shape `cacheLoginRequestOptions()` mints
+     * (32 random bytes -> 43 characters). `$ceremonyId` reaches this service
+     * as client input; validating the shape here - not just at the FormRequest
+     * layer - keeps the cache key bounded and rejects IDs this service never
+     * minted before they are ever concatenated into a `Cache::pull()` key.
+     */
+    private const LOGIN_CEREMONY_ID_PATTERN = '/^[A-Za-z0-9_-]{43}$/';
+
     private readonly SerializerInterface $serializer;
 
     private readonly CeremonyStepManagerFactory $ceremonyStepManagerFactory;
@@ -157,6 +166,10 @@ final class PasskeyCeremonyService
      */
     public function pullLoginRequestOptions(string $ceremonyId): PublicKeyCredentialRequestOptions|null
     {
+        if (preg_match(self::LOGIN_CEREMONY_ID_PATTERN, $ceremonyId) !== 1) {
+            return null;
+        }
+
         /** @var string|null $json */
         $json = Cache::pull(self::LOGIN_CACHE_KEY_PREFIX.$ceremonyId);
 
