@@ -120,6 +120,40 @@ describe('PhpResourcePatcher', function (): void {
         expect(file_get_contents($this->path))->toBe($withRolesKey);
     });
 
+    it('patches instead of reporting a conflict when roles only appears inside a nested array', function (): void {
+        $nestedRolesKey = <<<'PHP'
+            <?php
+
+            declare(strict_types=1);
+
+            namespace App\Http\Resources;
+
+            use Illuminate\Http\Request;
+            use Illuminate\Http\Resources\Json\JsonResource;
+
+            class UserResource extends JsonResource
+            {
+                public function toArray(Request $request): array
+                {
+                    return [
+                        'id' => $this->id,
+                        'meta' => [
+                            'roles' => 'not the top-level key',
+                        ],
+                    ];
+                }
+            }
+
+            PHP;
+        file_put_contents($this->path, $nestedRolesKey);
+
+        expect((new PhpResourcePatcher)->addRolesAndPermissions($this->path))
+            ->toBe(PhpResourcePatchOutcome::Patched);
+
+        expect(file_get_contents($this->path))
+            ->toContain("'roles' => \$this->roles->pluck('name')->all(),");
+    });
+
     it('reports the anchor as missing and writes nothing when there is no toArray method', function (): void {
         $withoutToArray = <<<'PHP'
             <?php
