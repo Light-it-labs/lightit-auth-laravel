@@ -21,7 +21,7 @@ export const usePasskeys = (
   props?: Omit<UseQueryOptions<Passkey[], Error>, "queryKey" | "queryFn">,
 ) => {
   return useQuery({
-    queryKey: ["auth", "passkeys", token],
+    queryKey: ["auth", "passkeys"],
     queryFn: () => listPasskeys({ token }),
     ...props,
   });
@@ -30,14 +30,13 @@ export const usePasskeys = (
 const enrolPasskey = async ({ token, name }: { token: string; name: string }): Promise<Passkey> => {
   const options = await getPasskeyRegistrationOptions({ token });
 
-  let credential;
   try {
-    credential = await createPasskeyCredential(options);
+    const credential = await createPasskeyCredential(options);
+
+    return await createPasskey({ token, name, credential });
   } catch (error) {
     throw mapPasskeyCeremonyError(error);
   }
-
-  return createPasskey({ token, name, credential });
 };
 
 export const useEnrolPasskey = (props?: UseMutationProps<typeof enrolPasskey>) => {
@@ -51,14 +50,13 @@ export const useDeletePasskey = (props?: UseMutationProps<typeof deletePasskey>)
 const signInWithPasskey = async (): Promise<PasskeyLoginResult> => {
   const options = await getPasskeyLoginOptions();
 
-  let credential;
   try {
-    credential = await getPasskeyCredential(options);
+    const credential = await getPasskeyCredential(options);
+
+    return await loginWithPasskey({ ceremonyId: options.ceremonyId, credential });
   } catch (error) {
     throw mapPasskeyCeremonyError(error);
   }
-
-  return loginWithPasskey({ ceremonyId: options.ceremonyId, credential });
 };
 
 export const useSignInWithPasskey = (props?: UseMutationProps<typeof signInWithPasskey>) => {
