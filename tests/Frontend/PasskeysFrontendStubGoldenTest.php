@@ -59,8 +59,15 @@ describe('Passkeys frontend stub rendering', function () use ($fixturePath, $stu
             ->toContain('passkeysCeremonyApi')
             ->toContain('no response interceptor at all');
 
-        $ceremonyBlock = substr($api, (int) strpos($api, 'const passkeysCeremonyApi'));
-        $ceremonyBlock = substr($ceremonyBlock, 0, (int) strpos($ceremonyBlock, 'const bearer'));
+        $start = strpos($api, 'const passkeysCeremonyApi');
+        $end = strpos($api, 'const bearer');
+
+        // A silently-false strpos() here would collapse the slice below to an
+        // empty string, making the assertion vacuously true instead of failing.
+        expect($start)->not->toBeFalse();
+        expect($end)->not->toBeFalse();
+
+        $ceremonyBlock = substr($api, $start, $end - $start);
 
         expect($ceremonyBlock)->not->toContain('deepCamelKeys');
     });
