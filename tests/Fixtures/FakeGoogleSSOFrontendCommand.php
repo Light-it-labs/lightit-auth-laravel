@@ -13,11 +13,15 @@ use Lightitlabs\Tools\StubRenderer;
 
 final class FakeGoogleSSOFrontendCommand extends Command
 {
-    protected $name = 'google-sso-frontend-fake';
+    protected $signature = 'google-sso-frontend-fake';
+
+    private readonly string $laravelRoot;
 
     public function __construct(private readonly ?string $frontendPath = null)
     {
         parent::__construct();
+
+        $this->laravelRoot = sys_get_temp_dir().'/lightit-google-sso-laravel-root-'.bin2hex(random_bytes(6));
     }
 
     public function handle(): int
@@ -30,7 +34,7 @@ final class FakeGoogleSSOFrontendCommand extends Command
             new OriginMarker('0.0.0-test'),
             new FrontendProjectLocator($manifest),
             $manifest,
-            sys_get_temp_dir().'/lightit-google-sso-laravel-root',
+            $this->laravelRoot,
             $this->frontendPath,
         );
 
