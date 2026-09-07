@@ -6,6 +6,8 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\RouteFileRegistrar;
+use Lightitlabs\Tools\RouteRegistrationOutcome;
 use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
@@ -21,9 +23,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/App/Resources',
     ];
 
+    private const ROUTES_LABEL = 'two-factor authentication';
+
+    private const ROUTES_FILE_NAME = 'two-factor-auth.php';
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
     public function install(): void
@@ -43,13 +51,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->copyMigration();
         $this->copyConfigFiles();
         $this->copyLangFiles();
+        $this->registerRoutes();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 5, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -126,7 +135,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function publishConfiguration(): void
     {
-        $this->composerInstaller->printStep(2, 5, 'Publishing configuration');
+        $this->composerInstaller->printStep(2, 6, 'Publishing configuration');
 
         $this->command->call('vendor:publish', [
             '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
@@ -135,7 +144,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 5, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 6, 'Copying migration files');
 
         $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
@@ -149,7 +158,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(4, 5, 'Copying config files');
+        $this->composerInstaller->printStep(4, 6, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -164,7 +173,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(5, 5, 'Copying lang files');
+        $this->composerInstaller->printStep(5, 6, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
@@ -174,5 +183,63 @@ final class Google2FAInstaller implements AuthInstallerInterface
             lang_path('en/google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
+    }
+
+    private function registerRoutes(): void
+    {
+        $this->composerInstaller->printStep(6, 6, 'Registering routes');
+
+        if (! is_dir(base_path('routes'))) {
+            mkdir(base_path('routes'), 0755, true);
+        }
+
+        $this->writeStubIfMissing(
+            __DIR__.'/../../Stubs/Google2FA/routes/two-factor-auth.stub',
+            base_path('routes/'.self::ROUTES_FILE_NAME),
+            'routes/'.self::ROUTES_FILE_NAME
+        );
+
+        $outcome = $this->routeFileRegistrar->register(
+            base_path($this->apiRoutesPath),
+            self::ROUTES_FILE_NAME,
+            self::ROUTES_LABEL
+        );
+        $requireStatement = $this->routeFileRegistrar->requireStatement(self::ROUTES_FILE_NAME);
+
+        match ($outcome) {
+            RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
+                "Updated {$this->apiRoutesPath}: {$requireStatement}"
+            ),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
+                "Two-factor authentication routes already required in {$this->apiRoutesPath}"
+            ),
+            RouteRegistrationOutcome::ParentMissing => $this->command->warn(
+                "Could not find {$this->apiRoutesPath}. "
+                ."Please add {$requireStatement} to your API route file manually."
+            ),
+            RouteRegistrationOutcome::Failed => $this->command->warn(
+                "Could not append {$requireStatement} to {$this->apiRoutesPath} automatically. "
+                .'Please add it manually.'
+            ),
+            RouteRegistrationOutcome::Corrupted => $this->command->error(
+                "{$this->apiRoutesPath} was left in an inconsistent state while adding {$requireStatement}. "
+                .'Please inspect the file.'
+            ),
+        };
+    }
+
+    /**
+     * Skip-and-report if the destination already exists; throw if the source stub is
+     * missing or the copy fails.
+     */
+    private function writeStubIfMissing(string $source, string $destination, string $label): void
+    {
+        if (file_exists($destination)) {
+            $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
+
+            return;
+        }
+
+        $this->writeStubOrFail($source, $destination, $label);
     }
 }
