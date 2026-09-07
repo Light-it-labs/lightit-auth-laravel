@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Lightit\Authentication\Domain\DataTransferObjects\StorePasskeyDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyCeremonyFailedException;
@@ -19,7 +18,6 @@ final readonly class CompletePasskeyRegistrationAction
 
     public function __construct(
         private PasskeyCeremonyService $ceremonyService,
-        private Request $request,
     ) {
     }
 
@@ -46,13 +44,13 @@ final readonly class CompletePasskeyRegistrationAction
         $credentialRecord = $this->ceremonyService->verifyAttestation(
             json_encode($dto->credential, JSON_THROW_ON_ERROR),
             $options,
-            $this->request->getHost(),
+            $this->ceremonyService->relyingParty()->id,
         );
 
         $passkey = new Passkey();
         $passkey->user_id = $user->id;
         $passkey->name = $dto->name;
-        $passkey->credential_id = $credentialRecord->publicKeyCredentialId;
+        $passkey->credential_id = $this->ceremonyService->encodeCredentialId($credentialRecord->publicKeyCredentialId);
         $passkey->credential = json_decode(
             $this->ceremonyService->serializer()->serialize($credentialRecord, 'json'),
             true,
