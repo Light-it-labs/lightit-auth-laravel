@@ -12,7 +12,7 @@ use Lightitlabs\Tools\StubRenderer;
 
 final class FakeGoogle2FAFrontendCommand extends Command
 {
-    protected $name = 'google2fa-frontend-fake';
+    protected $signature = 'google2fa-frontend-fake';
 
     public function __construct(private readonly ?string $frontendPath = null)
     {
