@@ -28,13 +28,9 @@ describe('Google2FAFrontendInstaller', function (): void {
             'src/services/auth/two-factor/actions.ts',
             'AUTH-2FA-FRONTEND-TODO.md',
         ] as $relative) {
-            expect($this->root.'/'.$relative)->toBeFile();
+            expect(file_get_contents($this->root.'/'.$relative))
+                ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
         }
-
-        expect(file_get_contents($this->root.'/src/services/auth/two-factor/api.ts'))
-            ->toBe(file_get_contents(
-                __DIR__.'/../Fixtures/frontend/expected/src/services/auth/two-factor/api.ts'
-            ));
     });
 
     it('reports every dependency already installed when the fixture project has them all', function (): void {
