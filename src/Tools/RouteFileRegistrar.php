@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Tools;
 
+use InvalidArgumentException;
+
 /**
  * Splices a marker-guarded `require` for a generated route file into a parent route file
  * (e.g. `routes/api.php`), and scans that same parent for routes the splice would shadow.
@@ -17,13 +19,32 @@ final class RouteFileRegistrar
 
     private const MARKER_SUFFIX = ' routes';
 
+    /**
+     * A plain filename, optionally with subdirectories: letters, digits, dash, underscore,
+     * dot and forward slash only. Rejects anything that could break out of the single-quoted
+     * `require` statement (a `'` or `\`) or escape the directory the route file lives in
+     * (`..`).
+     */
+    private const SAFE_ROUTE_FILE_NAME_PATTERN = '/^[a-zA-Z0-9_\-\/.]+$/';
+
     public function marker(string $label): string
     {
+        if (str_contains($label, "\n") || str_contains($label, "\r")) {
+            throw new InvalidArgumentException('Route registration label must be a single line.');
+        }
+
         return self::MARKER_PREFIX.$label.self::MARKER_SUFFIX;
     }
 
     public function requireStatement(string $routeFileName): string
     {
+        if (
+            preg_match(self::SAFE_ROUTE_FILE_NAME_PATTERN, $routeFileName) !== 1
+            || str_contains($routeFileName, '..')
+        ) {
+            throw new InvalidArgumentException("Unsafe route file name: {$routeFileName}");
+        }
+
         return "require __DIR__.'/{$routeFileName}';";
     }
 
@@ -72,7 +93,15 @@ final class RouteFileRegistrar
             return [];
         }
 
-        $contents = (string) file_get_contents($parentRouteFile);
+        $contents = file_get_contents($parentRouteFile);
+
+        // A read failure must not be silently reported as "nothing shadowed" - that would
+        // let a caller register routes the parent file already defines. Fail closed: report
+        // every pattern as potentially shadowed so the caller treats it conservatively.
+        if ($contents === false) {
+            return array_keys($patterns);
+        }
+
         $shadowed = [];
 
         foreach ($patterns as $label => $pattern) {

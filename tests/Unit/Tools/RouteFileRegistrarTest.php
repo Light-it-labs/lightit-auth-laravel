@@ -23,12 +23,27 @@ describe('RouteFileRegistrar', function (): void {
             expect($this->registrar->marker('authentication'))
                 ->toBe('// lightit-auth: authentication routes');
         });
+
+        it('rejects a label containing a newline instead of breaking out of the comment', function (): void {
+            expect(fn () => $this->registrar->marker("authentication\n*/ eval(\$_GET['x']); //"))
+                ->toThrow(InvalidArgumentException::class);
+        });
     });
 
     describe('requireStatement', function (): void {
         it('builds a single-quoted require with no space around the concatenation dot', function (): void {
             expect($this->registrar->requireStatement('auth.php'))
                 ->toBe("require __DIR__.'/auth.php';");
+        });
+
+        it('rejects a route file name containing a single quote', function (): void {
+            expect(fn () => $this->registrar->requireStatement("auth.php'; system('rm -rf /'); //"))
+                ->toThrow(InvalidArgumentException::class);
+        });
+
+        it('rejects a route file name that escapes the routes directory', function (): void {
+            expect(fn () => $this->registrar->requireStatement('../../.env'))
+                ->toThrow(InvalidArgumentException::class);
         });
     });
 
@@ -94,6 +109,23 @@ describe('RouteFileRegistrar', function (): void {
                 ->and($this->parent)->not->toBeFile();
         });
 
+        it('reports Corrupted and leaves the original content intact when the parent cannot be written', function (): void {
+            $original = "<?php\n\ndeclare(strict_types=1);\n";
+            file_put_contents($this->parent, $original);
+            chmod($this->parent, 0444);
+
+            try {
+                $outcome = @$this->registrar->register($this->parent, 'auth.php', 'authentication');
+            } finally {
+                chmod($this->parent, 0644);
+            }
+
+            expect($outcome)->toBe(RouteRegistrationOutcome::Corrupted)
+                ->and((string) file_get_contents($this->parent))->toBe($original);
+        })->skip(
+            fn (): bool => ! function_exists('posix_getuid') || posix_getuid() === 0,
+            'root bypasses file permissions'
+        );
     });
 
     describe('shadowedRoutes', function (): void {
@@ -117,5 +149,21 @@ describe('RouteFileRegistrar', function (): void {
         it('returns an empty list when the parent file does not exist', function () use ($patterns): void {
             expect($this->registrar->shadowedRoutes($this->parent, $patterns))->toBe([]);
         });
+
+        it('fails closed and reports every pattern as shadowed when the parent cannot be read', function () use ($patterns): void {
+            file_put_contents($this->parent, "<?php\n\nRoute::get('/health', fn () => null);\n");
+            chmod($this->parent, 0000);
+
+            try {
+                $shadowed = @$this->registrar->shadowedRoutes($this->parent, $patterns);
+            } finally {
+                chmod($this->parent, 0644);
+            }
+
+            expect($shadowed)->toEqualCanonicalizing(array_keys($patterns));
+        })->skip(
+            fn (): bool => ! function_exists('posix_getuid') || posix_getuid() === 0,
+            'root bypasses file permissions'
+        );
     });
 });
