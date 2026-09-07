@@ -37,8 +37,8 @@ final class PasskeysInstaller implements AuthInstallerInterface
      * @var array<string, string>
      */
     private const SHADOW_PATTERNS = [
-        'passkeys' => '/(?:Route::|->)(?:get|post|put|patch|delete)\(\s*[\'"]\/?passkeys/',
-        'auth/passkey' => '/(?:Route::|->)(?:get|post|put|patch|delete)\(\s*[\'"]\/?auth\/passkey/',
+        'passkeys' => '/(?:Route::|->)(?:get|post|put|patch|delete)\(\s*[\'"]\/?passkeys|Route::prefix\(\s*[\'"]\/?passkeys/',
+        'auth/passkey' => '/(?:Route::|->)(?:get|post|put|patch|delete)\(\s*[\'"]\/?auth\/passkey|Route::prefix\(\s*[\'"]\/?auth\/passkey/',
     ];
 
     public function __construct(
