@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+
+final class PasskeyLoginRequest extends FormRequest
+{
+    public const string CEREMONY_ID = 'ceremony_id';
+
+    public const string CREDENTIAL = 'credential';
+
+    public function rules(): array
+    {
+        return [
+            // Matches the unpadded base64url shape cacheLoginRequestOptions()
+            // mints (32 random bytes -> 43 characters): the value is concatenated
+            // directly into a cache key, so it is validated before it gets there.
+            self::CEREMONY_ID => ['required', 'string', 'regex:/^[A-Za-z0-9_-]{43}$/'],
+            self::CREDENTIAL => ['required', 'array'],
+        ];
+    }
+
+    public function toDto(): PasskeyLoginDto
+    {
+        return new PasskeyLoginDto(
+            ceremonyId: $this->string(self::CEREMONY_ID)->toString(),
+            credential: (array) $this->input(self::CREDENTIAL),
+        );
+    }
+}

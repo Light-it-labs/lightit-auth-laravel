@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginOptionsDto;
+
+/**
+ * Wraps the raw WebAuthn request options under `public_key` alongside the
+ * opaque `ceremony_id` the completion step must echo back. `public_key`'s own
+ * keys are deliberately NOT re-cased to snake_case, for the same reason
+ * `PasskeyCreationOptionsResource` isn't - that casing is the wire format
+ * `PublicKeyCredential.parseRequestOptionsFromJSON()` expects, fixed by the
+ * browser API rather than by this package's own convention.
+ *
+ * @mixin PasskeyLoginOptionsDto
+ */
+#[SchemaName('PasskeyRequestOptions')]
+class PasskeyRequestOptionsResource extends JsonResource
+{
+    /**
+     * @return array{ceremony_id: string, public_key: array<string, mixed>}
+     */
+    public function toArray(Request $request): array
+    {
+        /** @var array<string, mixed> $publicKey */
+        $publicKey = json_decode($this->optionsJson, true, flags: JSON_THROW_ON_ERROR);
+
+        return [
+            'ceremony_id' => $this->ceremonyId,
+            'public_key' => $publicKey,
+        ];
+    }
+}
