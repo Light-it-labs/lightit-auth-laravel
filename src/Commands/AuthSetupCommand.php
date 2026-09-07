@@ -59,7 +59,9 @@ class AuthSetupCommand extends Command
             );
         } while (empty($drivers));
 
-        $enable2FA = confirm(
+        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken->value, $drivers);
+
+        $enable2FA = $hasTokenDriver && confirm(
             label: 'Would you like to enable Two-Factor Authentication?',
             default: false,
         );
@@ -68,8 +70,6 @@ class AuthSetupCommand extends Command
             label: 'Would you like to enable Roles and Permissions?',
             default: false,
         );
-
-        $hasTokenDriver = in_array(AuthDriver::SanctumApiToken->value, $drivers);
 
         $enableOtp = $hasTokenDriver && confirm(
             label: 'Would you like to enable OTP (one-time password)?',
