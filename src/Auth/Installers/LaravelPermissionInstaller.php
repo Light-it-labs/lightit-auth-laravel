@@ -298,14 +298,10 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function generateEscapeHatch(): string
     {
-        $this->stubRenderer->renderTo(
+        $this->writeStubIfMissing(
             __DIR__.'/../../Stubs/LaravelPermissions/Http/Controllers/CurrentUserPermissionsController.stub',
             base_path('src/Shared/Permissions/App/Controllers/CurrentUserPermissionsController.php'),
-            [],
-            $this->originMarker
-        );
-        $this->composerInstaller->printFileCreated(
-            'Created: src/Shared/Permissions/App/Controllers/CurrentUserPermissionsController.php'
+            'src/Shared/Permissions/App/Controllers/CurrentUserPermissionsController.php'
         );
 
         $this->writeStubIfMissing(

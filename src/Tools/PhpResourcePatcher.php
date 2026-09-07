@@ -106,7 +106,60 @@ final class PhpResourcePatcher
     {
         $body = substr($contents, $bounds['open'] + 1, $bounds['close'] - $bounds['open'] - 1);
 
-        return preg_match(self::CONFLICTING_KEY_PATTERN, $body) === 1;
+        return preg_match(self::CONFLICTING_KEY_PATTERN, $this->topLevelEntriesOnly($body)) === 1;
+    }
+
+    /**
+     * Drops every character that sits inside a nested `[...]` (or a quoted string
+     * within one), keeping only what the outer array declares directly. Without
+     * this, a nested value such as `'meta' => ['roles' => ...]` would trip the
+     * conflicting-key guard for a `roles`/`permissions` key that was never
+     * actually declared on the response's own top level.
+     */
+    private function topLevelEntriesOnly(string $body): string
+    {
+        $length = \strlen($body);
+        $depth = 0;
+        $index = 0;
+        $topLevel = '';
+
+        while ($index < $length) {
+            $character = $body[$index];
+
+            if ($character === '"' || $character === "'") {
+                $end = $this->endOfString($body, $index);
+
+                if ($depth === 0) {
+                    $topLevel .= substr($body, $index, $end - $index);
+                }
+
+                $index = $end;
+
+                continue;
+            }
+
+            if ($character === '[') {
+                $depth++;
+                $index++;
+
+                continue;
+            }
+
+            if ($character === ']') {
+                $depth--;
+                $index++;
+
+                continue;
+            }
+
+            if ($depth === 0) {
+                $topLevel .= $character;
+            }
+
+            $index++;
+        }
+
+        return $topLevel;
     }
 
     /**
