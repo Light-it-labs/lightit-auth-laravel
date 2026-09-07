@@ -9,9 +9,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Unwrapped, and deliberately NOT re-cased to snake_case: the key casing here is
- * the raw WebAuthn wire format `PublicKeyCredential.parseCreationOptionsFromJSON()`
- * expects, fixed by the browser API rather than by this package's own convention.
+ * Wrapped under Laravel's default `data` envelope like every other resource in
+ * this package, and deliberately NOT re-cased to snake_case: the key casing
+ * *inside* that envelope is the raw WebAuthn wire format
+ * `PublicKeyCredential.parseCreationOptionsFromJSON()` expects, fixed by the
+ * browser API rather than by this package's own convention. The frontend's
+ * `getPasskeyRegistrationOptions()` reads `response.data.data` accordingly -
+ * do not add `public static $wrap = null;` here without updating that call.
  */
 #[SchemaName('PasskeyCreationOptions')]
 class PasskeyCreationOptionsResource extends JsonResource
