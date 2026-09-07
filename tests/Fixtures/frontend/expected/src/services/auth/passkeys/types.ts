@@ -16,7 +16,7 @@ export type PasskeyRequestOptions = {
 
 export type PasskeyLoginResult = {
   accessToken: string;
-  tokenType: string;
+  tokenType: "Bearer";
   expiresIn: number;
 };
 
