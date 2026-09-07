@@ -6,12 +6,14 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -101,7 +103,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
             $this->ensureDirectoryExists(dirname($targetPath));
 
-            copy(
+            $this->stubCopier->copy(
                 $stubsPath . $stub,
                 $targetPath
             );
