@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["expected/src/*", "consumer-stubs/*"]
+    },
+    "rootDirs": ["expected/src", "consumer-stubs"]
+  },
+  "include": ["expected/src/**/*.ts", "consumer-stubs/**/*.ts"]
+}

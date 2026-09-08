@@ -6,7 +6,9 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Enums\AuthDriver;
+use Lightitlabs\Tools\RouteFileRegistrar;
+use Lightitlabs\Tools\RouteRegistrationOutcome;
+use Lightitlabs\Tools\StubCopier;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -21,12 +23,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/App/Resources',
     ];
 
+    private const ROUTES_LABEL = 'two-factor authentication';
+
+    private const ROUTES_FILE_NAME = 'two-factor-auth.php';
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-        private readonly AuthDriver $driver,
-    ) {
-    }
+        private readonly StubCopier $stubCopier,
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly string $apiRoutesPath = 'routes/api.php',
+    ) {}
 
     public function install(): void
     {
@@ -45,13 +52,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->copyMigration();
         $this->copyConfigFiles();
         $this->copyLangFiles();
+        $this->registerRoutes();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 5, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -59,24 +67,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
-        $sharedStubsPath = __DIR__ . '/../../Stubs/Google2FA/Auth';
-        $driverStubsPath = $this->resolveDriverStubsPath();
-
-        $this->copySharedAuthFiles($sharedStubsPath);
-        $this->copyDriverSpecificFiles($driverStubsPath);
+        $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
     }
 
-    private function resolveDriverStubsPath(): string
-    {
-        return match ($this->driver) {
-            AuthDriver::SanctumApiToken => __DIR__ . '/../../Stubs/Google2FA/Sanctum/Auth',
-            default => __DIR__ . '/../../Stubs/Google2FA/JWT/Auth',
-        };
-    }
-
-    private function copySharedAuthFiles(string $stubsPath): void
+    private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
+            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
+            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
+            '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
+            '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
+            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
@@ -116,36 +117,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
+            $this->writeStubIfMissing(
+                $stubsPath.$stub,
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
-        }
-    }
-
-    private function copyDriverSpecificFiles(string $stubsPath): void
-    {
-        $files = [
-            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
-            '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
-            '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
-            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
-        ];
-
-        foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
-            );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
     }
 
     private function publishConfiguration(): void
     {
-        $this->composerInstaller->printStep(2, 5, 'Publishing configuration');
+        $this->composerInstaller->printStep(2, 6, 'Publishing configuration');
 
         $this->command->call('vendor:publish', [
             '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
@@ -154,44 +136,117 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 5, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 6, 'Copying migration files');
 
-        $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
+        $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
-        copy(
-            $stub,
-            base_path($destination)
-        );
+        if (file_exists(base_path($destination))) {
+            $this->composerInstaller->printMigrationCreated("Skipped {$destination}: the file already exists.");
+
+            return;
+        }
+
+        $this->stubCopier->copy($stub, base_path($destination));
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(4, 5, 'Copying config files');
+        $this->composerInstaller->printStep(4, 6, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
         }
 
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
-            config_path('google2fa.php')
-        );
+        $destination = config_path('google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped config/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->stubCopier->copy(__DIR__.'/../../Stubs/Google2FA/config/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
     }
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(5, 5, 'Copying lang files');
+        $this->composerInstaller->printStep(5, 6, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
         }
-        copy(
-            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
-            lang_path('en/google2fa.php')
-        );
+
+        $destination = lang_path('en/google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped lang/en/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->stubCopier->copy(__DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
+    }
+
+    private function registerRoutes(): void
+    {
+        $this->composerInstaller->printStep(6, 6, 'Registering routes');
+
+        if (! is_dir(base_path('routes'))) {
+            mkdir(base_path('routes'), 0755, true);
+        }
+
+        $this->writeStubIfMissing(
+            __DIR__.'/../../Stubs/Google2FA/routes/two-factor-auth.stub',
+            base_path('routes/'.self::ROUTES_FILE_NAME),
+            'routes/'.self::ROUTES_FILE_NAME
+        );
+
+        $outcome = $this->routeFileRegistrar->register(
+            base_path($this->apiRoutesPath),
+            self::ROUTES_FILE_NAME,
+            self::ROUTES_LABEL
+        );
+        $requireStatement = $this->routeFileRegistrar->requireStatement(self::ROUTES_FILE_NAME);
+
+        match ($outcome) {
+            RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
+                "Updated {$this->apiRoutesPath}: {$requireStatement}"
+            ),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
+                "Two-factor authentication routes already required in {$this->apiRoutesPath}"
+            ),
+            RouteRegistrationOutcome::ParentMissing => $this->command->warn(
+                "Could not find {$this->apiRoutesPath}. "
+                ."Please add {$requireStatement} to your API route file manually."
+            ),
+            RouteRegistrationOutcome::Failed => $this->command->warn(
+                "Could not append {$requireStatement} to {$this->apiRoutesPath} automatically. "
+                .'Please add it manually.'
+            ),
+            RouteRegistrationOutcome::Corrupted => $this->command->error(
+                "{$this->apiRoutesPath} was left in an inconsistent state while adding {$requireStatement}. "
+                .'Please inspect the file.'
+            ),
+        };
+    }
+
+    /**
+     * Skip-and-report if the destination already exists; throw if the source stub is
+     * missing or the copy fails.
+     */
+    private function writeStubIfMissing(string $source, string $destination, string $label): void
+    {
+        if (file_exists($destination)) {
+            $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
+
+            return;
+        }
+
+        $this->stubCopier->copy($source, $destination);
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 }

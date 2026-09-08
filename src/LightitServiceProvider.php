@@ -20,7 +20,6 @@ class LightitServiceProvider extends PackageServiceProvider
             ->name('lightit-auth-laravel')
             ->hasConfigFile()
             ->hasViews()
-            ->hasMigration('create_lightit_auth_laravel_table')
             ->hasCommand(LightitCommand::class)
             ->hasCommand(AuthSetupCommand::class);
     }

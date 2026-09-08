@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
 
 final class SanctumInstaller implements AuthInstallerInterface
 {
@@ -20,6 +21,7 @@ final class SanctumInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
+        private readonly StubCopier $stubCopier,
     ) {
     }
 
@@ -61,11 +63,23 @@ final class SanctumInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $this->writeStubIfMissing(
                 $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
+                base_path("src/Authentication/{$destination}"),
+                "src/Authentication/{$destination}"
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
         }
+    }
+
+    private function writeStubIfMissing(string $source, string $destination, string $label): void
+    {
+        if (file_exists($destination)) {
+            $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
+
+            return;
+        }
+
+        $this->stubCopier->copy($source, $destination);
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 }
