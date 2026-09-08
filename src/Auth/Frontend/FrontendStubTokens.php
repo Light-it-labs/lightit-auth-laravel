@@ -24,6 +24,9 @@ final class FrontendStubTokens
             'authStoreImporters' => '- None found.',
             'csrfCookieEndpoint' => '/sanctum/csrf-cookie',
             'currentUserEndpoint' => 'me',
+            'currentUserQueryFactory' => 'currentUserQuery',
+            'currentUserQueryImportPath' => '@/services/auth/factories',
+            'currentUserQueryProbeNote' => '',
             'currentUserResponseAccessor' => 'response.data.data',
             'dependencyReport' => 'Every dependency this layer needs is already installed.',
             'googleSsoLoginEndpoint' => 'auth/google',
@@ -35,9 +38,15 @@ final class FrontendStubTokens
             'passkeyLoginOptionsEndpoint' => 'auth/passkey/options',
             'passkeyRegistrationOptionsEndpoint' => 'passkeys/registration-options',
             'passkeysEndpoint' => 'passkeys',
+            // Always overridden by LaravelPermissionFrontendInstaller with the real
+            // PermissionCatalog::toTypeScriptConstants() output; empty is only ever
+            // observed if a stub is rendered directly against bare defaults().
+            'permissionConstants' => '',
+            'permissionCallSites' => '- None found.',
             'queryClientCheckbox' => 'x',
             'queryClientStatus' => 'Done automatically.',
             'queryKeyScope' => 'auth',
+            'unauthorizedRedirectPath' => '/',
             'twoFactorSetupEndpoint' => '2fa/setup',
             'twoFactorCompleteEndpoint' => '2fa/complete',
             'twoFactorVerifyRecoveryCodeEndpoint' => '2fa/verify-recovery-code',

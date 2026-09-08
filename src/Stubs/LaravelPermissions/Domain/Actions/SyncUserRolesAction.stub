@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\Domain\Actions;
+
+use Lightit\Users\Domain\Models\User;
+
+final class SyncUserRolesAction
+{
+    /**
+     * @param  list<string>  $roleNames
+     */
+    public function execute(User $user, array $roleNames): User
+    {
+        $user->syncRoles($roleNames);
+
+        return $user->load('roles.permissions');
+    }
+}

@@ -13,6 +13,7 @@ use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOFrontendInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
+use Lightitlabs\Auth\Installers\LaravelPermissionFrontendInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
@@ -237,9 +238,34 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
-        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
+        $laravelPermission = new LaravelPermissionInstaller(
+            $this,
+            $composerInstaller,
+            new StubRenderer,
+            OriginMarker::resolved(),
+        );
         $laravelPermission->install();
+        $this->printSectionSeparator();
+
+        $this->setupRolesAndPermissionsFrontend();
+    }
+
+    protected function setupRolesAndPermissionsFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Roles and Permissions frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new LaravelPermissionFrontendInstaller(
+            $this,
+            new StubRenderer,
+            OriginMarker::resolved(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 
