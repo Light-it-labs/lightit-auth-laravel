@@ -11,6 +11,7 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
+use Lightitlabs\Auth\Installers\GoogleSSOFrontendInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
@@ -18,6 +19,7 @@ use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Enums\LoginMethod;
+use Lightitlabs\Tools\FileManipulator;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubRenderer;
@@ -153,8 +155,30 @@ class AuthSetupCommand extends Command
 
         $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
+        $fileManipulator = new FileManipulator($this);
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier, $fileManipulator);
         $googleSSOInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->setupGoogleSSOFrontend();
+    }
+
+    protected function setupGoogleSSOFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Google SSO frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new GoogleSSOFrontendInstaller(
+            $this,
+            new StubRenderer,
+            OriginMarker::resolved(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 
