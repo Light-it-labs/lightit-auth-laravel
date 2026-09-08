@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\DataTransferObjects\StorePasskeyDto;
+
+final class StorePasskeyRequest extends FormRequest
+{
+    public const string NAME = 'name';
+
+    public const string CREDENTIAL = 'credential';
+
+    public function rules(): array
+    {
+        return [
+            self::NAME => ['required', 'string', 'max:255'],
+            self::CREDENTIAL => ['required', 'array'],
+        ];
+    }
+
+    public function toDto(): StorePasskeyDto
+    {
+        return new StorePasskeyDto(
+            name: $this->string(self::NAME)->toString(),
+            credential: (array) $this->input(self::CREDENTIAL),
+        );
+    }
+}
