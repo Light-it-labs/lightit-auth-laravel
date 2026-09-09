@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Shared\Permissions\App\Controllers\CurrentUserPermissionsController;
+
+/*
+|--------------------------------------------------------------------------
+| Current User Permissions Route (escape hatch)
+|--------------------------------------------------------------------------
+|
+| Generated only when no current-user resource could be found to patch.
+| Prefer patching your existing current-user resource instead - see
+| ROLES-PERMISSIONS-TODO.md.
+|
+*/
+
+Route::middleware('auth:sanctum')
+    ->get('me/permissions', CurrentUserPermissionsController::class);
