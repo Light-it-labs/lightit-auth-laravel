@@ -81,4 +81,30 @@ describe('StubCopier', function (): void {
         expect(fn () => $this->copier->copy($source, $destination))
             ->toThrow(RuntimeException::class, "Unable to write file: {$destination}");
     });
+
+    it('remembers a destination it wrote, so a later copy() into it is known to be safe', function (): void {
+        $source = $this->directory.'/LoginController.stub';
+        $destination = $this->directory.'/LoginController.php';
+
+        file_put_contents($source, "<?php\n\ndeclare(strict_types=1);\n");
+
+        expect($this->copier->wasWrittenThisRun($destination))->toBeFalse();
+
+        $this->copier->copy($source, $destination);
+
+        expect($this->copier->wasWrittenThisRun($destination))->toBeTrue();
+    });
+
+    it('does not consider a destination written by a different StubCopier instance', function (): void {
+        $source = $this->directory.'/LoginController.stub';
+        $destination = $this->directory.'/LoginController.php';
+
+        file_put_contents($source, "<?php\n\ndeclare(strict_types=1);\n");
+
+        $this->copier->copy($source, $destination);
+
+        $otherRun = new StubCopier(new OriginMarker('9.9.9'));
+
+        expect($otherRun->wasWrittenThisRun($destination))->toBeFalse();
+    });
 });

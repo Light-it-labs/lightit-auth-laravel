@@ -235,18 +235,27 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * Skip-and-report if the destination already exists; throw if the source stub is
-     * missing or the copy fails.
+     * Skip-and-report if the destination already exists, unless this same
+     * StubCopier wrote it moments ago - i.e. a sibling installer in this
+     * same `auth:setup` run generated it (SanctumInstaller's LoginAction.php
+     * is the case this guards: it must be replaced by 2FA's, not skipped).
+     * Any other existing file - from a previous run, or a consumer's own
+     * file - is left untouched. Throws if the source stub is missing or the
+     * copy fails.
      */
     private function writeStubIfMissing(string $source, string $destination, string $label): void
     {
-        if (file_exists($destination)) {
+        $existedBefore = file_exists($destination);
+
+        if ($existedBefore && ! $this->stubCopier->wasWrittenThisRun($destination)) {
             $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
 
             return;
         }
 
         $this->stubCopier->copy($source, $destination);
-        $this->composerInstaller->printFileCreated("Created: {$label}");
+        $this->composerInstaller->printFileCreated(
+            $existedBefore ? "Replaced: {$label}" : "Created: {$label}"
+        );
     }
 }
