@@ -1,0 +1,19 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { redirect } from "@tanstack/react-router";
+
+import { {{ currentUserQueryFactory }} } from "{{ currentUserQueryImportPath }}";
+import type { PermissionValue } from "./constants";
+
+export const ensurePermission = async (
+  queryClient: QueryClient,
+  required: PermissionValue | PermissionValue[],
+): Promise<void> => {
+  const currentUser = await queryClient.ensureQueryData({{ currentUserQueryFactory }}());
+  const permissions = currentUser?.permissions ?? [];
+  const requiredList = Array.isArray(required) ? required : [required];
+  const hasAccess = requiredList.every((permission) => permissions.includes(permission));
+
+  if (!hasAccess) {
+    throw redirect({ to: "{{ unauthorizedRedirectPath }}" });
+  }
+};
