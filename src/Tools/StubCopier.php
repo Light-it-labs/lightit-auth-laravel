@@ -10,7 +10,14 @@ final class StubCopier
 {
     private const PHP_HEADER = "<?php\n\n";
 
-    public function __construct(private readonly OriginMarker $originMarker) {}
+    private readonly WrittenFilesLedger $ledger;
+
+    public function __construct(
+        private readonly OriginMarker $originMarker,
+        ?WrittenFilesLedger $ledger = null,
+    ) {
+        $this->ledger = $ledger ?? new WrittenFilesLedger;
+    }
 
     public function copy(string $source, string $destination): void
     {
@@ -29,5 +36,16 @@ final class StubCopier
         if (@file_put_contents($destination, $withMarker) === false) {
             throw new RuntimeException("Unable to write file: {$destination}");
         }
+
+        $this->ledger->record($destination);
+    }
+
+    /**
+     * Whether this same StubCopier instance already wrote $destination
+     * during the current run - see WrittenFilesLedger.
+     */
+    public function wasWrittenThisRun(string $destination): bool
+    {
+        return $this->ledger->wasWrittenThisRun($destination);
     }
 }

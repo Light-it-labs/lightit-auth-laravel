@@ -117,19 +117,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            $this->writeStubOrFail(
+            $this->writeStubIfMissing(
                 $stubsPath.$stub,
                 base_path("src/Authentication/{$destination}"),
                 "src/Authentication/{$destination}"
             );
         }
-    }
-
-    private function writeStubOrFail(string $source, string $destination, string $label): void
-    {
-        $this->stubCopier->copy($source, $destination);
-
-        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 
     private function publishConfiguration(): void
@@ -148,10 +141,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
-        $this->stubCopier->copy(
-            $stub,
-            base_path($destination)
-        );
+        if (file_exists(base_path($destination))) {
+            $this->composerInstaller->printMigrationCreated("Skipped {$destination}: the file already exists.");
+
+            return;
+        }
+
+        $this->stubCopier->copy($stub, base_path($destination));
         $this->composerInstaller->printMigrationCreated("Created: {$destination}");
     }
 
@@ -163,10 +159,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(config_path(), 0755, true);
         }
 
-        $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/config/google2fa.stub',
-            config_path('google2fa.php')
-        );
+        $destination = config_path('google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped config/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->stubCopier->copy(__DIR__.'/../../Stubs/Google2FA/config/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
     }
 
@@ -177,10 +178,16 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
         }
-        $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub',
-            lang_path('en/google2fa.php')
-        );
+
+        $destination = lang_path('en/google2fa.php');
+
+        if (file_exists($destination)) {
+            $this->composerInstaller->printConfigPublished('Skipped lang/en/google2fa.php: the file already exists.');
+
+            return;
+        }
+
+        $this->stubCopier->copy(__DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub', $destination);
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
     }
 
@@ -228,17 +235,27 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * Skip-and-report if the destination already exists; throw if the source stub is
-     * missing or the copy fails.
+     * Skip-and-report if the destination already exists, unless this same
+     * StubCopier wrote it moments ago - i.e. a sibling installer in this
+     * same `auth:setup` run generated it (SanctumInstaller's LoginAction.php
+     * is the case this guards: it must be replaced by 2FA's, not skipped).
+     * Any other existing file - from a previous run, or a consumer's own
+     * file - is left untouched. Throws if the source stub is missing or the
+     * copy fails.
      */
     private function writeStubIfMissing(string $source, string $destination, string $label): void
     {
-        if (file_exists($destination)) {
+        $existedBefore = file_exists($destination);
+
+        if ($existedBefore && ! $this->stubCopier->wasWrittenThisRun($destination)) {
             $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
 
             return;
         }
 
-        $this->writeStubOrFail($source, $destination, $label);
+        $this->stubCopier->copy($source, $destination);
+        $this->composerInstaller->printFileCreated(
+            $existedBefore ? "Replaced: {$label}" : "Created: {$label}"
+        );
     }
 }

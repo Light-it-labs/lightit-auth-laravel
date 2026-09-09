@@ -39,6 +39,21 @@ class AuthSetupCommand extends Command
 
     protected $description = 'Setup the authentication structure';
 
+    private ?StubCopier $stubCopier = null;
+
+    /**
+     * Shared across every backend installer for the whole `handle()` run, so
+     * StubCopier's write-tracking ledger can tell "written by a sibling
+     * installer moments ago in this run" (safe to replace - see
+     * SanctumInstaller/Google2FAInstaller's LoginAction.php collision) apart
+     * from "left over from a previous run or a consumer's own file" (never
+     * touched).
+     */
+    protected function stubCopier(): StubCopier
+    {
+        return $this->stubCopier ??= new StubCopier(OriginMarker::resolved());
+    }
+
     public function handle(): int
     {
         $this->output->writeln('');
@@ -141,7 +156,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Sanctum...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $sanctumInstaller = new SanctumInstaller($this, $composerInstaller, $stubCopier);
         $sanctumInstaller->install();
         $this->printSectionSeparator();
@@ -152,7 +167,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
         $googleSSOInstaller->install();
         $this->printSectionSeparator();
@@ -178,7 +193,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up 2FA...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $stubCopier);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
@@ -210,7 +225,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
         $laravelPermission->install();
         $this->printSectionSeparator();
@@ -221,7 +236,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up OTP...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $otpInstaller = new OtpInstaller($composerInstaller, $stubCopier);
         $otpInstaller->install();
         $this->printSectionSeparator();
@@ -232,7 +247,7 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('🛠 Setting up Forgot Password...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $stubCopier = $this->stubCopier();
         $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller, $stubCopier);
         $forgotPasswordInstaller->install();
         $this->printSectionSeparator();

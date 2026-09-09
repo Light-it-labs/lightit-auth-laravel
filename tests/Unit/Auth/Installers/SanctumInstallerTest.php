@@ -77,18 +77,30 @@ describe('SanctumInstaller idempotency', function (): void {
             public function handle(): int
             {
                 $composerInstaller = new ComposerInstaller($this);
-                $stubCopier = new StubCopier(new OriginMarker('0.0.0-test'));
-                $installer = new SanctumInstaller($this, $composerInstaller, $stubCopier);
 
-                $createAuthFiles = new ReflectionMethod($installer, 'createAuthFiles');
+                // Simulates a second, later `auth:setup` run - a fresh process with its
+                // own StubCopier, not a second call reusing the first run's instance.
+                // See StubCopier::wasWrittenThisRun(): only a write from *this* run may
+                // be replaced without an exists check.
+                $firstRunInstaller = new SanctumInstaller(
+                    $this,
+                    $composerInstaller,
+                    new StubCopier(new OriginMarker('0.0.0-test')),
+                );
+
+                $createAuthFiles = new ReflectionMethod($firstRunInstaller, 'createAuthFiles');
                 $createAuthFiles->setAccessible(true);
-
-                $createAuthFiles->invoke($installer);
+                $createAuthFiles->invoke($firstRunInstaller);
 
                 $target = base_path('src/Authentication/App/Requests/LoginRequest.php');
                 file_put_contents($target, '// customized by the consuming project'.PHP_EOL);
 
-                $createAuthFiles->invoke($installer);
+                $secondRunInstaller = new SanctumInstaller(
+                    $this,
+                    $composerInstaller,
+                    new StubCopier(new OriginMarker('0.0.0-test')),
+                );
+                $createAuthFiles->invoke($secondRunInstaller);
 
                 return self::SUCCESS;
             }

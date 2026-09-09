@@ -71,15 +71,26 @@ final class SanctumInstaller implements AuthInstallerInterface
         }
     }
 
+    /**
+     * Skips a destination that already exists, unless this same StubCopier
+     * wrote it moments ago - i.e. a sibling installer in this same
+     * `auth:setup` run generated it and is entitled to have it replaced. Any
+     * other existing file - from a previous run, or a consumer's own file -
+     * is left untouched.
+     */
     private function writeStubIfMissing(string $source, string $destination, string $label): void
     {
-        if (file_exists($destination)) {
+        $existedBefore = file_exists($destination);
+
+        if ($existedBefore && ! $this->stubCopier->wasWrittenThisRun($destination)) {
             $this->composerInstaller->printFileCreated("Skipped {$label}: the file already exists.");
 
             return;
         }
 
         $this->stubCopier->copy($source, $destination);
-        $this->composerInstaller->printFileCreated("Created: {$label}");
+        $this->composerInstaller->printFileCreated(
+            $existedBefore ? "Replaced: {$label}" : "Created: {$label}"
+        );
     }
 }
