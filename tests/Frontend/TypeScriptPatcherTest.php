@@ -282,4 +282,78 @@ describe('TypeScriptPatcher', function (): void {
 
             TS);
     });
+
+    describe('addGoogleClientIdToEnv', function (): void {
+        $envPatch = static function (string $path, string $contents): string {
+            file_put_contents($path, $contents);
+
+            expect((new TypeScriptPatcher)->addGoogleClientIdToEnv($path))
+                ->toBe(TypeScriptPatchOutcome::Patched);
+
+            return (string) file_get_contents($path);
+        };
+
+        it('inserts the var right after VITE_API_URL inside the client schema', function () use ($envPatch): void {
+            expect($envPatch($this->path, <<<'TS'
+                import { createEnv } from "@t3-oss/env-core";
+                import { z } from "zod";
+
+                export const env = createEnv({
+                  client: {
+                    VITE_APP_NAME: z.string().min(1),
+                    VITE_API_URL: z.string().min(1),
+                  },
+                  runtimeEnv: import.meta.env,
+                });
+
+                TS))->toBe(<<<'TS'
+                import { createEnv } from "@t3-oss/env-core";
+                import { z } from "zod";
+
+                export const env = createEnv({
+                  client: {
+                    VITE_APP_NAME: z.string().min(1),
+                    VITE_API_URL: z.string().min(1),
+                    VITE_GOOGLE_CLIENT_ID: z.string().min(1),
+                  },
+                  runtimeEnv: import.meta.env,
+                });
+
+                TS);
+        });
+
+        it('leaves an already patched file untouched', function (): void {
+            $original = <<<'TS'
+                export const env = createEnv({
+                  client: {
+                    VITE_API_URL: z.string().min(1),
+                    VITE_GOOGLE_CLIENT_ID: z.string().min(1),
+                  },
+                });
+
+                TS;
+            file_put_contents($this->path, $original);
+            $patcher = new TypeScriptPatcher;
+
+            expect($patcher->addGoogleClientIdToEnv($this->path))
+                ->toBe(TypeScriptPatchOutcome::AlreadyApplied);
+
+            expect(file_get_contents($this->path))->toBe($original);
+        });
+
+        it('reports the anchor as missing when VITE_API_URL is absent', function (): void {
+            $withoutAnchor = "export const env = createEnv({ client: {} });\n";
+            file_put_contents($this->path, $withoutAnchor);
+
+            expect((new TypeScriptPatcher)->addGoogleClientIdToEnv($this->path))
+                ->toBe(TypeScriptPatchOutcome::AnchorNotFound);
+
+            expect(file_get_contents($this->path))->toBe($withoutAnchor);
+        });
+
+        it('reports a missing file', function (): void {
+            expect((new TypeScriptPatcher)->addGoogleClientIdToEnv($this->directory.'/absent.ts'))
+                ->toBe(TypeScriptPatchOutcome::Missing);
+        });
+    });
 });

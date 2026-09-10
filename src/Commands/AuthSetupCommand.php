@@ -7,10 +7,12 @@ namespace Lightitlabs\Commands;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
+use Lightitlabs\Auth\Installers\GoogleSSOFrontendInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
@@ -151,6 +153,26 @@ class AuthSetupCommand extends Command
         $composerInstaller = new ComposerInstaller($this);
         $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller);
         $googleSSOInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->setupGoogleSSOFrontend();
+    }
+
+    protected function setupGoogleSSOFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up the Google sign-in button...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new GoogleSSOFrontendInstaller(
+            $this,
+            new StubRenderer,
+            new TypeScriptPatcher,
+            new FrontendProjectLocator($manifest),
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 
