@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Closure;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Http\Request;
+use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
+use Lightit\Users\Domain\Models\User;
+
+class LoginAction
+{
+    public function __construct(
+        private readonly AuthFactory $authFactory,
+    ) {}
+
+    /**
+     * @param array{email: string, password: string} $credentials
+     *
+     * @throws UnauthenticatedException
+     */
+    public function execute(Request $request, array $credentials, Closure $onFailure, Closure $onSuccess): User
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->authFactory->guard('web');
+
+        if (! $request->hasSession()) {
+            throw new UnauthenticatedException;
+        }
+
+        if (! $guard->attempt($credentials)) {
+            $onFailure();
+
+            throw new UnauthenticatedException;
+        }
+
+        $onSuccess();
+
+        /** @var User $user */
+        $user = $guard->user();
+
+        $request->session()->regenerate();
+
+        return $user;
+    }
+}
