@@ -49,7 +49,7 @@ describe('two-factor screen stub rendering', function () use ($fixturePath, $stu
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($finder)->toHaveCount(4);
+        expect($finder)->toHaveCount(9);
 
         foreach ($finder as $file) {
             expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))
