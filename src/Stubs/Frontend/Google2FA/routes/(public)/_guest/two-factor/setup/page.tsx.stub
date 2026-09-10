@@ -29,7 +29,15 @@ export default function TwoFactorSetupPage() {
   };
 
   if (isError) {
-    return <p role="alert">Something went wrong generating your two-factor setup.</p>;
+    // The setup endpoint doesn't return an error code, so a network failure and an
+    // expired/invalid challenge token look identical here - retrying is the only
+    // generic recovery available without inventing an API contract.
+    return (
+      <div>
+        <p role="alert">Something went wrong generating your two-factor setup.</p>
+        <Button onClick={() => mutate({ token })}>Try again</Button>
+      </div>
+    );
   }
 
   if (isPending || !data) {

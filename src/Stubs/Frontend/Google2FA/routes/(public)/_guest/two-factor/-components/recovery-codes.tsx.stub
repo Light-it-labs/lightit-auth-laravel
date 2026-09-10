@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 
@@ -8,11 +9,15 @@ type RecoveryCodesProps = {
 };
 
 export const RecoveryCodes = ({ recoveryCodes }: RecoveryCodesProps) => {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
-  const handleCopy = () => {
-    void navigator.clipboard.writeText(recoveryCodes.join("\n"));
-    setCopied(true);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join("\n"));
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
   };
 
   return (
@@ -25,10 +30,17 @@ export const RecoveryCodes = ({ recoveryCodes }: RecoveryCodesProps) => {
           <li key={code}>{code}</li>
         ))}
       </ul>
-      <Button type="button" onClick={handleCopy}>
+      <Button type="button" onClick={() => void handleCopy()}>
         <Icons.copy aria-hidden="true" />
-        {copied ? "Copied" : "Copy codes"}
+        {copyState === "copied" ? "Copied" : "Copy codes"}
       </Button>
+      {copyState === "failed" && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Couldn&apos;t copy the codes automatically. Select and copy them manually instead.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 };
