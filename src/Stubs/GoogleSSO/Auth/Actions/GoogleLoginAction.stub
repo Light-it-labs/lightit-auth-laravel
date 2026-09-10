@@ -7,7 +7,6 @@ namespace Lightit\Authentication\Domain\Actions;
 use Google\Client as GoogleClient;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Users\Domain\Models\User;
 use Lightit\Shared\App\Exceptions\Http\InvalidGoogleTokenException;
 use UnexpectedValueException;
@@ -23,7 +22,7 @@ class GoogleLoginAction
     /**
      * @throws InvalidGoogleTokenException
      */
-    public function execute(string $googleIdToken): LoginDto
+    public function execute(string $googleIdToken): void
     {
         try {
             $payload = $this->googleClient->verifyIdToken($googleIdToken);
@@ -44,6 +43,6 @@ class GoogleLoginAction
             ]
         );
 
-        return $this->loginAction->execute($user);
+        $this->loginAction->execute($user);
     }
 }

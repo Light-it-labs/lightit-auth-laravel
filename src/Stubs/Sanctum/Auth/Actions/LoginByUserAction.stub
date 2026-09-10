@@ -4,18 +4,26 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Http\Request;
 use Lightit\Users\Domain\Models\User;
 
 final class LoginByUserAction
 {
-    public function execute(User $user): LoginDto
-    {
-        $token = $user->createToken('default');
+    public function __construct(
+        private readonly AuthFactory $auth,
+        private readonly Request $request,
+    ) {
+    }
 
-        return new LoginDto(
-            accessToken: $token->plainTextToken,
-            tokenType: 'Bearer'
-        );
+    public function execute(User $user): void
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $guard->login($user);
+
+        $this->request->session()->regenerate();
     }
 }
