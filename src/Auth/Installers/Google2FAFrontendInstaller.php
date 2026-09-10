@@ -29,6 +29,20 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'services/auth/two-factor/schemas.ts.stub' => 'src/services/auth/two-factor/schemas.ts',
         'services/auth/two-factor/api.ts.stub' => 'src/services/auth/two-factor/api.ts',
         'services/auth/two-factor/actions.ts.stub' => 'src/services/auth/two-factor/actions.ts',
+        'routes/(public)/_guest/two-factor/setup/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+        'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
+        'routes/(public)/_guest/two-factor/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/page.tsx',
+        'routes/(public)/_guest/two-factor/recovery-code/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx',
+    ];
+
+    /**
+     * Not 2FA-specific - every screen that completes an authentication routes its
+     * result through this seam (see AUTH-2FA-FRONTEND-TODO.md). It is generated
+     * from here only because this is currently the package's one active frontend
+     * installer; a future non-2FA login method would need to trigger it too.
+     */
+    private const SHARED_FILES = [
+        'services/auth/session.ts.stub' => 'src/services/auth/session.ts',
     ];
 
     public function __construct(
@@ -46,6 +60,11 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         return __DIR__.'/../../Stubs/Frontend/Google2FA';
     }
 
+    public static function sharedStubDirectory(): string
+    {
+        return __DIR__.'/../../Stubs/Frontend/Shared';
+    }
+
     public function install(): void
     {
         $root = $this->locator->locate($this->laravelRoot, $this->frontendPath);
@@ -61,10 +80,14 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         $tokens = $this->tokens($root);
 
         foreach (self::FILES as $stub => $relative) {
-            $this->write($root, $stub, $relative, $tokens);
+            $this->write($root, self::stubDirectory().'/'.$stub, $relative, $tokens);
         }
 
-        $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
+        foreach (self::SHARED_FILES as $stub => $relative) {
+            $this->write($root, self::sharedStubDirectory().'/'.$stub, $relative, $tokens);
+        }
+
+        $this->write($root, self::stubDirectory().'/'.self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
 
         $this->command->info(
             'Frontend two-factor authentication layer generated. Read '.self::TODO_FILE.' before building the screens.'
@@ -74,7 +97,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     /**
      * @param  array<string, string>  $tokens
      */
-    private function write(string $root, string $stub, string $relative, array $tokens): void
+    private function write(string $root, string $stubPath, string $relative, array $tokens): void
     {
         $destination = $this->locator->resolveDestination($root, $relative);
 
@@ -82,7 +105,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->command->warn("Overwriting: {$relative}");
         }
 
-        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens, $this->originMarker);
+        $this->stubRenderer->renderTo($stubPath, $destination, $tokens, $this->originMarker);
 
         $this->command->line("Created: {$relative}");
     }
