@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions\Pipes;
+
+use Closure;
+
+/**
+ * The pipeline's terminal pipe: if no earlier pipe issued a 2FA challenge or
+ * setup token, the credentials are fully validated and the guard already holds
+ * a session - see `ValidateCredentials`. There is nothing left to hand the
+ * frontend but confirmation, so the response carries `token_type: "session"`
+ * and no token, instead of minting an access token nobody asked for.
+ */
+final class IssueSessionMarkerIfNoFinalToken
+{
+    public function handle(LoginContext $context, Closure $next): mixed
+    {
+        if (! $context->hasFinalToken()) {
+            $context->issueFinalToken(token: null, expiresInSeconds: 0, type: 'session');
+        }
+
+        return $next($context);
+    }
+}

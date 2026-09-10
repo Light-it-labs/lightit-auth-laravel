@@ -7,7 +7,6 @@ namespace Lightit\Authentication\Domain\Actions;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\Actions\LoginByUserAction;
-use Lightit\Authentication\Domain\DataTransferObjects\LoginDto;
 use Lightit\Authentication\Domain\DataTransferObjects\OtpVerifyDto;
 use Lightit\Authentication\Domain\Exceptions\OtpException;
 use Lightit\Authentication\Domain\Models\Otp;
@@ -23,7 +22,7 @@ final readonly class ConsumeOtpAction
     /**
      * @throws OtpException
      */
-    public function execute(OtpVerifyDto $dto): LoginDto
+    public function execute(OtpVerifyDto $dto): void
     {
         $otp = Otp::query()
             ->where('destination', $dto->email)
@@ -40,6 +39,6 @@ final readonly class ConsumeOtpAction
         $otp->used_at = CarbonImmutable::now();
         $otp->saveOrFail();
 
-        return $this->loginByUserAction->execute($user);
+        $this->loginByUserAction->execute($user);
     }
 }
