@@ -8,6 +8,8 @@ use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\LoginActionPatcher;
 use Lightitlabs\Tools\LoginActionPatchOutcome;
+use Lightitlabs\Tools\NativeLoginActionInjector;
+use Lightitlabs\Tools\NativeLoginInjectionOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -35,6 +37,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly StubCopier $stubCopier,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
         private readonly LoginActionPatcher $loginActionPatcher = new LoginActionPatcher,
+        private readonly NativeLoginActionInjector $nativeLoginActionInjector = new NativeLoginActionInjector,
         private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
@@ -83,6 +86,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
      * that loop only knows "create if missing", not "replace this specific
      * sibling installer's output but nothing a consumer touched" - see
      * `LoginActionPatcher`.
+     *
+     * A destination `LoginActionPatcher` doesn't recognise is a login this
+     * package never generated at all - e.g. the boilerplate's own native
+     * `LoginAction.php`. There's nothing safe to replace wholesale there, but
+     * giving up would leave 2FA silently unwired into a real login, so
+     * `NativeLoginActionInjector` is tried next: it only touches a narrow,
+     * verified anchor inside that file, never a blind rewrite.
      */
     private function installLoginAction(): void
     {
@@ -103,15 +113,41 @@ final class Google2FAInstaller implements AuthInstallerInterface
             LoginActionPatchOutcome::AlreadyApplied => $this->composerInstaller->printFileCreated(
                 "{$label} already carries the 2FA login pipeline."
             ),
-            LoginActionPatchOutcome::CustomizedSkipped => $this->command->warn(
-                "Skipped {$label}: it no longer matches this package's generated output, so it looks "
-                .'edited. Wire the 2FA pipeline into it by hand - see '
-                .'vendor/light-it-labs/lightit-auth-laravel/src/Stubs/Google2FA/Auth/Actions/LoginAction.stub '
-                .'for the reference implementation.'
-            ),
+            LoginActionPatchOutcome::CustomizedSkipped => $this->injectIntoNativeLoginAction($label),
             LoginActionPatchOutcome::SourceMissing,
             LoginActionPatchOutcome::Failed => $this->command->error(
                 "Could not install {$label} ({$outcome->name})."
+            ),
+        };
+    }
+
+    /**
+     * `$label`'s content isn't this package's own generated output - most
+     * likely a login the consumer's boilerplate ships natively, such as
+     * `Light-it-labs/laravel`'s cookie-based `LoginAction` (rate-limit
+     * closures, its own `session()->regenerate()`). Injects a single call to
+     * `TwoFactorLoginGate` right after that login's own success path clears
+     * the rate limiter, rather than rewriting anything it already does.
+     */
+    private function injectIntoNativeLoginAction(string $label): void
+    {
+        $outcome = $this->nativeLoginActionInjector->inject(base_path($label));
+
+        match ($outcome) {
+            NativeLoginInjectionOutcome::Patched => $this->composerInstaller->printFileCreated(
+                "Wired the 2FA challenge gate into {$label}."
+            ),
+            NativeLoginInjectionOutcome::AlreadyApplied => $this->composerInstaller->printFileCreated(
+                "{$label} already carries the 2FA challenge gate."
+            ),
+            NativeLoginInjectionOutcome::AnchorNotFound,
+            NativeLoginInjectionOutcome::Failed,
+            NativeLoginInjectionOutcome::Corrupted => $this->command->warn(
+                "Could not wire 2FA into {$label} automatically ({$outcome->name}): it doesn't match the "
+                .'known shape (execute(Request, array, Closure $onFailure, Closure $onSuccess): User) this '
+                .'injector targets. Add this call yourself, right after the line that clears the rate '
+                ."limiter on a successful attempt and before the method returns the user:\n\n"
+                .$this->nativeLoginActionInjector->manualSnippet()
             ),
         };
     }
@@ -141,6 +177,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/DataTransferObjects/VerifyRecoveryCodeDto.stub' => 'Domain/DataTransferObjects/VerifyRecoveryCodeDto.php',
             '/Enums/TwoFactorReason.stub' => 'Domain/Enums/TwoFactorReason.php',
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
+            '/Exceptions/TwoFactorChallengeException.stub' => 'Domain/Exceptions/TwoFactorChallengeException.php',
+            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
             '/Resources/VerifyRecoveryCodeResource.stub' => 'App/Resources/VerifyRecoveryCodeResource.php',
             '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',

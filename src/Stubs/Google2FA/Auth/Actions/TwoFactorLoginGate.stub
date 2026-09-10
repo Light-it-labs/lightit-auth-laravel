@@ -1,0 +1,51 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * Gates a just-authenticated user for 2FA from inside a login this package
+ * never generated - see NativeLoginActionInjector, which calls
+ * guardAgainstChallenge() right after that login's own rate-limit success
+ * hook and before it returns the user. Mirrors
+ * IssueTwoFactorSetupTokenIfMandatory / IssueTwoFactorChallengeTokenIfEnabled
+ * as sequential checks instead of pipeline stages, since the host login's own
+ * control flow can't be replaced - only appended to.
+ */
+final class TwoFactorLoginGate
+{
+    /**
+     * @throws TwoFactorChallengeException
+     */
+    public function guardAgainstChallenge(User $user): void
+    {
+        if (! Config::boolean('google2fa.enabled')) {
+            return;
+        }
+
+        /** @var int $ttlMinutes */
+        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
+
+        if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory')) {
+            throw new TwoFactorChallengeException(
+                token: $user->create2faToken($ttlMinutes, TwoFactorReason::SetupRequired),
+                tokenType: TwoFactorReason::SetupRequired->value,
+                expiresIn: $ttlMinutes * 60,
+            );
+        }
+
+        if ($user->hasTwoFactorAuthenticationSecretStored()) {
+            throw new TwoFactorChallengeException(
+                token: $user->create2faToken($ttlMinutes, TwoFactorReason::VerificationRequired),
+                tokenType: TwoFactorReason::VerificationRequired->value,
+                expiresIn: $ttlMinutes * 60,
+            );
+        }
+    }
+}
