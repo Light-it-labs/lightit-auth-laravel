@@ -27,7 +27,6 @@ describe('passkeys screen stub rendering', function () use ($fixturePath, $stubP
             '(public)/_guest/login/-components/passkey-login-button.tsx.stub',
             '(public)/_guest/login/-components/passkey-login-button.tsx',
         ],
-        ['_private/security/page.tsx.stub', '_private/security/page.tsx'],
         [
             '_private/security/-components/passkeys-section.tsx.stub',
             '_private/security/-components/passkeys-section.tsx',
@@ -76,18 +75,11 @@ describe('passkeys screen stub rendering', function () use ($fixturePath, $stubP
             ->toContain('can&apos;t use passkeys');
     });
 
-    it('renders the security host page before anything can render into it', function () use (
-        $fixturePath
-    ): void {
-        expect(file_get_contents($fixturePath('_private/security/page.tsx')))
-            ->toContain('PasskeysSection');
-    });
-
     it('leaves no placeholder unresolved in any screen stub', function () use ($stubPath): void {
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($finder)->toHaveCount(4);
+        expect($finder)->toHaveCount(3);
 
         foreach ($finder as $file) {
             expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))

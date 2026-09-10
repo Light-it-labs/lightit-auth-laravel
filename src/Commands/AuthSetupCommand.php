@@ -20,6 +20,7 @@ use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Auth\Installers\SanctumInstaller;
+use Lightitlabs\Auth\Installers\SharedFrontendSeamInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Enums\LoginMethod;
@@ -65,6 +66,7 @@ class AuthSetupCommand extends Command
         try {
             $this->setupLoginMethods($loginMethods);
             $this->setupFeatures($features);
+            $this->setupSharedFrontendSeams($loginMethods, $features);
         } catch (Throwable $exception) {
             $this->printFailure('Authentication setup failed: '.$exception->getMessage());
 
@@ -184,6 +186,46 @@ class AuthSetupCommand extends Command
         );
 
         $frontendInstaller->install();
+        $this->printSectionSeparator();
+    }
+
+    /**
+     * Runs after every login method and feature has installed its own layer, once
+     * whether the session seam and/or the security page host are needed at all is
+     * fully known - see SharedFrontendSeamInstaller for why this is not owned by
+     * any single feature's installer.
+     *
+     * @param  list<LoginMethod>  $loginMethods
+     * @param  list<Feature>  $features
+     */
+    protected function setupSharedFrontendSeams(array $loginMethods, array $features): void
+    {
+        $needsSessionSeam = in_array(LoginMethod::GoogleSso, $loginMethods, true)
+            || in_array(Feature::TwoFactorAuthentication, $features, true)
+            || in_array(Feature::Passkeys, $features, true);
+
+        $needsPasskeysSecuritySection = in_array(Feature::Passkeys, $features, true);
+        $needsTwoFactorSecuritySection = in_array(Feature::TwoFactorAuthentication, $features, true);
+
+        if (! $needsSessionSeam && ! $needsPasskeysSecuritySection && ! $needsTwoFactorSecuritySection) {
+            return;
+        }
+
+        $this->printBoxedMessage('🛠 Setting up shared frontend seams...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $sharedSeamInstaller = new SharedFrontendSeamInstaller(
+            $this,
+            new StubRenderer,
+            new FrontendProjectLocator($manifest),
+            base_path(),
+            $needsSessionSeam,
+            $needsPasskeysSecuritySection,
+            $needsTwoFactorSecuritySection,
+        );
+
+        $sharedSeamInstaller->install();
         $this->printSectionSeparator();
     }
 

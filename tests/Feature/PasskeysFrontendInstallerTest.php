@@ -26,6 +26,9 @@ describe('PasskeysFrontendInstaller', function (): void {
             'src/services/auth/passkeys/schemas.ts',
             'src/services/auth/passkeys/api.ts',
             'src/services/auth/passkeys/actions.ts',
+            'src/routes/(public)/_guest/login/-components/passkey-login-button.tsx',
+            'src/routes/_private/security/-components/passkeys-section.tsx',
+            'src/routes/_private/security/-components/enrol-passkey-dialog.tsx',
             'AUTH-PASSKEYS-FRONTEND-TODO.md',
         ] as $relative) {
             expect($this->root.'/'.$relative)->toBeFile();

@@ -41,18 +41,11 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
         'routes/(public)/_guest/two-factor/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/page.tsx',
         'routes/(public)/_guest/two-factor/recovery-code/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx',
-    ];
-
-    /**
-     * Not 2FA-specific - every screen that completes an authentication routes its
-     * result through this seam (see AUTH-2FA-FRONTEND-TODO.md). It is generated
-     * from here only because this is currently the package's one active frontend
-     * installer; a future non-2FA login method would need to trigger it too.
-     *
-     * Unmarked for the same reason as SCREEN_FILES above.
-     */
-    private const SHARED_FILES = [
-        'services/auth/session.ts.stub' => 'src/services/auth/session.ts',
+        'routes/(public)/_guest/two-factor/reset/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/reset/page.tsx',
+        'routes/_private/security/-components/two-factor-section.tsx.stub' => 'src/routes/_private/security/-components/two-factor-section.tsx',
+        'routes/_private/security/-components/disable-two-factor-dialog.tsx.stub' => 'src/routes/_private/security/-components/disable-two-factor-dialog.tsx',
+        'routes/_private/security/-components/regenerate-recovery-codes-dialog.tsx.stub' => 'src/routes/_private/security/-components/regenerate-recovery-codes-dialog.tsx',
+        'routes/_private/security/-components/request-two-factor-reset-dialog.tsx.stub' => 'src/routes/_private/security/-components/request-two-factor-reset-dialog.tsx',
     ];
 
     public function __construct(
@@ -68,11 +61,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     public static function stubDirectory(): string
     {
         return __DIR__.'/../../Stubs/Frontend/Google2FA';
-    }
-
-    public static function sharedStubDirectory(): string
-    {
-        return __DIR__.'/../../Stubs/Frontend/Shared';
     }
 
     public function install(): void
@@ -95,10 +83,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         foreach (self::SCREEN_FILES as $stub => $relative) {
             $this->write($root, self::stubDirectory().'/'.$stub, $relative, $tokens);
-        }
-
-        foreach (self::SHARED_FILES as $stub => $relative) {
-            $this->write($root, self::sharedStubDirectory().'/'.$stub, $relative, $tokens);
         }
 
         $this->write($root, self::stubDirectory().'/'.self::TODO_FILE.'.stub', self::TODO_FILE, $tokens, $this->originMarker);

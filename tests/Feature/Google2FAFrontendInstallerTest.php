@@ -26,11 +26,15 @@ describe('Google2FAFrontendInstaller', function (): void {
             'src/services/auth/two-factor/schemas.ts',
             'src/services/auth/two-factor/api.ts',
             'src/services/auth/two-factor/actions.ts',
-            'src/services/auth/session.ts',
             'src/routes/(public)/_guest/two-factor/setup/page.tsx',
             'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
             'src/routes/(public)/_guest/two-factor/page.tsx',
             'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx',
+            'src/routes/(public)/_guest/two-factor/reset/page.tsx',
+            'src/routes/_private/security/-components/two-factor-section.tsx',
+            'src/routes/_private/security/-components/disable-two-factor-dialog.tsx',
+            'src/routes/_private/security/-components/regenerate-recovery-codes-dialog.tsx',
+            'src/routes/_private/security/-components/request-two-factor-reset-dialog.tsx',
             'AUTH-2FA-FRONTEND-TODO.md',
         ] as $relative) {
             expect(file_get_contents($this->root.'/'.$relative))
