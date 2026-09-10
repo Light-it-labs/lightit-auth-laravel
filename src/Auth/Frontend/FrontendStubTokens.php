@@ -26,6 +26,7 @@ final class FrontendStubTokens
             'currentUserEndpoint' => 'me',
             'currentUserResponseAccessor' => 'response.data.data',
             'dependencyReport' => 'Every dependency this layer needs is already installed.',
+            'googleSsoLoginEndpoint' => 'auth/google',
             'loginEndpoint' => 'auth/login',
             'loginRoutePath' => '/login',
             'logoutEndpoint' => 'auth/logout',
