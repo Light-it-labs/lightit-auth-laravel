@@ -35,11 +35,15 @@ export type PasskeyCeremonyError = {
 // WebAuthn is a secure-context-only API. Checking `isSecureContext` alongside
 // `PublicKeyCredential` turns a misconfigured HTTP-over-custom-TLD dev origin
 // into a clean "not supported" branch instead of a raw TypeError on a missing
-// browser API.
+// browser API. `parseCreationOptionsFromJSON`/`parseRequestOptionsFromJSON` are
+// checked too: a browser can expose `PublicKeyCredential` while lacking these
+// newer JSON helpers, and both ceremony wrappers below call them directly.
 export const isPasskeySupported = (): boolean => {
   return (
     typeof window !== "undefined" &&
     window.isSecureContext &&
-    typeof window.PublicKeyCredential !== "undefined"
+    typeof window.PublicKeyCredential !== "undefined" &&
+    typeof window.PublicKeyCredential.parseCreationOptionsFromJSON === "function" &&
+    typeof window.PublicKeyCredential.parseRequestOptionsFromJSON === "function"
   );
 };

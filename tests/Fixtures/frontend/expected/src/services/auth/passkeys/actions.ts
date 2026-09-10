@@ -21,16 +21,17 @@ export const usePasskeys = (
   props?: UseQueryProps<{ queryFn: typeof listPasskeys }>,
 ) => {
   return useQuery({
-    queryKey: ["auth", "passkeys"],
+    // Keyed on the token, not just the scope: a different session must never
+    // see a previous account's cached list before its own request resolves.
+    queryKey: ["auth", "passkeys", token],
     queryFn: () => listPasskeys({ token }),
     ...props,
   });
 };
 
 const enrolPasskey = async ({ token, name }: { token: string; name: string }): Promise<Passkey> => {
-  const options = await getPasskeyRegistrationOptions({ token });
-
   try {
+    const options = await getPasskeyRegistrationOptions({ token });
     const credential = await createPasskeyCredential(options);
 
     return await createPasskey({ token, name, credential });

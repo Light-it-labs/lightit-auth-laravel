@@ -14,10 +14,12 @@ export const PasskeysSection = () => {
   // Hooks run unconditionally regardless of whether a token is present yet -
   // the query is disabled instead, and the missing-token case is handled by
   // the early return below, after both hooks have already been called.
-  const { data: passkeys, isLoading, refetch } = usePasskeys(
-    { token: token ?? "" },
-    { enabled: token !== null },
-  );
+  const {
+    data: passkeys,
+    isLoading,
+    isError,
+    refetch,
+  } = usePasskeys({ token: token ?? "" }, { enabled: token !== null });
   const { mutate: deletePasskey, isPending: isDeleting } = useDeletePasskey({
     onSuccess: () => {
       void refetch();
@@ -46,6 +48,14 @@ export const PasskeysSection = () => {
       <h2>Passkeys</h2>
       <p>One is enough - a password manager syncs it to every device you use.</p>
       {isLoading ? <p>Loading your passkeys…</p> : null}
+      {isError ? (
+        <Alert variant="destructive">
+          <AlertDescription>Couldn&apos;t load your passkeys.</AlertDescription>
+          <Button type="button" onClick={() => void refetch()}>
+            Try again
+          </Button>
+        </Alert>
+      ) : null}
       <ul>
         {passkeys?.map((passkey: Passkey) => (
           <li key={passkey.id}>

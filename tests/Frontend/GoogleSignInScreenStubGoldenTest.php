@@ -53,6 +53,25 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
             ->toContain('https://accounts.google.com/gsi/client');
     });
 
+    it('never leaves a script-loading rejection unhandled - it surfaces an error state instead', function () use ($stubPath): void {
+        $hook = (new StubRenderer)->render(
+            $stubPath('hooks/use-google-identity-services.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($hook)
+            ->not->toContain('void loadGoogleIdentityServices()')
+            ->toContain('.catch(')
+            ->toContain('isError');
+
+        $button = (new StubRenderer)->render(
+            $stubPath('routes/(public)/_guest/login/-components/google-login-button.tsx.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($button)->toContain('identityServicesFailed');
+    });
+
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;

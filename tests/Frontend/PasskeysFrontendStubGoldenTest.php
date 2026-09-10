@@ -87,4 +87,41 @@ describe('Passkeys frontend stub rendering', function () use ($fixturePath, $stu
             ->toContain('light-it')
             ->not->toContain('lightit');
     });
+
+    it('gates support on both JSON conversion helpers, not just the constructor', function () use (
+        $fixturePath
+    ): void {
+        expect(file_get_contents($fixturePath('src/services/auth/passkeys/types.ts')))
+            ->toContain('typeof window.PublicKeyCredential !== "undefined"')
+            ->toContain('typeof window.PublicKeyCredential.parseCreationOptionsFromJSON === "function"')
+            ->toContain('typeof window.PublicKeyCredential.parseRequestOptionsFromJSON === "function"');
+    });
+
+    it('keeps the registration-options request inside the try that maps ceremony errors', function () use (
+        $fixturePath
+    ): void {
+        $actions = file_get_contents($fixturePath('src/services/auth/passkeys/actions.ts'));
+
+        $start = strpos($actions, 'const enrolPasskey');
+        $end = strpos($actions, 'export const useEnrolPasskey');
+
+        expect($start)->not->toBeFalse();
+        expect($end)->not->toBeFalse();
+
+        $enrolPasskey = substr($actions, $start, $end - $start);
+
+        expect($enrolPasskey)
+            ->toContain('try {')
+            ->toContain('getPasskeyRegistrationOptions');
+
+        // The registration-options call must sit after the opening brace, not before it.
+        expect(strpos($enrolPasskey, 'try {'))->toBeLessThan(strpos($enrolPasskey, 'getPasskeyRegistrationOptions'));
+    });
+
+    it('keys the passkeys list query on the token, so a different session never sees a stale list', function () use (
+        $fixturePath
+    ): void {
+        expect(file_get_contents($fixturePath('src/services/auth/passkeys/actions.ts')))
+            ->toContain('queryKey: ["auth", "passkeys", token]');
+    });
 });

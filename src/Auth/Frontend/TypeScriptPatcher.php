@@ -18,6 +18,8 @@ final class TypeScriptPatcher
 
     private const GOOGLE_CLIENT_ID_DECLARATION = 'z.string().min(1),';
 
+    private const GOOGLE_CLIENT_ID_DECLARATION_PATTERN = '/^[ \t]*VITE_GOOGLE_CLIENT_ID:\s*z\.string\(\)\.min\(1\),?[ \t]*$/m';
+
     private const API_URL_VAR_PATTERN = '/^([ \t]*)VITE_API_URL:[^\n]*\n/m';
 
     public function addGoogleClientIdToEnv(string $path): TypeScriptPatchOutcome
@@ -32,7 +34,7 @@ final class TypeScriptPatcher
             return TypeScriptPatchOutcome::Failed;
         }
 
-        if (str_contains($original, self::GOOGLE_CLIENT_ID_VAR)) {
+        if (preg_match(self::GOOGLE_CLIENT_ID_DECLARATION_PATTERN, $original) === 1) {
             return TypeScriptPatchOutcome::AlreadyApplied;
         }
 
@@ -55,7 +57,7 @@ final class TypeScriptPatcher
 
         $written = file_get_contents($path);
 
-        if ($written === false || ! str_contains($written, self::GOOGLE_CLIENT_ID_VAR)) {
+        if ($written === false || preg_match(self::GOOGLE_CLIENT_ID_DECLARATION_PATTERN, $written) !== 1) {
             return $this->restore($path, $original);
         }
 

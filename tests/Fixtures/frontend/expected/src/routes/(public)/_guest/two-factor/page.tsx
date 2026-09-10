@@ -54,6 +54,7 @@ export default function TwoFactorChallengePage() {
           onChange={(event) => setOneTimePassword(event.target.value)}
           inputMode="numeric"
           maxLength={6}
+          aria-label="Two-factor authentication code"
         />
         {validationError ? (
           <Alert variant="destructive">

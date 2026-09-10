@@ -45,6 +45,20 @@ describe('two-factor screen stub rendering', function () use ($fixturePath, $stu
         }
     });
 
+    it('gives the OTP and recovery-code inputs an accessible name', function () use ($stubPath): void {
+        $otp = (new StubRenderer)->render(
+            $stubPath('(public)/_guest/two-factor/page.tsx.stub'),
+            FrontendStubTokens::defaults(),
+        );
+        $recoveryCode = (new StubRenderer)->render(
+            $stubPath('(public)/_guest/two-factor/recovery-code/page.tsx.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($otp)->toContain('aria-label="Two-factor authentication code"');
+        expect($recoveryCode)->toContain('aria-label="Recovery code"');
+    });
+
     it('leaves no placeholder unresolved in any screen stub', function () use ($stubPath): void {
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;

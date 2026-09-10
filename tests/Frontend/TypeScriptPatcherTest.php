@@ -341,6 +341,27 @@ describe('TypeScriptPatcher', function (): void {
             expect(file_get_contents($this->path))->toBe($original);
         });
 
+        it('does not skip patching when the variable name only appears in a comment', function () use ($envPatch): void {
+            expect($envPatch($this->path, <<<'TS'
+                export const env = createEnv({
+                  client: {
+                    // TODO: also add VITE_GOOGLE_CLIENT_ID once Google SSO is configured
+                    VITE_API_URL: z.string().min(1),
+                  },
+                });
+
+                TS))->toBe(<<<'TS'
+                export const env = createEnv({
+                  client: {
+                    // TODO: also add VITE_GOOGLE_CLIENT_ID once Google SSO is configured
+                    VITE_API_URL: z.string().min(1),
+                    VITE_GOOGLE_CLIENT_ID: z.string().min(1),
+                  },
+                });
+
+                TS);
+        });
+
         it('reports the anchor as missing when VITE_API_URL is absent', function (): void {
             $withoutAnchor = "export const env = createEnv({ client: {} });\n";
             file_put_contents($this->path, $withoutAnchor);

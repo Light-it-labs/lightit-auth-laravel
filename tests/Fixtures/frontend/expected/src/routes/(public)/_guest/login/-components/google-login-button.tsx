@@ -7,19 +7,22 @@ import { useGoogleLogin } from "@/services/auth/sso/google/actions";
 export const GoogleLoginButton = () => {
   const navigate = useNavigate();
 
-  const { mutate, isError } = useGoogleLogin({
+  const { mutate, isError: loginFailed } = useGoogleLogin({
     onSuccess: (result) => {
       persistSession(result);
       void navigate({ to: "/" });
     },
   });
 
-  const { containerRef } = useGoogleIdentityServices((idToken) => mutate({ idToken }));
+  const { containerRef, isError: identityServicesFailed } = useGoogleIdentityServices((idToken) =>
+    mutate({ idToken }),
+  );
 
   return (
     <div>
       <div ref={containerRef} />
-      {isError ? <p>Google sign-in failed. Try again.</p> : null}
+      {identityServicesFailed ? <p>Couldn&apos;t load Google sign-in. Try again later.</p> : null}
+      {loginFailed ? <p>Google sign-in failed. Try again.</p> : null}
     </div>
   );
 };

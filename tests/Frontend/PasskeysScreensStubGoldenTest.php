@@ -75,6 +75,20 @@ describe('passkeys screen stub rendering', function () use ($fixturePath, $stubP
             ->toContain('can&apos;t use passkeys');
     });
 
+    it('renders an error state with a retry action when listPasskeys rejects', function () use (
+        $stubPath
+    ): void {
+        $section = (new StubRenderer)->render(
+            $stubPath('_private/security/-components/passkeys-section.tsx.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($section)
+            ->toContain('isError')
+            ->toContain('refetch')
+            ->toContain('Try again');
+    });
+
     it('leaves no placeholder unresolved in any screen stub', function () use ($stubPath): void {
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;

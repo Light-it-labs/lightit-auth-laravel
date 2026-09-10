@@ -63,7 +63,11 @@ export default function TwoFactorRecoveryCodePage() {
     <div>
       <h1>Use a recovery code</h1>
       <Form onSubmit={handleSubmit}>
-        <Input value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} />
+        <Input
+          value={recoveryCode}
+          onChange={(event) => setRecoveryCode(event.target.value)}
+          aria-label="Recovery code"
+        />
         {validationError ? (
           <Alert variant="destructive">
             <AlertDescription>{validationError}</AlertDescription>

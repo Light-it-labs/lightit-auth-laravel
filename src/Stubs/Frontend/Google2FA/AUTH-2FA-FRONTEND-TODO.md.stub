@@ -11,6 +11,15 @@ listed below are generated for you. Delete this file once you've read it.
 | `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code and password zod schemas |
 | `src/services/auth/two-factor/api.ts` | One function per 2FA endpoint, each attaching its own `Authorization: Bearer` header |
 | `src/services/auth/two-factor/actions.ts` | `useMutation`-based hooks wrapping each `api.ts` function |
+| `src/routes/(public)/_guest/two-factor/setup/page.tsx` | Setup / QR screen |
+| `src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx` | Recovery-codes display, shared by setup and regenerate |
+| `src/routes/(public)/_guest/two-factor/page.tsx` | OTP challenge screen |
+| `src/routes/(public)/_guest/two-factor/recovery-code/page.tsx` | Recovery-code challenge screen |
+| `src/routes/(public)/_guest/two-factor/reset/page.tsx` | Guest-side confirm page for a reset challenge token |
+| `src/routes/_private/security/-components/two-factor-section.tsx` | Account-management section - composed into the security page host alongside Passkeys, if selected |
+| `src/routes/_private/security/-components/disable-two-factor-dialog.tsx` | Self-service disable dialog |
+| `src/routes/_private/security/-components/regenerate-recovery-codes-dialog.tsx` | Regenerate-recovery-codes dialog |
+| `src/routes/_private/security/-components/request-two-factor-reset-dialog.tsx` | Reset-request dialog |
 
 ## The login branch
 

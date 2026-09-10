@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { env } from "@/config/env";
 
@@ -65,32 +65,42 @@ export const useGoogleIdentityServices = (onCredential: (idToken: string) => voi
   const containerRef = useRef<HTMLDivElement>(null);
   const onCredentialRef = useRef(onCredential);
   onCredentialRef.current = onCredential;
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    void loadGoogleIdentityServices().then((google) => {
-      if (cancelled || !containerRef.current) {
-        return;
-      }
+    loadGoogleIdentityServices()
+      .then((google) => {
+        if (cancelled || !containerRef.current) {
+          return;
+        }
 
-      google.accounts.id.initialize({
-        client_id: env.VITE_GOOGLE_CLIENT_ID,
-        callback: (response) => onCredentialRef.current(response.credential),
-      });
+        google.accounts.id.initialize({
+          client_id: env.VITE_GOOGLE_CLIENT_ID,
+          callback: (response) => onCredentialRef.current(response.credential),
+        });
 
-      google.accounts.id.renderButton(containerRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        width: "100%",
+        google.accounts.id.renderButton(containerRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          width: "100%",
+        });
+      })
+      .catch(() => {
+        // A CSP block or network failure leaves `containerRef` empty with no
+        // button rendered into it - surface that instead of an unhandled
+        // rejection and a silent blank `<div>`.
+        if (!cancelled) {
+          setIsError(true);
+        }
       });
-    });
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return { containerRef };
+  return { containerRef, isError };
 };
