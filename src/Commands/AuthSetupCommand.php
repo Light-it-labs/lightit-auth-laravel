@@ -7,6 +7,7 @@ namespace Lightitlabs\Commands;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
@@ -168,7 +169,7 @@ class AuthSetupCommand extends Command
 
     protected function setupGoogleSSOFrontend(): void
     {
-        $this->printBoxedMessage('🛠 Setting up Google SSO frontend...');
+        $this->printBoxedMessage('🛠 Setting up the Google sign-in button...');
 
         $manifest = new FrontendPackageManifest;
 
@@ -176,6 +177,7 @@ class AuthSetupCommand extends Command
             $this,
             new StubRenderer,
             OriginMarker::resolved(),
+            new TypeScriptPatcher,
             new FrontendProjectLocator($manifest),
             $manifest,
             base_path(),

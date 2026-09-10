@@ -7,6 +7,7 @@ namespace Lightitlabs\Tests\Fixtures;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Auth\Installers\GoogleSSOFrontendInstaller;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
@@ -32,6 +33,7 @@ final class FakeGoogleSSOFrontendCommand extends Command
             $this,
             new StubRenderer,
             new OriginMarker('0.0.0-test'),
+            new TypeScriptPatcher,
             new FrontendProjectLocator($manifest),
             $manifest,
             $this->laravelRoot,

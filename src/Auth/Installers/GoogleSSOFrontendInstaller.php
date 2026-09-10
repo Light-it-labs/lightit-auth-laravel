@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
+use Lightitlabs\Auth\Frontend\TypeScriptPatcher;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
@@ -16,6 +17,8 @@ use RuntimeException;
 final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
 {
     private const TODO_FILE = 'AUTH-GOOGLE-SSO-FRONTEND-TODO.md';
+
+    private const ENV_FILE = 'src/config/env.ts';
 
     private const REQUIRED_DEPENDENCIES = [
         '@tanstack/react-query',
@@ -29,12 +32,15 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         'services/auth/sso/google/schemas.ts.stub' => 'src/services/auth/sso/google/schemas.ts',
         'services/auth/sso/google/api.ts.stub' => 'src/services/auth/sso/google/api.ts',
         'services/auth/sso/google/actions.ts.stub' => 'src/services/auth/sso/google/actions.ts',
+        'hooks/use-google-identity-services.ts.stub' => 'src/hooks/use-google-identity-services.ts',
+        'routes/(public)/_guest/login/-components/google-login-button.tsx.stub' => 'src/routes/(public)/_guest/login/-components/google-login-button.tsx',
     ];
 
     public function __construct(
         private readonly Command $command,
         private readonly StubRenderer $stubRenderer,
         private readonly OriginMarker $originMarker,
+        private readonly TypeScriptPatcher $typeScriptPatcher,
         private readonly FrontendProjectLocator $locator,
         private readonly FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
@@ -66,6 +72,8 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
 
         $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
 
+        $this->patchEnv($root);
+
         $this->command->info(
             'Frontend Google SSO layer generated. Read '.self::TODO_FILE.' before building the screens.'
         );
@@ -85,6 +93,23 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens, $this->originMarker);
 
         $this->command->line("Created: {$relative}");
+    }
+
+    private function patchEnv(string $root): void
+    {
+        $envPath = $this->locator->resolveDestination($root, self::ENV_FILE);
+        $outcome = $this->typeScriptPatcher->addGoogleClientIdToEnv($envPath);
+
+        if ($outcome->needsManualStep()) {
+            $this->command->warn(
+                'Could not add VITE_GOOGLE_CLIENT_ID to '.self::ENV_FILE.' automatically ('.$outcome->name.'). '
+                .'Add it to the client schema by hand.'
+            );
+
+            return;
+        }
+
+        $this->command->line('Patched: '.self::ENV_FILE);
     }
 
     private function reportUnresolvedRoot(): void
