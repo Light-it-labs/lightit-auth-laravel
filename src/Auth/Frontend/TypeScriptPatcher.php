@@ -14,6 +14,54 @@ final class TypeScriptPatcher
 
     private const RETRY_STATUS_LIST_PATTERN = '/\[([^\[\]]*?)\]\s*\.includes\(\s*error\.response\.status\s*\)/s';
 
+    private const GOOGLE_CLIENT_ID_VAR = 'VITE_GOOGLE_CLIENT_ID';
+
+    private const GOOGLE_CLIENT_ID_DECLARATION = 'z.string().min(1),';
+
+    private const API_URL_VAR_PATTERN = '/^([ \t]*)VITE_API_URL:[^\n]*\n/m';
+
+    public function addGoogleClientIdToEnv(string $path): TypeScriptPatchOutcome
+    {
+        if (! file_exists($path)) {
+            return TypeScriptPatchOutcome::Missing;
+        }
+
+        $original = file_get_contents($path);
+
+        if ($original === false) {
+            return TypeScriptPatchOutcome::Failed;
+        }
+
+        if (str_contains($original, self::GOOGLE_CLIENT_ID_VAR)) {
+            return TypeScriptPatchOutcome::AlreadyApplied;
+        }
+
+        $matches = [];
+
+        if (preg_match(self::API_URL_VAR_PATTERN, $original, $matches, PREG_OFFSET_CAPTURE) !== 1) {
+            return TypeScriptPatchOutcome::AnchorNotFound;
+        }
+
+        $indentation = $matches[1][0];
+        $insertAt = $matches[0][1] + strlen($matches[0][0]);
+
+        $patched = substr($original, 0, $insertAt)
+            .$indentation.self::GOOGLE_CLIENT_ID_VAR.': '.self::GOOGLE_CLIENT_ID_DECLARATION."\n"
+            .substr($original, $insertAt);
+
+        if (file_put_contents($path, $patched) === false) {
+            return $this->restore($path, $original);
+        }
+
+        $written = file_get_contents($path);
+
+        if ($written === false || ! str_contains($written, self::GOOGLE_CLIENT_ID_VAR)) {
+            return $this->restore($path, $original);
+        }
+
+        return TypeScriptPatchOutcome::Patched;
+    }
+
     public function addCsrfMismatchToRetryList(string $path): TypeScriptPatchOutcome
     {
         if (! file_exists($path)) {
