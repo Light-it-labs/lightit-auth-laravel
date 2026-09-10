@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Exception;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Signals that a login this package did not generate reached a valid,
+ * fully-authenticated user who still needs to clear 2FA - see
+ * TwoFactorLoginGate. This isn't an error: it carries the same
+ * {access_token, token_type, expires_in} shape LoginResource wraps a
+ * pipeline-generated LoginDto in, so the frontend's isSetupRequired /
+ * isVerificationRequired guards see an identical response either way. It
+ * renders itself, rather than extending this package's usual HttpException
+ * base, because that base's {error_code, message} shape doesn't fit a
+ * continuation response.
+ */
+final class TwoFactorChallengeException extends Exception
+{
+    public function __construct(
+        public readonly string $token,
+        public readonly string $tokenType,
+        public readonly int $expiresIn,
+    ) {
+        parent::__construct("Two-factor authentication required: {$tokenType}.");
+    }
+
+    public function render(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'access_token' => $this->token,
+                'token_type' => $this->tokenType,
+                'expires_in' => $this->expiresIn,
+            ],
+        ]);
+    }
+}

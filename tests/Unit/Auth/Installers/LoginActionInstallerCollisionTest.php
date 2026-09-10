@@ -117,6 +117,49 @@ describe('LoginAction.php collision between SanctumInstaller and Google2FAInstal
         expect((string) file_get_contents($this->destination))->toBe('// customized by the consuming project'.PHP_EOL);
     });
 
+    it('wires the 2FA challenge gate into a native LoginAction.php this package never generated', function (): void {
+        // `Light-it-labs/laravel`'s own cookie-based LoginAction (PR #426) -
+        // this package never wrote it, so LoginActionPatcher doesn't
+        // recognise it either. See NativeLoginActionInjectorTest for the
+        // fixture's full content and the injector's own unit tests.
+        $nativeLoginAction = (string) file_get_contents(
+            __DIR__.'/../../../Fixtures/laravel-426-native-login-action.php.txt'
+        );
+
+        $command = new class extends Command
+        {
+            protected $signature = 'login-action-collision-native-test';
+
+            public function handle(): int
+            {
+                $composerInstaller = new ComposerInstaller($this);
+                $stubCopier = new StubCopier(new OriginMarker('0.0.0-test'));
+
+                $google2fa = new Google2FAInstaller($this, $composerInstaller, $stubCopier);
+                runCreateAuthFiles($google2fa);
+
+                return self::SUCCESS;
+            }
+        };
+
+        if (! is_dir(dirname($this->destination))) {
+            mkdir(dirname($this->destination), 0755, true);
+        }
+
+        file_put_contents($this->destination, $nativeLoginAction);
+
+        $command->setLaravel($this->app);
+        $command->run(new ArrayInput([]), new NullOutput);
+
+        $patched = (string) file_get_contents($this->destination);
+
+        expect($patched)
+            ->toContain('$onFailure();')
+            ->toContain('$onSuccess();')
+            ->toContain('$request->session()->regenerate();')
+            ->toContain('TwoFactorLoginGate::class)->guardAgainstChallenge($user);');
+    });
+
     it('is idempotent when 2FA install runs twice', function (): void {
         $command = new class extends Command
         {
