@@ -1,0 +1,62 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+import type { UseMutationProps, UseQueryProps } from "@/services/types";
+import {
+  createPasskey,
+  createPasskeyCredential,
+  deletePasskey,
+  getPasskeyCredential,
+  getPasskeyLoginOptions,
+  getPasskeyRegistrationOptions,
+  listPasskeys,
+  loginWithPasskey,
+  mapPasskeyCeremonyError,
+} from "./api";
+import type { Passkey, PasskeyLoginResult } from "./types";
+
+export const usePasskeys = (
+  { token }: { token: string },
+  props?: UseQueryProps<{ queryFn: typeof listPasskeys }>,
+) => {
+  return useQuery({
+    queryKey: ["{{ queryKeyScope }}", "passkeys"],
+    queryFn: () => listPasskeys({ token }),
+    ...props,
+  });
+};
+
+const enrolPasskey = async ({ token, name }: { token: string; name: string }): Promise<Passkey> => {
+  const options = await getPasskeyRegistrationOptions({ token });
+
+  try {
+    const credential = await createPasskeyCredential(options);
+
+    return await createPasskey({ token, name, credential });
+  } catch (error) {
+    throw mapPasskeyCeremonyError(error);
+  }
+};
+
+export const useEnrolPasskey = (props?: UseMutationProps<typeof enrolPasskey>) => {
+  return useMutation({ mutationFn: enrolPasskey, ...props });
+};
+
+export const useDeletePasskey = (props?: UseMutationProps<typeof deletePasskey>) => {
+  return useMutation({ mutationFn: deletePasskey, ...props });
+};
+
+const signInWithPasskey = async (): Promise<PasskeyLoginResult> => {
+  const options = await getPasskeyLoginOptions();
+
+  try {
+    const credential = await getPasskeyCredential(options);
+
+    return await loginWithPasskey({ ceremonyId: options.ceremonyId, credential });
+  } catch (error) {
+    throw mapPasskeyCeremonyError(error);
+  }
+};
+
+export const useSignInWithPasskey = (props?: UseMutationProps<typeof signInWithPasskey>) => {
+  return useMutation({ mutationFn: signInWithPasskey, ...props });
+};
