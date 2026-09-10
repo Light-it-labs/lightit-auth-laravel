@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 use Lightitlabs\Tools\StubRenderer;
+use Symfony\Component\Finder\Finder;
 
 $fixturePath = static function (string $relative): string {
     return __DIR__.'/../Fixtures/frontend/expected/'.$relative;
@@ -27,16 +28,20 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         ['services/auth/two-factor/actions.ts.stub', 'src/services/auth/two-factor/actions.ts'],
         ['services/auth/two-factor/schemas.ts.stub', 'src/services/auth/two-factor/schemas.ts'],
         ['AUTH-2FA-FRONTEND-TODO.md.stub', 'AUTH-2FA-FRONTEND-TODO.md'],
+        ['routes/(public)/_guest/two-factor/setup/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/setup/page.tsx'],
+        ['routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub', 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx'],
+        ['routes/(public)/_guest/two-factor/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/page.tsx'],
+        ['routes/(public)/_guest/two-factor/recovery-code/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx'],
     ]);
 
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
-        $stubs = glob($stubPath('{,*/,*/*/,*/*/*/}*.stub'), \GLOB_BRACE);
+        $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($stubs)->toHaveCount(5);
+        expect($finder)->toHaveCount(9);
 
-        foreach ($stubs as $stub) {
-            expect($renderer->render($stub, FrontendStubTokens::defaults()))
+        foreach ($finder as $file) {
+            expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))
                 ->not->toMatch('/\{\{\s*[a-z][a-zA-Z]*\s*\}\}/');
         }
     });
@@ -83,5 +88,38 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
             ->toBe(file_get_contents($fixturePath('AUTH-2FA-FRONTEND-TODO.md')))
             ->toContain('light-it')
             ->not->toContain('lightit');
+    });
+});
+
+describe('Shared frontend stub rendering', function () use ($fixturePath): void {
+    $sharedStubPath = static function (string $relative): string {
+        return __DIR__.'/../../src/Stubs/Frontend/Shared/'.$relative;
+    };
+
+    it('renders the session seam stub byte-for-byte against its golden fixture', function () use (
+        $fixturePath, $sharedStubPath
+    ): void {
+        $rendered = (new StubRenderer)->render(
+            $sharedStubPath('services/auth/session.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)->toBe(file_get_contents($fixturePath('src/services/auth/session.ts')));
+    });
+
+    it('never exposes accessToken to callers - only persistSession/clearSession/getAccessToken', function () use (
+        $sharedStubPath
+    ): void {
+        $rendered = (new StubRenderer)->render(
+            $sharedStubPath('services/auth/session.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)
+            ->toContain('export const persistSession')
+            ->toContain('export const clearSession')
+            ->toContain('export const getAccessToken')
+            ->not->toContain('export const accessToken')
+            ->not->toContain('export let accessToken');
     });
 });
