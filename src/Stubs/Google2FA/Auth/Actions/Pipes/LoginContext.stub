@@ -19,17 +19,27 @@ final class LoginContext
 
     private string $tokenType;
 
+    /**
+     * Whether a pipe already produced this context's outcome - a real 2FA
+     * challenge/setup token, or the session marker `IssueSessionMarkerIfNoFinalToken`
+     * issues when none of the earlier pipes did. `$finalToken` alone can't tell
+     * those apart from "nothing issued yet": the session marker is a legitimate
+     * outcome carrying no token string.
+     */
+    private bool $tokenIssued = false;
+
     public function __construct(
         public readonly CredentialsDto $credentials,
         public readonly Guard $guard,
     ) {
     }
 
-    public function issueFinalToken(string $token, int $expiresInSeconds, string $type = 'Bearer'): void
+    public function issueFinalToken(string|null $token, int $expiresInSeconds, string $type = 'Bearer'): void
     {
         $this->finalToken = $token;
         $this->expiresInSeconds = $expiresInSeconds;
         $this->tokenType = $type;
+        $this->tokenIssued = true;
     }
 
     public function setUser(User $user): void
@@ -48,20 +58,17 @@ final class LoginContext
 
     public function hasFinalToken(): bool
     {
-        return is_string($this->finalToken) && $this->finalToken !== '';
+        return $this->tokenIssued;
     }
 
     public function toDto(): LoginDto
     {
-        if (! $this->hasFinalToken()) {
+        if (! $this->tokenIssued) {
             throw new \RuntimeException('Token not set');
         }
 
-        /** @var string $token */
-        $token = $this->finalToken;
-
         return new LoginDto(
-            accessToken: $token,
+            accessToken: $this->finalToken,
             tokenType: $this->tokenType,
             expiresIn: $this->expiresInSeconds,
         );

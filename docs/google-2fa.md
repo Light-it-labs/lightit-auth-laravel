@@ -116,7 +116,7 @@ Route::prefix('2fa')->group(static function (): void {
 3. `POST /2fa/complete`
    - Bearer: setup token
    - Body: `{ "one_time_password": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
+   - Logs the user into the session guard and returns: `{ access_token: null, token_type: "session", expires_in: null }`
 
 **Subsequent logins (2FA already configured):**
 
@@ -126,7 +126,7 @@ Route::prefix('2fa')->group(static function (): void {
 2. `POST /2fa/complete`
    - Bearer: challenge token
    - Body: `{ "one_time_password": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
+   - Logs the user into the session guard and returns: `{ access_token: null, token_type: "session", expires_in: null }`
 
 **Login with a recovery code (lost authenticator):**
 
@@ -136,7 +136,7 @@ Route::prefix('2fa')->group(static function (): void {
 2. `POST /2fa/verify-recovery-code`
    - Bearer: challenge token
    - Body: `{ "recovery_code": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
+   - Logs the user into the session guard and returns: `{ access_token: null, token_type: "session", expires_in: null, remaining_recovery_codes }`
 
 **Reset 2FA (lost authenticator, using a recovery code to regain access):**
 
@@ -146,7 +146,7 @@ Route::prefix('2fa')->group(static function (): void {
 2. `POST /2fa/verify-recovery-code`
    - Bearer: challenge token
    - Body: `{ "recovery_code": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
+   - Logs the user into the session guard and returns: `{ access_token: null, token_type: "session", expires_in: null, remaining_recovery_codes }`
 3. `POST /2fa/request-reset`
    - Bearer: real access token
    - Body: `{ "password": "..." }`
@@ -176,11 +176,11 @@ flowchart TD
     ValidateCreds -- no --> E401[401 Unauthorized]
     ValidateCreds -- yes --> AppHas2FA{2FA enabled?}
 
-    AppHas2FA -- no --> JWT1[Access Token]
+    AppHas2FA -- no --> Session1[Session Established]
     AppHas2FA -- yes --> IsMandatory{2FA mandatory?}
 
     IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
-    UserHas2FA -- no --> JWT2[Access Token]
+    UserHas2FA -- no --> Session2[Session Established]
     UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
 
     IsMandatory -- yes --> IsSetup{2FA configured?}
@@ -193,12 +193,12 @@ flowchart TD
     ChallengeToken --> RecoveryCode[POST /2fa/verify-recovery-code]
 
     Complete -- invalid --> E401_2[401 Unauthorized]
-    Complete -- valid --> JWT3[Access Token]
+    Complete -- valid --> Session3[Session Established]
 
     RecoveryCode -- invalid --> E401_3[401 Unauthorized]
-    RecoveryCode -- valid --> JWT4[Access Token]
+    RecoveryCode -- valid --> Session4[Session Established]
 
-    JWT4 --> Password[POST /2fa/request-reset]
+    Session4 --> Password[POST /2fa/request-reset]
     Password -- invalid --> E401_4[401 Unauthorized]
     Password -- valid --> ResetToken[Re-setup Token]
     ResetToken --> Reset[POST /2fa/reset]

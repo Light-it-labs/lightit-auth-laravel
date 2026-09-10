@@ -6,15 +6,14 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\PasskeyLoginRequest;
-use Lightit\Authentication\App\Resources\LoginResource;
 use Lightit\Authentication\Domain\Actions\PasskeyLoginAction;
 
 final readonly class PasskeyLoginController
 {
     public function __invoke(PasskeyLoginRequest $request, PasskeyLoginAction $passkeyLoginAction): JsonResponse
     {
-        $loginDto = $passkeyLoginAction->execute($request->toDto());
+        $passkeyLoginAction->execute($request->toDto());
 
-        return LoginResource::make($loginDto)->response();
+        return response()->json(status: JsonResponse::HTTP_NO_CONTENT);
     }
 }

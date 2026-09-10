@@ -6,6 +6,8 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\LoginActionPatcher;
+use Lightitlabs\Tools\LoginActionPatchOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -32,6 +34,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
+        private readonly LoginActionPatcher $loginActionPatcher = new LoginActionPatcher,
         private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
@@ -67,17 +70,59 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
+        $this->installLoginAction();
         $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
+    }
+
+    /**
+     * `LoginAction.php` is written by both `SanctumInstaller` (a plain
+     * `guard()->attempt()`) and this installer (the 2FA pipeline) - on an
+     * ordinary `auth:setup` run, Sanctum's plain version is what's on disk by
+     * the time this runs, and it must be replaced with the pipeline version.
+     * Handled separately from the generic `copyAuthFiles()` loop below because
+     * that loop only knows "create if missing", not "replace this specific
+     * sibling installer's output but nothing a consumer touched" - see
+     * `LoginActionPatcher`.
+     */
+    private function installLoginAction(): void
+    {
+        $label = 'src/Authentication/Domain/Actions/LoginAction.php';
+
+        $outcome = $this->loginActionPatcher->install(
+            $this->stubCopier,
+            __DIR__.'/../../Stubs/Sanctum/Auth/Actions/LoginAction.stub',
+            __DIR__.'/../../Stubs/Google2FA/Auth/Actions/LoginAction.stub',
+            base_path($label),
+        );
+
+        match ($outcome) {
+            LoginActionPatchOutcome::Installed => $this->composerInstaller->printFileCreated("Created: {$label}"),
+            LoginActionPatchOutcome::Patched => $this->composerInstaller->printFileCreated(
+                "Replaced {$label} with the 2FA login pipeline."
+            ),
+            LoginActionPatchOutcome::AlreadyApplied => $this->composerInstaller->printFileCreated(
+                "{$label} already carries the 2FA login pipeline."
+            ),
+            LoginActionPatchOutcome::CustomizedSkipped => $this->command->warn(
+                "Skipped {$label}: it no longer matches this package's generated output, so it looks "
+                .'edited. Wire the 2FA pipeline into it by hand - see '
+                .'vendor/light-it-labs/lightit-auth-laravel/src/Stubs/Google2FA/Auth/Actions/LoginAction.stub '
+                .'for the reference implementation.'
+            ),
+            LoginActionPatchOutcome::SourceMissing,
+            LoginActionPatchOutcome::Failed => $this->command->error(
+                "Could not install {$label} ({$outcome->name})."
+            ),
+        };
     }
 
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
-            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
+            '/Actions/Pipes/IssueSessionMarkerIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueSessionMarkerIfNoFinalToken.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',

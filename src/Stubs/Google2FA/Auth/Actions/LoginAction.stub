@@ -8,7 +8,7 @@ use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Pipeline\Pipeline;
 use Lightit\Authentication\Domain\Actions\Pipes\BuildLoginResult;
-use Lightit\Authentication\Domain\Actions\Pipes\IssueAccessTokenIfNoFinalToken;
+use Lightit\Authentication\Domain\Actions\Pipes\IssueSessionMarkerIfNoFinalToken;
 use Lightit\Authentication\Domain\Actions\Pipes\IssueTwoFactorChallengeTokenIfEnabled;
 use Lightit\Authentication\Domain\Actions\Pipes\IssueTwoFactorSetupTokenIfMandatory;
 use Lightit\Authentication\Domain\Actions\Pipes\LoginContext;
@@ -40,7 +40,7 @@ final readonly class LoginAction
                 ResolveUser::class,
                 IssueTwoFactorSetupTokenIfMandatory::class,
                 IssueTwoFactorChallengeTokenIfEnabled::class,
-                IssueAccessTokenIfNoFinalToken::class,
+                IssueSessionMarkerIfNoFinalToken::class,
                 BuildLoginResult::class,
             ])
             ->thenReturn();
