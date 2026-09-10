@@ -47,7 +47,7 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($finder)->toHaveCount(9);
+        expect($finder)->toHaveCount(14);
 
         foreach ($finder as $file) {
             expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))

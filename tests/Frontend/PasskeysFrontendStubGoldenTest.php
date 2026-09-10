@@ -42,7 +42,7 @@ describe('Passkeys frontend stub rendering', function () use ($fixturePath, $stu
         $stubs = glob($stubPath('{,*/,*/*/,*/*/*/}*.stub'), \GLOB_BRACE);
         $renderer = new StubRenderer;
 
-        expect($stubs)->toHaveCount(5);
+        expect($stubs)->toHaveCount(6);
 
         foreach ($stubs as $stub) {
             expect($renderer->render($stub, FrontendStubTokens::defaults()))
