@@ -47,9 +47,14 @@ export default function TwoFactorSetupPage() {
   return (
     <div>
       <h1>Set up two-factor authentication</h1>
-      {/* The backend returns `qr` as a raw SVG string and this package ships no
-          sanitizer - sanitize it (e.g. with DOMPurify) before wiring this up for real. */}
-      <div dangerouslySetInnerHTML={{ __html: data.qr }} />
+      {/* The backend returns `qr` as a raw SVG string. Rendering it through `<img>`
+          off a data URI - instead of `dangerouslySetInnerHTML` - keeps any script or
+          event-handler content inert: an image resource doesn't execute embedded
+          scripts the way inline SVG in the live DOM does. */}
+      <img
+        src={`data:image/svg+xml,${encodeURIComponent(data.qr)}`}
+        alt="Scan this QR code with your authenticator app"
+      />
       <p>Can&apos;t scan the code? Enter this manually: {data.secret}</p>
       <Separator />
       <RecoveryCodes recoveryCodes={data.recoveryCodes} />
