@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./react-project/src/*", "./expected/src/*", "./consumer-stubs/*", "./app-stubs/*"]
+    }
+  },
+  "include": [
+    "react-project/src/**/*.ts",
+    "react-project/src/**/*.tsx",
+    "expected/src/**/*.ts",
+    "expected/src/**/*.tsx",
+    "consumer-stubs/**/*.tsx",
+    "app-stubs/**/*.ts"
+  ]
+}

@@ -83,7 +83,8 @@
         "phpstan:baseline": "vendor/bin/phpstan analyse --memory-limit=4G --generate-baseline",
         "rector": "vendor/bin/rector process --dry-run --ansi",
         "rector:fix": "vendor/bin/rector process --ansi",
-        "fixer": "composer ecs:fix && composer phpstan && composer rector:fix"
+        "fixer": "composer ecs:fix && composer phpstan && composer rector:fix",
+        "tsc": "cd tests/Fixtures/frontend && npm install --no-audit --no-fund && npx tsc --noEmit"
     },
     "config": {
         "sort-packages": true,
