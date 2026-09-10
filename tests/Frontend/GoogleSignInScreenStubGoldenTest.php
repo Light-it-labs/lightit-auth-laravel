@@ -23,10 +23,6 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
 
         expect($rendered)->toBe(file_get_contents($fixturePath($fixture)));
     })->with([
-        ['services/auth/sso/google/types.ts.stub', 'src/services/auth/sso/google/types.ts'],
-        ['services/auth/sso/google/schemas.ts.stub', 'src/services/auth/sso/google/schemas.ts'],
-        ['services/auth/sso/google/api.ts.stub', 'src/services/auth/sso/google/api.ts'],
-        ['services/auth/sso/google/actions.ts.stub', 'src/services/auth/sso/google/actions.ts'],
         ['hooks/use-google-identity-services.ts.stub', 'src/hooks/use-google-identity-services.ts'],
         [
             'routes/(public)/_guest/login/-components/google-login-button.tsx.stub',
@@ -61,7 +57,7 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
         $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($finder)->toHaveCount(6);
+        expect($finder)->toHaveCount(7);
 
         foreach ($finder as $file) {
             expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))

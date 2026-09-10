@@ -32,6 +32,14 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         'services/auth/sso/google/schemas.ts.stub' => 'src/services/auth/sso/google/schemas.ts',
         'services/auth/sso/google/api.ts.stub' => 'src/services/auth/sso/google/api.ts',
         'services/auth/sso/google/actions.ts.stub' => 'src/services/auth/sso/google/actions.ts',
+    ];
+
+    /**
+     * Screens and hooks, unlike the service layer and the TODO doc above, are not
+     * stamped with the provenance marker - they are meant to be edited freely as
+     * soon as they land, not recognised later as this package's own output.
+     */
+    private const SCREEN_FILES = [
         'hooks/use-google-identity-services.ts.stub' => 'src/hooks/use-google-identity-services.ts',
         'routes/(public)/_guest/login/-components/google-login-button.tsx.stub' => 'src/routes/(public)/_guest/login/-components/google-login-button.tsx',
     ];
@@ -67,10 +75,14 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         $tokens = $this->tokens($root);
 
         foreach (self::FILES as $stub => $relative) {
-            $this->write($root, $stub, $relative, $tokens);
+            $this->write($root, $stub, $relative, $tokens, $this->originMarker);
         }
 
-        $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
+        $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens, $this->originMarker);
+
+        foreach (self::SCREEN_FILES as $stub => $relative) {
+            $this->write($root, $stub, $relative, $tokens);
+        }
 
         $this->patchEnv($root);
 
@@ -82,7 +94,7 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
     /**
      * @param  array<string, string>  $tokens
      */
-    private function write(string $root, string $stub, string $relative, array $tokens): void
+    private function write(string $root, string $stub, string $relative, array $tokens, ?OriginMarker $marker = null): void
     {
         $destination = $this->locator->resolveDestination($root, $relative);
 
@@ -90,7 +102,7 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
             $this->command->warn("Overwriting: {$relative}");
         }
 
-        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens, $this->originMarker);
+        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens, $marker);
 
         $this->command->line("Created: {$relative}");
     }

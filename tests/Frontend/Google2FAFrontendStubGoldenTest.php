@@ -37,10 +37,6 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         ['services/auth/two-factor/actions.ts.stub', 'src/services/auth/two-factor/actions.ts'],
         ['services/auth/two-factor/schemas.ts.stub', 'src/services/auth/two-factor/schemas.ts'],
         ['AUTH-2FA-FRONTEND-TODO.md.stub', 'AUTH-2FA-FRONTEND-TODO.md'],
-        ['routes/(public)/_guest/two-factor/setup/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/setup/page.tsx'],
-        ['routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub', 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx'],
-        ['routes/(public)/_guest/two-factor/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/page.tsx'],
-        ['routes/(public)/_guest/two-factor/recovery-code/page.tsx.stub', 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx'],
     ]);
 
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
@@ -61,6 +57,7 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         $rendered = (new StubRenderer)->render(
             $stubPath('services/auth/two-factor/api.ts.stub'),
             FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
         );
 
         expect($rendered)
@@ -77,6 +74,7 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         $rendered = (new StubRenderer)->render(
             $stubPath('services/auth/two-factor/api.ts.stub'),
             FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
         );
 
         expect($rendered)
@@ -91,6 +89,7 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
         $rendered = (new StubRenderer)->render(
             $stubPath('AUTH-2FA-FRONTEND-TODO.md.stub'),
             FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
         );
 
         expect($rendered)

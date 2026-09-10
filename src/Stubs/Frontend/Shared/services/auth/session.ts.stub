@@ -1,7 +1,7 @@
 type PersistableSession = {
   accessToken: string;
-  tokenType: "Bearer";
-  expiresIn: number;
+  tokenType: string;
+  expiresIn: number | null;
 };
 
 // In-memory only, by design: persisting to localStorage/sessionStorage is a decision

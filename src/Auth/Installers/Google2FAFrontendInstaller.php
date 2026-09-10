@@ -29,6 +29,14 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'services/auth/two-factor/schemas.ts.stub' => 'src/services/auth/two-factor/schemas.ts',
         'services/auth/two-factor/api.ts.stub' => 'src/services/auth/two-factor/api.ts',
         'services/auth/two-factor/actions.ts.stub' => 'src/services/auth/two-factor/actions.ts',
+    ];
+
+    /**
+     * Screens, unlike the service layer and the TODO doc above, are not stamped
+     * with the provenance marker - they are meant to be edited freely as soon as
+     * they land, not recognised later as this package's own output.
+     */
+    private const SCREEN_FILES = [
         'routes/(public)/_guest/two-factor/setup/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/setup/page.tsx',
         'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
         'routes/(public)/_guest/two-factor/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/page.tsx',
@@ -40,6 +48,8 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
      * result through this seam (see AUTH-2FA-FRONTEND-TODO.md). It is generated
      * from here only because this is currently the package's one active frontend
      * installer; a future non-2FA login method would need to trigger it too.
+     *
+     * Unmarked for the same reason as SCREEN_FILES above.
      */
     private const SHARED_FILES = [
         'services/auth/session.ts.stub' => 'src/services/auth/session.ts',
@@ -80,6 +90,10 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         $tokens = $this->tokens($root);
 
         foreach (self::FILES as $stub => $relative) {
+            $this->write($root, self::stubDirectory().'/'.$stub, $relative, $tokens, $this->originMarker);
+        }
+
+        foreach (self::SCREEN_FILES as $stub => $relative) {
             $this->write($root, self::stubDirectory().'/'.$stub, $relative, $tokens);
         }
 
@@ -87,7 +101,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->write($root, self::sharedStubDirectory().'/'.$stub, $relative, $tokens);
         }
 
-        $this->write($root, self::stubDirectory().'/'.self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
+        $this->write($root, self::stubDirectory().'/'.self::TODO_FILE.'.stub', self::TODO_FILE, $tokens, $this->originMarker);
 
         $this->command->info(
             'Frontend two-factor authentication layer generated. Read '.self::TODO_FILE.' before building the screens.'
@@ -97,7 +111,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     /**
      * @param  array<string, string>  $tokens
      */
-    private function write(string $root, string $stubPath, string $relative, array $tokens): void
+    private function write(string $root, string $stubPath, string $relative, array $tokens, ?OriginMarker $marker = null): void
     {
         $destination = $this->locator->resolveDestination($root, $relative);
 
@@ -105,7 +119,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->command->warn("Overwriting: {$relative}");
         }
 
-        $this->stubRenderer->renderTo($stubPath, $destination, $tokens, $this->originMarker);
+        $this->stubRenderer->renderTo($stubPath, $destination, $tokens, $marker);
 
         $this->command->line("Created: {$relative}");
     }
