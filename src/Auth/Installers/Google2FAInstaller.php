@@ -13,7 +13,6 @@ use Lightitlabs\Tools\NativeLoginInjectionOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
-use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -67,9 +66,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->ensureUserModelSupportsTwoFactor();
-
         $this->createAuthFiles();
+
+        $this->warnIfUserModelCannotSupportTwoFactor();
+
         $this->publishConfiguration();
         $this->copyMigration();
         $this->copyConfigFiles();
@@ -84,27 +84,34 @@ final class Google2FAInstaller implements AuthInstallerInterface
      * `true`, so `TwoFactorLoginGate::guardAgainstChallenge()` - wired into
      * every login by either the generated pipeline or
      * `NativeLoginActionInjector` - calls `TwoFactorAuthenticatable`-only
-     * methods on the very next login after this install, with no config
-     * change required to hit it. There is nothing safe to auto-patch here:
-     * unlike `LoginAction.php`, this is the consumer's already-customized
-     * User model, and rewriting its `extends` clause is a much heavier,
-     * riskier edit than appending one guarded call to a login method (see
-     * `NativeLoginActionInjector`). Failing the whole install loudly, before
-     * a single 2FA file is written, is preferred over a TODO note that's
-     * easy to skip past.
+     * methods on the very next login, with no config change required to hit
+     * it. There is nothing safe to auto-patch here: unlike `LoginAction.php`,
+     * this is the consumer's already-customized User model, and rewriting
+     * its `extends` clause is a much heavier, riskier edit than appending
+     * one guarded call to a login method (see `NativeLoginActionInjector`).
      *
-     * @throws RuntimeException
+     * Must run after `createAuthFiles()`: that's what writes
+     * `TwoFactorAuthenticatable.php` in the first place, so checking before
+     * it exists can never pass - see docs/google-2fa.md, which documents
+     * extending it as a manual step done once the rest of `auth:setup`
+     * (this method's caller) has already finished. A warning, not a thrown
+     * exception, for the same reason: the docs treat this as a normal
+     * follow-up step, not a precondition, so the rest of the install -
+     * config, migration, lang files, routes - should still complete instead
+     * of being left half-written over something the consumer fixes after.
      */
-    private function ensureUserModelSupportsTwoFactor(
+    private function warnIfUserModelCannotSupportTwoFactor(
         string $userModelClass = self::USER_MODEL_CLASS,
         string $requiredParentClass = self::TWO_FACTOR_AUTHENTICATABLE_CLASS,
     ): void {
         if (! class_exists($userModelClass)) {
-            throw new RuntimeException(
+            $this->command->warn(
                 "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
                 ."extend {$requiredParentClass} - without it, every login throws BadMethodCallException as "
                 .'soon as 2FA is wired in.'
             );
+
+            return;
         }
 
         $ancestors = class_parents($userModelClass);
@@ -113,11 +120,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
-        throw new RuntimeException(
+        $this->command->warn(
             "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
             ."to true in config/google2fa.php, so every login calls {$requiredParentClass}-only methods on "
             .'this class and throws BadMethodCallException. Change '.$userModelClass.' to extend '
-            .$requiredParentClass.' (instead of Authenticatable) and re-run auth:setup.'
+            .$requiredParentClass.' (instead of Authenticatable) before your first login - see step 2 in '
+            .'docs/google-2fa.md.'
         );
     }
 
