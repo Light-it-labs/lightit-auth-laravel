@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { Icons } from "@/components/ui/icons";
 
 type RecoveryCodesProps = {
@@ -35,11 +35,7 @@ export const RecoveryCodes = ({ recoveryCodes }: RecoveryCodesProps) => {
         {copyState === "copied" ? "Copied" : "Copy codes"}
       </Button>
       {copyState === "failed" && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            Couldn&apos;t copy the codes automatically. Select and copy them manually instead.
-          </AlertDescription>
-        </Alert>
+        <ErrorMessage errorMessage="Couldn't copy the codes automatically. Select and copy them manually instead." />
       )}
     </div>
   );

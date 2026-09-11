@@ -1,8 +1,7 @@
 import { useEffect, type FormEvent } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { useSetupTwoFactor } from "@/services/auth/two-factor/actions";
 import { RecoveryCodes } from "../-components/recovery-codes";
 
@@ -10,7 +9,7 @@ type SetupSearch = {
   token: string;
 };
 
-export default function TwoFactorSetupPage() {
+const TwoFactorSetupPage = () => {
   const { token } = useSearch({ strict: false }) as unknown as SetupSearch;
   const navigate = useNavigate();
   const { mutate, data, isPending, isError } = useSetupTwoFactor();
@@ -56,9 +55,11 @@ export default function TwoFactorSetupPage() {
         alt="Scan this QR code with your authenticator app"
       />
       <p>Can&apos;t scan the code? Enter this manually: {data.secret}</p>
-      <Separator />
+      <hr />
       <RecoveryCodes recoveryCodes={data.recoveryCodes} />
       <Button onClick={handleContinue}>Continue</Button>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/setup/")({ component: TwoFactorSetupPage });

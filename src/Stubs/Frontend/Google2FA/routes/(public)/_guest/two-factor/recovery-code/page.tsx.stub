@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { persistSession } from "@/services/auth/session";
 import { useVerifyRecoveryCode } from "@/services/auth/two-factor/actions";
@@ -13,7 +12,7 @@ type RecoveryCodeSearch = {
   token: string;
 };
 
-export default function TwoFactorRecoveryCodePage() {
+const TwoFactorRecoveryCodePage = () => {
   const { token } = useSearch({ strict: false }) as unknown as RecoveryCodeSearch;
   const navigate = useNavigate();
 
@@ -47,12 +46,9 @@ export default function TwoFactorRecoveryCodePage() {
     return (
       <div>
         {remainingRecoveryCodes <= 1 ? (
-          <Alert variant="destructive">
-            <AlertDescription>
-              You have {remainingRecoveryCodes} recovery code left. Generate new ones from your account
-              settings.
-            </AlertDescription>
-          </Alert>
+          <ErrorMessage
+            errorMessage={`You have ${remainingRecoveryCodes} recovery code left. Generate new ones from your account settings.`}
+          />
         ) : null}
         <Button onClick={() => void navigate({ to: "/" })}>Continue</Button>
       </div>
@@ -62,26 +58,22 @@ export default function TwoFactorRecoveryCodePage() {
   return (
     <div>
       <h1>Use a recovery code</h1>
-      <Form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <Input
           value={recoveryCode}
           onChange={(event) => setRecoveryCode(event.target.value)}
           aria-label="Recovery code"
         />
-        {validationError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{validationError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>That recovery code didn&apos;t work.</AlertDescription>
-          </Alert>
-        ) : null}
+        <ErrorMessage errorMessage={validationError ?? undefined} />
+        {isError ? <ErrorMessage errorMessage="That recovery code didn't work." /> : null}
         <Button type="submit" disabled={isPending}>
           Verify
         </Button>
-      </Form>
+      </form>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/recovery-code/")({
+  component: TwoFactorRecoveryCodePage,
+});

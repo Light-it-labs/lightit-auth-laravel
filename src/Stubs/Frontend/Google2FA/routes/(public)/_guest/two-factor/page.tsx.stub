@@ -1,9 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { persistSession } from "@/services/auth/session";
 import { useCompleteTwoFactor } from "@/services/auth/two-factor/actions";
@@ -14,7 +13,7 @@ type ChallengeSearch = {
   flow?: "setup" | "login";
 };
 
-export default function TwoFactorChallengePage() {
+const TwoFactorChallengePage = () => {
   const { token, flow } = useSearch({ strict: false }) as unknown as ChallengeSearch;
   const navigate = useNavigate();
   const isSetupFlow = flow === "setup";
@@ -48,7 +47,7 @@ export default function TwoFactorChallengePage() {
   return (
     <div>
       <h1>{isSetupFlow ? "Confirm two-factor setup" : "Enter your two-factor code"}</h1>
-      <Form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <Input
           value={oneTimePassword}
           onChange={(event) => setOneTimePassword(event.target.value)}
@@ -56,23 +55,17 @@ export default function TwoFactorChallengePage() {
           maxLength={6}
           aria-label="Two-factor authentication code"
         />
-        {validationError ? (
-          <Alert variant="destructive">
-            <AlertDescription>{validationError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {isError ? (
-          <Alert variant="destructive">
-            <AlertDescription>That code didn&apos;t work. Try again.</AlertDescription>
-          </Alert>
-        ) : null}
+        <ErrorMessage errorMessage={validationError ?? undefined} />
+        {isError ? <ErrorMessage errorMessage="That code didn't work. Try again." /> : null}
         <Button type="submit" disabled={isPending}>
           Confirm
         </Button>
-      </Form>
+      </form>
       <Link to="/two-factor/recovery-code" search={recoveryCodeSearch}>
         Lost your device? Use a recovery code
       </Link>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/")({ component: TwoFactorChallengePage });
