@@ -13,6 +13,7 @@ use Lightitlabs\Tools\NativeLoginInjectionOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -61,9 +62,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
             'pragmarx/google2fa-qrcode',
             'bacon/bacon-qr-code',
         ])) {
-            $this->command->error('Installing Google 2FA laravel and QR Code');
-
-            return;
+            throw new RuntimeException(
+                'Could not install pragmarx/google2fa-laravel, pragmarx/google2fa-qrcode, and bacon/bacon-qr-code '
+                .'via composer, so 2FA was not set up. Run `composer require pragmarx/google2fa-laravel '
+                .'pragmarx/google2fa-qrcode bacon/bacon-qr-code` yourself, then re-run `php artisan auth:setup` '
+                .'to finish setting up 2FA.'
+            );
         }
 
         $this->createAuthFiles();
