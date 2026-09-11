@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/error-message";
-import { Icons } from "@/components/ui/icons";
 
 type RecoveryCodesProps = {
   recoveryCodes: string[];
@@ -31,7 +30,6 @@ export const RecoveryCodes = ({ recoveryCodes }: RecoveryCodesProps) => {
         ))}
       </ul>
       <Button type="button" onClick={() => void handleCopy()}>
-        <Icons.copy aria-hidden="true" />
         {copyState === "copied" ? "Copied" : "Copy codes"}
       </Button>
       {copyState === "failed" && (
