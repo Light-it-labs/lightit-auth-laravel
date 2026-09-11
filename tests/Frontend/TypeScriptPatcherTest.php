@@ -245,6 +245,26 @@ describe('TypeScriptPatcher', function (): void {
             ->and(TypeScriptPatchOutcome::AlreadyApplied->needsManualStep())->toBeFalse();
     });
 
+    it('does not skip patching when the constant name only appears in a comment', function () use (
+        $patch
+    ): void {
+        expect($patch($this->path, <<<'TS'
+            // See CSRF_TOKEN_MISMATCH handling in the auth docs.
+            import { HttpStatusCode } from "axios";
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized].includes(error.response.status);
+
+            TS))->toBe(<<<'TS'
+            // See CSRF_TOKEN_MISMATCH handling in the auth docs.
+            import { HttpStatusCode } from "axios";
+
+            const CSRF_TOKEN_MISMATCH = 419;
+
+            export const retry = (error) => [HttpStatusCode.Unauthorized, CSRF_TOKEN_MISMATCH].includes(error.response.status);
+
+            TS);
+    });
+
     it('does not treat an unrelated 419 as an applied patch', function () use ($patch): void {
         expect($patch($this->path, <<<'TS'
             import { HttpStatusCode } from "axios";

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubRenderer;
+use Symfony\Component\Finder\Finder;
 
 // Fixed so the golden fixtures stay stable across CI runs regardless of the
 // package's real installed version.
@@ -39,21 +40,28 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
     ]);
 
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
-        $stubs = glob($stubPath('{,*/,*/*/,*/*/*/}*.stub'), \GLOB_BRACE);
+        $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
         $renderer = new StubRenderer;
 
-        expect($stubs)->toHaveCount(5);
+        expect($finder)->toHaveCount(9);
 
-        foreach ($stubs as $stub) {
-            expect($renderer->render($stub, FrontendStubTokens::defaults()))
+        foreach ($finder as $file) {
+            expect($renderer->render($file->getPathname(), FrontendStubTokens::defaults()))
                 ->not->toMatch('/\{\{\s*[a-z][a-zA-Z]*\s*\}\}/');
         }
     });
 
     it('routes the two adaptations from idr-front at the package\'s own paths, not idr-front\'s', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/two-factor/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
             ->toContain('"2fa/verify-recovery-code"')
             ->toContain('"2fa/regenerate-recovery-codes"')
             ->not->toContain('auth/verify-recovery-code')
@@ -61,18 +69,65 @@ describe('Google2FA frontend stub rendering', function () use ($fixturePath, $st
     });
 
     it('attaches a manual Authorization header per call instead of a shared authenticated client', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('services/auth/two-factor/api.ts.stub'),
+            FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('src/services/auth/two-factor/api.ts')))
             ->toContain('Authorization: `Bearer ${token}`')
             ->not->toContain('withCredentials');
     });
 
     it('spells the provenance marker so cspell can tokenize it', function () use (
-        $fixturePath
+        $fixturePath, $stubPath
     ): void {
-        expect(file_get_contents($fixturePath('AUTH-2FA-FRONTEND-TODO.md')))
+        $rendered = (new StubRenderer)->render(
+            $stubPath('AUTH-2FA-FRONTEND-TODO.md.stub'),
+            FrontendStubTokens::defaults(),
+            new OriginMarker(GOLDEN_TEST_MARKER_VERSION),
+        );
+
+        expect($rendered)
+            ->toBe(file_get_contents($fixturePath('AUTH-2FA-FRONTEND-TODO.md')))
             ->toContain('light-it')
             ->not->toContain('lightit');
+    });
+});
+
+describe('Shared frontend stub rendering', function () use ($fixturePath): void {
+    $sharedStubPath = static function (string $relative): string {
+        return __DIR__.'/../../src/Stubs/Frontend/Shared/'.$relative;
+    };
+
+    it('renders the session seam stub byte-for-byte against its golden fixture', function () use (
+        $fixturePath, $sharedStubPath
+    ): void {
+        $rendered = (new StubRenderer)->render(
+            $sharedStubPath('services/auth/session.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)->toBe(file_get_contents($fixturePath('src/services/auth/session.ts')));
+    });
+
+    it('never exposes accessToken to callers - only persistSession/clearSession/getAccessToken', function () use (
+        $sharedStubPath
+    ): void {
+        $rendered = (new StubRenderer)->render(
+            $sharedStubPath('services/auth/session.ts.stub'),
+            FrontendStubTokens::defaults(),
+        );
+
+        expect($rendered)
+            ->toContain('export const persistSession')
+            ->toContain('export const clearSession')
+            ->toContain('export const getAccessToken')
+            ->not->toContain('export const accessToken')
+            ->not->toContain('export let accessToken');
     });
 });
