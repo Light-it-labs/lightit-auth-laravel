@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -8,13 +9,8 @@ import { persistSession } from "@/services/auth/session";
 import { useCompleteTwoFactor } from "@/services/auth/two-factor/actions";
 import { getOneTimePasswordSchema } from "@/services/auth/two-factor/schemas";
 
-type ChallengeSearch = {
-  token: string;
-  flow?: "setup" | "login";
-};
-
 const TwoFactorChallengePage = () => {
-  const { token, flow } = useSearch({ strict: false }) as unknown as ChallengeSearch;
+  const { token, flow } = Route.useSearch();
   const navigate = useNavigate();
   const isSetupFlow = flow === "setup";
   const recoveryCodeSearch = { token };
@@ -68,4 +64,10 @@ const TwoFactorChallengePage = () => {
   );
 };
 
-export const Route = createFileRoute("/(public)/_guest/two-factor/")({ component: TwoFactorChallengePage });
+export const Route = createFileRoute("/(public)/_guest/two-factor/")({
+  component: TwoFactorChallengePage,
+  validateSearch: z.object({
+    token: z.string(),
+    flow: z.enum(["setup", "login"]).optional(),
+  }),
+});

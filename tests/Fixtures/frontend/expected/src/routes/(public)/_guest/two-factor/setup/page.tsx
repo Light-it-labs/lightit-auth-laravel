@@ -1,16 +1,13 @@
 import { useEffect, type FormEvent } from "react";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { useSetupTwoFactor } from "@/services/auth/two-factor/actions";
 import { RecoveryCodes } from "../-components/recovery-codes";
 
-type SetupSearch = {
-  token: string;
-};
-
 const TwoFactorSetupPage = () => {
-  const { token } = useSearch({ strict: false }) as unknown as SetupSearch;
+  const { token } = Route.useSearch();
   const navigate = useNavigate();
   const { mutate, data, isPending, isError } = useSetupTwoFactor();
 
@@ -62,4 +59,9 @@ const TwoFactorSetupPage = () => {
   );
 };
 
-export const Route = createFileRoute("/(public)/_guest/two-factor/setup/")({ component: TwoFactorSetupPage });
+export const Route = createFileRoute("/(public)/_guest/two-factor/setup/")({
+  component: TwoFactorSetupPage,
+  validateSearch: z.object({
+    token: z.string(),
+  }),
+});

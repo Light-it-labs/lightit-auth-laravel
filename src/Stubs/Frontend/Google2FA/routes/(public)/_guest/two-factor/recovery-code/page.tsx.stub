@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/error-message";
@@ -8,12 +9,8 @@ import { persistSession } from "@/services/auth/session";
 import { useVerifyRecoveryCode } from "@/services/auth/two-factor/actions";
 import { getRecoveryCodeSchema } from "@/services/auth/two-factor/schemas";
 
-type RecoveryCodeSearch = {
-  token: string;
-};
-
 const TwoFactorRecoveryCodePage = () => {
-  const { token } = useSearch({ strict: false }) as unknown as RecoveryCodeSearch;
+  const { token } = Route.useSearch();
   const navigate = useNavigate();
 
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -76,4 +73,7 @@ const TwoFactorRecoveryCodePage = () => {
 
 export const Route = createFileRoute("/(public)/_guest/two-factor/recovery-code/")({
   component: TwoFactorRecoveryCodePage,
+  validateSearch: z.object({
+    token: z.string(),
+  }),
 });
