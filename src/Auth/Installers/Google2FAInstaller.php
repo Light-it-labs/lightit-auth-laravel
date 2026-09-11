@@ -13,6 +13,7 @@ use Lightitlabs\Tools\NativeLoginInjectionOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -30,6 +31,19 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const ROUTES_LABEL = 'two-factor authentication';
 
     private const ROUTES_FILE_NAME = 'two-factor-auth.php';
+
+    /**
+     * The consuming boilerplate's own User model - the same FQCN every
+     * generated 2FA stub already assumes (see ResolveUser.stub,
+     * LoginContext.stub). `TwoFactorLoginGate::guardAgainstChallenge()`,
+     * wired into that boilerplate's own native login by
+     * `NativeLoginActionInjector`, calls methods that only exist on
+     * `TwoFactorAuthenticatable` - if this class doesn't extend it, every
+     * login throws `BadMethodCallException` the moment 2FA is enabled.
+     */
+    private const USER_MODEL_CLASS = 'Lightit\\Users\\Domain\\Models\\User';
+
+    private const TWO_FACTOR_AUTHENTICATABLE_CLASS = 'Lightit\\Authentication\\Domain\\TwoFactorAuthenticatable';
 
     public function __construct(
         private readonly Command $command,
@@ -53,6 +67,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
+        $this->ensureUserModelSupportsTwoFactor();
+
         $this->createAuthFiles();
         $this->publishConfiguration();
         $this->copyMigration();
@@ -61,6 +77,48 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->registerRoutes();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
+    }
+
+    /**
+     * `config/google2fa.php`'s `enabled` and `mandatory` both default to
+     * `true`, so `TwoFactorLoginGate::guardAgainstChallenge()` - wired into
+     * every login by either the generated pipeline or
+     * `NativeLoginActionInjector` - calls `TwoFactorAuthenticatable`-only
+     * methods on the very next login after this install, with no config
+     * change required to hit it. There is nothing safe to auto-patch here:
+     * unlike `LoginAction.php`, this is the consumer's already-customized
+     * User model, and rewriting its `extends` clause is a much heavier,
+     * riskier edit than appending one guarded call to a login method (see
+     * `NativeLoginActionInjector`). Failing the whole install loudly, before
+     * a single 2FA file is written, is preferred over a TODO note that's
+     * easy to skip past.
+     *
+     * @throws RuntimeException
+     */
+    private function ensureUserModelSupportsTwoFactor(
+        string $userModelClass = self::USER_MODEL_CLASS,
+        string $requiredParentClass = self::TWO_FACTOR_AUTHENTICATABLE_CLASS,
+    ): void {
+        if (! class_exists($userModelClass)) {
+            throw new RuntimeException(
+                "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
+                ."extend {$requiredParentClass} - without it, every login throws BadMethodCallException as "
+                .'soon as 2FA is wired in.'
+            );
+        }
+
+        $ancestors = class_parents($userModelClass);
+
+        if ($ancestors !== false && in_array($requiredParentClass, $ancestors, true)) {
+            return;
+        }
+
+        throw new RuntimeException(
+            "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
+            ."to true in config/google2fa.php, so every login calls {$requiredParentClass}-only methods on "
+            .'this class and throws BadMethodCallException. Change '.$userModelClass.' to extend '
+            .$requiredParentClass.' (instead of Authenticatable) and re-run auth:setup.'
+        );
     }
 
     private function createAuthFiles(): void
