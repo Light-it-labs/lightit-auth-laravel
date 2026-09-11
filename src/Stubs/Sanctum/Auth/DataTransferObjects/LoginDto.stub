@@ -7,7 +7,7 @@ namespace Lightit\Authentication\Domain\DataTransferObjects;
 readonly class LoginDto
 {
     public function __construct(
-        public string $accessToken,
+        public string|null $accessToken,
         public string $tokenType,
         public int|null $expiresIn = null,
     ) {
