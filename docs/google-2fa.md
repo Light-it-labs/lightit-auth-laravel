@@ -176,33 +176,40 @@ flowchart TD
     ValidateCreds -- no --> E401[401 Unauthorized]
     ValidateCreds -- yes --> AppHas2FA{2FA enabled?}
 
-    AppHas2FA -- no --> JWT1[Access Token]
+    AppHas2FA -- no --> AccessToken[Access Token]
     AppHas2FA -- yes --> IsMandatory{2FA mandatory?}
 
     IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
-    UserHas2FA -- no --> JWT2[Access Token]
+    UserHas2FA -- no --> AccessToken
     UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
 
     IsMandatory -- yes --> IsSetup{2FA configured?}
     IsSetup -- no --> SetupToken[2FA Setup Token]
+    IsSetup -- yes --> ChallengeToken
+
     SetupToken --> Setup[POST /2fa/setup]
     Setup --> Complete
 
-    IsSetup -- yes --> ChallengeToken
     ChallengeToken --> Complete[POST /2fa/complete]
     ChallengeToken --> RecoveryCode[POST /2fa/verify-recovery-code]
 
-    Complete -- invalid --> E401_2[401 Unauthorized]
-    Complete -- valid --> JWT3[Access Token]
+    Complete -- invalid --> E401
+    Complete -- valid --> AccessToken
+    RecoveryCode -- invalid --> E401
+    RecoveryCode -- valid --> AccessToken
 
-    RecoveryCode -- invalid --> E401_3[401 Unauthorized]
-    RecoveryCode -- valid --> JWT4[Access Token]
+    AccessToken --> RequestReset[POST /2fa/request-reset]
+    AccessToken --> Regenerate[POST /2fa/regenerate-recovery-codes]
+    AccessToken --> Disable[POST /2fa/disable]
 
-    JWT4 --> Password[POST /2fa/request-reset]
-    Password -- invalid --> E401_4[401 Unauthorized]
-    Password -- valid --> ResetToken[Re-setup Token]
+    RequestReset -- wrong password --> E401
+    RequestReset -- valid --> ResetToken[Re-setup Token]
     ResetToken --> Reset[POST /2fa/reset]
-    Reset --> Cleared[2FA Cleared]
+    Reset --> Cleared[2FA cleared]
+
+    Regenerate -- valid --> NewCodes[New recovery codes]
+    Disable -- 2FA is mandatory --> E403[403 Forbidden]
+    Disable -- valid --> Disabled[2FA disabled]
 ```
 
 ---
