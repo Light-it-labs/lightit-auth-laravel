@@ -73,7 +73,7 @@ class UnauthorizedException extends HttpException
 
 #### 5. Configure the authentication guard
 
-Follow the guard configuration from your chosen driver — see [JWT setup](jwt.md#3-update-environment-and-config) or [Sanctum setup](sanctum.md#3-update-environment-and-config).
+Follow the guard configuration from your chosen driver — see [Sanctum setup](sanctum.md#3-update-environment-and-config).
 
 #### 6. Define 2FA-related routes
 
@@ -170,39 +170,53 @@ Route::prefix('2fa')->group(static function (): void {
    - Returns: `{ data: { message } }`
    - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
 
+**Logging in**
+
 ```mermaid
 flowchart TD
     Login[POST /login] --> ValidateCreds{Valid credentials?}
     ValidateCreds -- no --> E401[401 Unauthorized]
     ValidateCreds -- yes --> AppHas2FA{2FA enabled?}
 
-    AppHas2FA -- no --> JWT1[Access Token]
+    AppHas2FA -- no --> AccessToken[Access Token]
     AppHas2FA -- yes --> IsMandatory{2FA mandatory?}
 
     IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
-    UserHas2FA -- no --> JWT2[Access Token]
+    UserHas2FA -- no --> AccessToken
     UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
 
     IsMandatory -- yes --> IsSetup{2FA configured?}
     IsSetup -- no --> SetupToken[2FA Setup Token]
-    SetupToken --> Setup[POST /2fa/setup]
-    Setup --> Complete
-
     IsSetup -- yes --> ChallengeToken
-    ChallengeToken --> Complete[POST /2fa/complete]
+
+    SetupToken --> Setup[POST /2fa/setup]
+    Setup --> Complete[POST /2fa/complete]
+
+    ChallengeToken --> Complete
     ChallengeToken --> RecoveryCode[POST /2fa/verify-recovery-code]
 
-    Complete -- invalid --> E401_2[401 Unauthorized]
-    Complete -- valid --> JWT3[Access Token]
+    Complete -- invalid --> E401
+    Complete -- valid --> AccessToken
+    RecoveryCode -- invalid --> E401
+    RecoveryCode -- valid --> AccessToken
+```
 
-    RecoveryCode -- invalid --> E401_3[401 Unauthorized]
-    RecoveryCode -- valid --> JWT4[Access Token]
+**Managing 2FA once logged in.** These are separate requests made later, each
+authenticated with the access token above and confirmed with the account password.
 
-    JWT4 --> Password[POST /2fa/request-reset]
-    Password -- invalid --> E401_4[401 Unauthorized]
-    Password -- valid --> ResetToken[Re-setup Token]
+```mermaid
+flowchart TD
+    Regenerate[POST /2fa/regenerate-recovery-codes] -- wrong password --> E401[401 Unauthorized]
+    Regenerate -- valid --> NewCodes[New recovery codes]
+
+    Disable[POST /2fa/disable] -- 2FA is mandatory --> E403[403 Forbidden]
+    Disable -- wrong password --> E401
+    Disable -- valid --> Disabled[2FA disabled]
+
+    RequestReset[POST /2fa/request-reset] -- wrong password --> E401
+    RequestReset -- valid --> ResetToken[Re-setup Token]
     ResetToken --> Reset[POST /2fa/reset]
-    Reset --> Cleared[2FA Cleared]
+    Reset --> Cleared[2FA cleared]
 ```
 
 ---
