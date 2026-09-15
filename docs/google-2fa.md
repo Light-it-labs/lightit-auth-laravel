@@ -170,6 +170,8 @@ Route::prefix('2fa')->group(static function (): void {
    - Returns: `{ data: { message } }`
    - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
 
+**Logging in**
+
 ```mermaid
 flowchart TD
     Login[POST /login] --> ValidateCreds{Valid credentials?}
@@ -188,28 +190,33 @@ flowchart TD
     IsSetup -- yes --> ChallengeToken
 
     SetupToken --> Setup[POST /2fa/setup]
-    Setup --> Complete
+    Setup --> Complete[POST /2fa/complete]
 
-    ChallengeToken --> Complete[POST /2fa/complete]
+    ChallengeToken --> Complete
     ChallengeToken --> RecoveryCode[POST /2fa/verify-recovery-code]
 
     Complete -- invalid --> E401
     Complete -- valid --> AccessToken
     RecoveryCode -- invalid --> E401
     RecoveryCode -- valid --> AccessToken
+```
 
-    AccessToken --> RequestReset[POST /2fa/request-reset]
-    AccessToken --> Regenerate[POST /2fa/regenerate-recovery-codes]
-    AccessToken --> Disable[POST /2fa/disable]
+**Managing 2FA once logged in.** These are separate requests made later, each
+authenticated with the access token above and confirmed with the account password.
 
-    RequestReset -- wrong password --> E401
+```mermaid
+flowchart TD
+    Regenerate[POST /2fa/regenerate-recovery-codes] -- wrong password --> E401[401 Unauthorized]
+    Regenerate -- valid --> NewCodes[New recovery codes]
+
+    Disable[POST /2fa/disable] -- 2FA is mandatory --> E403[403 Forbidden]
+    Disable -- wrong password --> E401
+    Disable -- valid --> Disabled[2FA disabled]
+
+    RequestReset[POST /2fa/request-reset] -- wrong password --> E401
     RequestReset -- valid --> ResetToken[Re-setup Token]
     ResetToken --> Reset[POST /2fa/reset]
     Reset --> Cleared[2FA cleared]
-
-    Regenerate -- valid --> NewCodes[New recovery codes]
-    Disable -- 2FA is mandatory --> E403[403 Forbidden]
-    Disable -- valid --> Disabled[2FA disabled]
 ```
 
 ---
