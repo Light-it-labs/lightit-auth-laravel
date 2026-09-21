@@ -16,6 +16,10 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
 {
     private const ENV_FILE = 'src/config/env.ts';
 
+    private const SESSION_STUB = __DIR__.'/../../Stubs/Frontend/Shared/services/auth/session.ts.stub';
+
+    private const SESSION_RELATIVE = 'src/services/auth/session.ts';
+
     private const FILES = [
         'services/auth/sso/google/types.ts.stub' => 'src/services/auth/sso/google/types.ts',
         'services/auth/sso/google/schemas.ts.stub' => 'src/services/auth/sso/google/schemas.ts',
@@ -55,11 +59,25 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
             $this->write($root, $stub, $relative);
         }
 
+        $this->writeSession($root);
+
         $this->patchEnv($root);
 
         $this->command->info(
             'Frontend Google sign-in button generated. Set VITE_GOOGLE_CLIENT_ID in your .env before using it.'
         );
+    }
+
+    private function writeSession(string $root): void
+    {
+        $destination = $this->locator->resolveDestination($root, self::SESSION_RELATIVE);
+
+        if (file_exists($destination)) {
+            $this->command->warn('Overwriting: '.self::SESSION_RELATIVE);
+        }
+
+        $this->stubRenderer->renderTo(self::SESSION_STUB, $destination, FrontendStubTokens::defaults());
+        $this->command->line('Created: '.self::SESSION_RELATIVE);
     }
 
     private function write(string $root, string $stub, string $relative): void

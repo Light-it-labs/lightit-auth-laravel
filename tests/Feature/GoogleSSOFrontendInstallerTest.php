@@ -27,6 +27,7 @@ describe('GoogleSSOFrontendInstaller', function (): void {
             'src/services/auth/sso/google/api.ts',
             'src/services/auth/sso/google/actions.ts',
             'src/hooks/use-google-identity-services.ts',
+            'src/services/auth/session.ts',
         ] as $relative) {
             expect(file_get_contents($this->root.'/'.$relative))
                 ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
