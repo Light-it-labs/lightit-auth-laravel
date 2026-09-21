@@ -9,18 +9,7 @@ use Illuminate\Support\Collection;
 class PermissionManagement
 {
     public const PERMISSIONS = [
-        UserPermissions::LIST => [
-            'name' => UserPermissions::LIST,
-        ],
-        UserPermissions::GET => [
-            'name' => UserPermissions::GET,
-        ],
-        UserPermissions::CREATE => [
-            'name' => UserPermissions::CREATE,
-        ],
-        UserPermissions::DELETE => [
-            'name' => UserPermissions::DELETE,
-        ],
+        {{ permissionRegistry }}
     ];
 
     public static function getPermissions(): Collection
