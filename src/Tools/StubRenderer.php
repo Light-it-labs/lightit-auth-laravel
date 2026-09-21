@@ -13,7 +13,7 @@ final class StubRenderer
     /**
      * @param  array<string, string>  $tokens
      */
-    public function render(string $stubPath, array $tokens): string
+    public function render(string $stubPath, array $tokens, ?OriginMarker $marker = null): string
     {
         $contents = @file_get_contents($stubPath);
 
@@ -29,15 +29,17 @@ final class StubRenderer
             );
         }
 
-        return $rendered;
+        return $marker !== null
+            ? $this->prependMarker($stubPath, $marker->forStub($stubPath), $rendered)
+            : $rendered;
     }
 
     /**
      * @param  array<string, string>  $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
+    public function renderTo(string $stubPath, string $destination, array $tokens, ?OriginMarker $marker = null): void
     {
-        $rendered = $this->render($stubPath, $tokens);
+        $rendered = $this->render($stubPath, $tokens, $marker);
 
         $directory = \dirname($destination);
 
@@ -69,5 +71,17 @@ final class StubRenderer
         }
 
         return $replacements;
+    }
+
+    private function prependMarker(string $stubPath, string $markerText, string $rendered): string
+    {
+        $realExt = pathinfo(substr($stubPath, 0, -strlen('.stub')), PATHINFO_EXTENSION);
+
+        $comment = match ($realExt) {
+            'md' => "<!-- {$markerText} -->",
+            default => "// {$markerText}",
+        };
+
+        return "{$comment}\n\n{$rendered}";
     }
 }
