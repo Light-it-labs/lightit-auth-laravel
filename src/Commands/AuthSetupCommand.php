@@ -13,6 +13,7 @@ use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
+use Lightitlabs\Tools\FileManipulator;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 
@@ -96,7 +97,8 @@ class AuthSetupCommand extends Command
 
         $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
+        $fileManipulator = new FileManipulator($this);
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier, $fileManipulator);
         $googleSSOInstaller->install();
         $this->printSectionSeparator();
     }

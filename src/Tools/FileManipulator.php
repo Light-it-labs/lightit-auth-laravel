@@ -12,24 +12,36 @@ final class FileManipulator
     {
     }
 
-    public function replaceInFile(string $search, string $replace, string $path): void
+    /**
+     * Replaces the first occurrence of $search with $replace in $path.
+     *
+     * Returns false (and leaves the file untouched) when the file is missing,
+     * unreadable, or $search does not occur in it, so callers can tell a
+     * silent no-op apart from an actual write.
+     */
+    public function replaceInFile(string $search, string $replace, string $path): bool
     {
         if (! file_exists($path)) {
             $this->command->error("File not found: $path");
 
-            return;
+            return false;
         }
 
         $content = file_get_contents($path);
         if ($content === false) {
             $this->command->error("Failed to read file: $path");
 
-            return;
+            return false;
         }
 
-        file_put_contents(
-            $path,
-            str_replace($search, $replace, $content)
-        );
+        $replaced = str_replace($search, $replace, $content, $count);
+
+        if ($count === 0) {
+            return false;
+        }
+
+        file_put_contents($path, $replaced);
+
+        return true;
     }
 }
