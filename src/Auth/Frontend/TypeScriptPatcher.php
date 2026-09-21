@@ -46,8 +46,8 @@ final class TypeScriptPatcher
         $insertAt = $matches[0][1] + strlen($matches[0][0]);
 
         $patched = substr($original, 0, $insertAt)
-            .$indentation.self::GOOGLE_CLIENT_ID_VAR.': '.self::GOOGLE_CLIENT_ID_DECLARATION."\n"
-            .substr($original, $insertAt);
+            . $indentation . self::GOOGLE_CLIENT_ID_VAR . ': ' . self::GOOGLE_CLIENT_ID_DECLARATION . "\n"
+            . substr($original, $insertAt);
 
         if (file_put_contents($path, $patched) === false) {
             return $this->restore($path, $original);

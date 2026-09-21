@@ -16,7 +16,7 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
 {
     private const ENV_FILE = 'src/config/env.ts';
 
-    private const SESSION_STUB = __DIR__.'/../../Stubs/Frontend/Shared/services/auth/session.ts.stub';
+    private const SESSION_STUB = __DIR__ . '/../../Stubs/Frontend/Shared/services/auth/session.ts.stub';
 
     private const SESSION_RELATIVE = 'src/services/auth/session.ts';
 
@@ -35,12 +35,13 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         private readonly TypeScriptPatcher $typeScriptPatcher,
         private readonly FrontendProjectLocator $locator,
         private readonly string $laravelRoot,
-        private readonly ?string $frontendPath = null,
-    ) {}
+        private readonly string|null $frontendPath = null,
+    ) {
+    }
 
     public static function stubDirectory(): string
     {
-        return __DIR__.'/../../Stubs/Frontend/GoogleSSO';
+        return __DIR__ . '/../../Stubs/Frontend/GoogleSSO';
     }
 
     public function install(): void
@@ -73,11 +74,11 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
         $destination = $this->locator->resolveDestination($root, self::SESSION_RELATIVE);
 
         if (file_exists($destination)) {
-            $this->command->warn('Overwriting: '.self::SESSION_RELATIVE);
+            $this->command->warn('Overwriting: ' . self::SESSION_RELATIVE);
         }
 
         $this->stubRenderer->renderTo(self::SESSION_STUB, $destination, FrontendStubTokens::defaults());
-        $this->command->line('Created: '.self::SESSION_RELATIVE);
+        $this->command->line('Created: ' . self::SESSION_RELATIVE);
     }
 
     private function write(string $root, string $stub, string $relative): void
@@ -88,7 +89,7 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
             $this->command->warn("Overwriting: {$relative}");
         }
 
-        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, FrontendStubTokens::defaults());
+        $this->stubRenderer->renderTo(self::stubDirectory() . '/' . $stub, $destination, FrontendStubTokens::defaults());
 
         $this->command->line("Created: {$relative}");
     }
@@ -100,27 +101,27 @@ final class GoogleSSOFrontendInstaller implements AuthInstallerInterface
 
         if ($outcome->needsManualStep()) {
             $this->command->warn(
-                'Could not add VITE_GOOGLE_CLIENT_ID to '.self::ENV_FILE.' automatically ('.$outcome->name.'). '
-                .'Add it to the client schema by hand.'
+                'Could not add VITE_GOOGLE_CLIENT_ID to ' . self::ENV_FILE . ' automatically (' . $outcome->name . '). '
+                . 'Add it to the client schema by hand.'
             );
 
             return;
         }
 
-        $this->command->line('Patched: '.self::ENV_FILE);
+        $this->command->line('Patched: ' . self::ENV_FILE);
     }
 
     private function reportUnresolvedRoot(): void
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
             throw new RuntimeException(
-                'Rejected --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
+                'Rejected --frontend-path: ' . $this->locator->rejectionReason($this->frontendPath)
             );
         }
 
         $this->command->warn(
             'No React project found next to the application. Skipping the Google sign-in button step. '
-            .'Pass an explicit frontend path to generate it manually.'
+            . 'Pass an explicit frontend path to generate it manually.'
         );
     }
 }

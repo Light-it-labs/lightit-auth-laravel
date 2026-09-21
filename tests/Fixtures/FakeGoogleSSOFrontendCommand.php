@@ -15,21 +15,21 @@ final class FakeGoogleSSOFrontendCommand extends Command
 {
     protected $signature = 'google-sso-frontend-fake';
 
-    public function __construct(private readonly ?string $frontendPath = null)
+    public function __construct(private readonly string|null $frontendPath = null)
     {
         parent::__construct();
     }
 
     public function handle(): int
     {
-        $manifest = new FrontendPackageManifest;
+        $manifest = new FrontendPackageManifest();
 
         $installer = new GoogleSSOFrontendInstaller(
             $this,
-            new StubRenderer,
-            new TypeScriptPatcher,
+            new StubRenderer(),
+            new TypeScriptPatcher(),
             new FrontendProjectLocator($manifest),
-            sys_get_temp_dir().'/lightit-google-sso-laravel-root',
+            sys_get_temp_dir() . '/lightit-google-sso-laravel-root',
             $this->frontendPath,
         );
 

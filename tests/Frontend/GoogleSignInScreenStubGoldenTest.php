@@ -7,11 +7,11 @@ use Lightitlabs\Tools\StubRenderer;
 use Symfony\Component\Finder\Finder;
 
 $fixturePath = static function (string $relative): string {
-    return __DIR__.'/../Fixtures/frontend/expected/'.$relative;
+    return __DIR__ . '/../Fixtures/frontend/expected/' . $relative;
 };
 
 $stubPath = static function (string $relative): string {
-    return __DIR__.'/../../src/Stubs/Frontend/GoogleSSO/'.$relative;
+    return __DIR__ . '/../../src/Stubs/Frontend/GoogleSSO/' . $relative;
 };
 
 describe('Google sign-in button stub rendering', function () use ($fixturePath, $stubPath): void {
@@ -19,7 +19,7 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
         string $stub,
         string $fixture,
     ) use ($fixturePath, $stubPath): void {
-        $rendered = (new StubRenderer)->render($stubPath($stub), FrontendStubTokens::defaults());
+        $rendered = (new StubRenderer())->render($stubPath($stub), FrontendStubTokens::defaults());
 
         expect($rendered)->toBe(file_get_contents($fixturePath($fixture)));
     })->with([
@@ -34,20 +34,23 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
         ],
     ]);
 
-    it('never reads accessToken directly - the button forwards the whole result to persistSession', function () use ($stubPath): void {
-        $rendered = (new StubRenderer)->render(
-            $stubPath('routes/(public)/_guest/login/-components/google-login-button.tsx.stub'),
-            FrontendStubTokens::defaults(),
-        );
-
-        expect($rendered)
-            ->not->toContain('.accessToken')
-            ->not->toContain('accessToken:')
-            ->toContain('persistSession(result)');
-    });
+    it(
+        'never reads accessToken directly - the button forwards the whole result to persistSession',
+        function () use ($stubPath): void {
+            $rendered = (new StubRenderer())->render(
+                $stubPath('routes/(public)/_guest/login/-components/google-login-button.tsx.stub'),
+                FrontendStubTokens::defaults(),
+            );
+    
+            expect($rendered)
+                ->not->toContain('.accessToken')
+                ->not->toContain('accessToken:')
+                ->toContain('persistSession(result)');
+        }
+    );
 
     it('loads the Identity Services script from its CDN URL, not an npm import', function () use ($stubPath): void {
-        $rendered = (new StubRenderer)->render(
+        $rendered = (new StubRenderer())->render(
             $stubPath('hooks/use-google-identity-services.ts.stub'),
             FrontendStubTokens::defaults(),
         );
@@ -58,8 +61,8 @@ describe('Google sign-in button stub rendering', function () use ($fixturePath, 
     });
 
     it('leaves no placeholder unresolved in any stub', function () use ($stubPath): void {
-        $finder = (new Finder)->files()->in($stubPath(''))->name('*.stub');
-        $renderer = new StubRenderer;
+        $finder = (new Finder())->files()->in($stubPath(''))->name('*.stub');
+        $renderer = new StubRenderer();
 
         expect($finder)->toHaveCount(6);
 

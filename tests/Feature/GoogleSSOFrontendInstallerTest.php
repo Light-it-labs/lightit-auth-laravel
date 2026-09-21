@@ -8,8 +8,8 @@ use Lightitlabs\Tests\Fixtures\FakeGoogleSSOFrontendCommand;
 
 describe('GoogleSSOFrontendInstaller', function (): void {
     beforeEach(function (): void {
-        $this->root = sys_get_temp_dir().'/lightit-google-sso-frontend-'.bin2hex(random_bytes(6));
-        File::copyDirectory(__DIR__.'/../Fixtures/frontend/react-project', $this->root);
+        $this->root = sys_get_temp_dir() . '/lightit-google-sso-frontend-' . bin2hex(random_bytes(6));
+        File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->root);
     });
 
     afterEach(function (): void {
@@ -29,18 +29,18 @@ describe('GoogleSSOFrontendInstaller', function (): void {
             'src/hooks/use-google-identity-services.ts',
             'src/services/auth/session.ts',
         ] as $relative) {
-            expect(file_get_contents($this->root.'/'.$relative))
-                ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->toBe(file_get_contents(__DIR__ . '/../Fixtures/frontend/expected/' . $relative));
         }
 
-        expect(file_get_contents($this->root.'/src/routes/(public)/_guest/login/-components/google-login-button.tsx'))
+        expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-components/google-login-button.tsx'))
             ->toBe(file_get_contents(
-                __DIR__.'/../Fixtures/frontend/expected/src/routes/(public)/_guest/login/-components/google-login-button.tsx'
+                __DIR__ . '/../Fixtures/frontend/expected/src/routes/(public)/_guest/login/-components/google-login-button.tsx'
             ));
     });
 
     it('patches src/config/env.ts with VITE_GOOGLE_CLIENT_ID', function (): void {
-        $envPath = $this->root.'/src/config/env.ts';
+        $envPath = $this->root . '/src/config/env.ts';
         mkdir(dirname($envPath), 0755, true);
         file_put_contents($envPath, <<<'TS'
             import { createEnv } from "@t3-oss/env-core";
@@ -95,11 +95,11 @@ describe('GoogleSSOFrontendInstaller', function (): void {
             ->expectsOutputToContain('Could not add VITE_GOOGLE_CLIENT_ID to src/config/env.ts automatically')
             ->assertSuccessful();
 
-        expect(file_exists($this->root.'/src/config/env.ts'))->toBeFalse();
+        expect(file_exists($this->root . '/src/config/env.ts'))->toBeFalse();
     });
 
     it('warns and skips instead of failing when no React project resolves', function (): void {
-        Artisan::registerCommand(new FakeGoogleSSOFrontendCommand);
+        Artisan::registerCommand(new FakeGoogleSSOFrontendCommand());
 
         $this->artisan('google-sso-frontend-fake')
             ->expectsOutputToContain('No React project found next to the application.')
