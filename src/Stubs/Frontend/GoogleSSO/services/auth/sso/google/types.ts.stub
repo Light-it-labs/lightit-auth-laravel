@@ -1,0 +1,9 @@
+export type GoogleLoginResponse = {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number | null;
+};
+
+export type GoogleLoginPayload = {
+  idToken: string;
+};
