@@ -1,0 +1,23 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { {{ currentUserQueryFactory }} } from "{{ currentUserQueryImportPath }}";
+import type { PermissionValue } from "./constants";
+
+type MatchOptions = {
+  matchAll?: boolean;
+};
+
+export const usePermissions = () => {
+  const { data: currentUser } = useQuery({{ currentUserQueryFactory }}());
+
+  const hasPermission = (expected: PermissionValue | PermissionValue[], options?: MatchOptions): boolean => {
+    const permissions = currentUser?.permissions ?? [];
+    const expectedList = Array.isArray(expected) ? expected : [expected];
+
+    return options?.matchAll
+      ? expectedList.every((permission) => permissions.includes(permission))
+      : expectedList.some((permission) => permissions.includes(permission));
+  };
+
+  return { hasPermission };
+};

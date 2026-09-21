@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
+use Lightitlabs\Auth\Installers\LaravelPermissionFrontendInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
@@ -125,6 +128,27 @@ class AuthSetupCommand extends Command
             OriginMarker::resolved(),
         );
         $laravelPermission->install();
+        $this->printSectionSeparator();
+
+        $this->setupRolesAndPermissionsFrontend();
+    }
+
+    protected function setupRolesAndPermissionsFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Roles and Permissions frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new LaravelPermissionFrontendInstaller(
+            $this,
+            new StubRenderer,
+            OriginMarker::resolved(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 

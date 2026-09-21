@@ -1,0 +1,7 @@
+export const PERMISSIONS = {
+{{ permissionConstants }}
+} as const;
+
+type ValueOf<T> = T extends Record<string, unknown> ? T[keyof T] : never;
+
+export type PermissionValue = ValueOf<ValueOf<typeof PERMISSIONS>>;

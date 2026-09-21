@@ -15,7 +15,7 @@ final class StubRenderer
     /**
      * @param  array<string, string>  $tokens
      */
-    public function render(string $stubPath, array $tokens): string
+    public function render(string $stubPath, array $tokens, ?OriginMarker $marker = null): string
     {
         $contents = @file_get_contents($stubPath);
 
@@ -31,6 +31,10 @@ final class StubRenderer
             );
         }
 
+        if ($marker !== null) {
+            $rendered = $this->withMarker($rendered, $stubPath, $marker);
+        }
+
         return $rendered;
     }
 
@@ -39,11 +43,7 @@ final class StubRenderer
      */
     public function renderTo(string $stubPath, string $destination, array $tokens, ?OriginMarker $marker = null): void
     {
-        $rendered = $this->render($stubPath, $tokens);
-
-        if ($marker !== null) {
-            $rendered = $this->withMarker($rendered, $stubPath, $marker);
-        }
+        $rendered = $this->render($stubPath, $tokens, $marker);
 
         $directory = \dirname($destination);
 
