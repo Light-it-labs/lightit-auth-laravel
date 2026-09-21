@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\Domain\Actions;
+
+use Illuminate\Support\Collection;
+use Spatie\Permission\Models\Role;
+
+final class ListRolesAction
+{
+    /**
+     * @return Collection<int, Role>
+     */
+    public function execute(): Collection
+    {
+        return Role::query()->with('permissions')->get();
+    }
+}

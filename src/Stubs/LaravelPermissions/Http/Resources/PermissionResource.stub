@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Spatie\Permission\Models\Permission;
+
+/**
+ * @mixin Permission
+ */
+#[SchemaName('Permission')]
+class PermissionResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'name' => $this->name,
+            'group' => $this->group,
+        ];
+    }
+}
