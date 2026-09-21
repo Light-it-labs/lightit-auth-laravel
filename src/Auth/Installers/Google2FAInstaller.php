@@ -230,6 +230,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->writeStubOrFail($source, $destination, $label);
+        if (! file_exists($source)) {
+            throw new RuntimeException("Missing stub: {$source}");
+        }
+
+        if (! copy($source, $destination)) {
+            throw new RuntimeException("Could not write {$destination}");
+        }
+
+        $this->composerInstaller->printFileCreated("Created: {$label}");
     }
 }
