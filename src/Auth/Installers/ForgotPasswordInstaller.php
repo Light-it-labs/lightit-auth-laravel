@@ -46,14 +46,14 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/Controllers/ForgotPasswordController.stub'          => 'App/Controllers/ForgotPasswordController.php',
-            '/Controllers/ResetPasswordController.stub'           => 'App/Controllers/ResetPasswordController.php',
-            '/Requests/ForgotPasswordRequest.stub'                => 'App/Requests/ForgotPasswordRequest.php',
-            '/Requests/ResetPasswordRequest.stub'                 => 'App/Requests/ResetPasswordRequest.php',
-            '/Actions/SendPasswordResetLinkAction.stub'           => 'Domain/Actions/SendPasswordResetLinkAction.php',
-            '/Actions/ResetPasswordAction.stub'                   => 'Domain/Actions/ResetPasswordAction.php',
-            '/DataTransferObjects/ResetPasswordDto.stub'          => 'Domain/DataTransferObjects/ResetPasswordDto.php',
-            '/Exceptions/ResetPasswordException.stub'             => 'Domain/Exceptions/ResetPasswordException.php',
+            '/Controllers/ForgotPasswordController.stub' => 'App/Controllers/ForgotPasswordController.php',
+            '/Controllers/ResetPasswordController.stub' => 'App/Controllers/ResetPasswordController.php',
+            '/Requests/ForgotPasswordRequest.stub' => 'App/Requests/ForgotPasswordRequest.php',
+            '/Requests/ResetPasswordRequest.stub' => 'App/Requests/ResetPasswordRequest.php',
+            '/Actions/SendPasswordResetLinkAction.stub' => 'Domain/Actions/SendPasswordResetLinkAction.php',
+            '/Actions/ResetPasswordAction.stub' => 'Domain/Actions/ResetPasswordAction.php',
+            '/DataTransferObjects/ResetPasswordDto.stub' => 'Domain/DataTransferObjects/ResetPasswordDto.php',
+            '/Exceptions/ResetPasswordException.stub' => 'Domain/Exceptions/ResetPasswordException.php',
         ];
 
         foreach ($files as $stub => $destination) {
