@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 function phpStubPaths(): array
 {
-    $stubsPath = realpath(__DIR__.'/../src/Stubs');
+    $stubsPath = realpath(__DIR__ . '/../src/Stubs');
 
     if ($stubsPath === false) {
         return [];
@@ -45,7 +45,7 @@ function phpStubPaths(): array
 
 function readStub(string $relativePath): string
 {
-    return (string) file_get_contents(__DIR__.'/../src/Stubs/'.$relativePath);
+    return (string) file_get_contents(__DIR__ . '/../src/Stubs/' . $relativePath);
 }
 
 dataset('phpStubs', function (): Generator {
@@ -79,6 +79,6 @@ describe('PHP stubs', function (): void {
 
     it('opens with a strict types declaration', function (string $relativePath): void {
         expect(readStub($relativePath))
-            ->toStartWith('<?php'.PHP_EOL.PHP_EOL.'declare(strict_types=1);');
+            ->toStartWith('<?php' . PHP_EOL . PHP_EOL . 'declare(strict_types=1);');
     })->with('phpClassStubs');
 });

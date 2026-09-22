@@ -18,7 +18,7 @@ final class FrontendUsageScanner
      */
     public function grep(string $root, string $pattern): array
     {
-        $sourceDirectory = $root.'/src';
+        $sourceDirectory = $root . '/src';
 
         if (! is_dir($sourceDirectory)) {
             return [];
@@ -42,7 +42,7 @@ final class FrontendUsageScanner
 
             foreach (explode("\n", $contents) as $index => $line) {
                 if (preg_match($pattern, $line) === 1) {
-                    $hits[] = $relative.':'.($index + 1);
+                    $hits[] = $relative . ':' . ($index + 1);
                 }
             }
         }
@@ -53,7 +53,7 @@ final class FrontendUsageScanner
     }
 
     /**
-     * @param  list<string>  $hits
+     * @param list<string> $hits
      */
     public function toMarkdownList(array $hits): string
     {
@@ -62,7 +62,7 @@ final class FrontendUsageScanner
         }
 
         return implode("\n", array_map(static function (string $hit): string {
-            return '- `'.$hit.'`';
+            return '- `' . $hit . '`';
         }, $hits));
     }
 

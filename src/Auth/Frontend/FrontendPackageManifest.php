@@ -24,9 +24,9 @@ final class FrontendPackageManifest
     /**
      * @return array<mixed>|null
      */
-    public function read(string $root): ?array
+    public function read(string $root): array|null
     {
-        $path = $root.'/package.json';
+        $path = $root . '/package.json';
 
         if (! is_file($path)) {
             return null;
@@ -96,7 +96,7 @@ final class FrontendPackageManifest
         }
 
         foreach (self::LOCK_FILES as $lockFile => $manager) {
-            if (is_file($root.'/'.$lockFile)) {
+            if (is_file($root . '/' . $lockFile)) {
                 return $manager;
             }
         }
@@ -109,7 +109,7 @@ final class FrontendPackageManifest
         return self::ADD_COMMANDS[$this->packageManager($root)];
     }
 
-    public function majorVersion(string $constraint): ?int
+    public function majorVersion(string $constraint): int|null
     {
         $version = $this->normalizeVersion($constraint);
 
@@ -131,7 +131,7 @@ final class FrontendPackageManifest
         return version_compare($version, $floor, '>=');
     }
 
-    public function normalizeVersion(string $constraint): ?string
+    public function normalizeVersion(string $constraint): string|null
     {
         if (preg_match('/(\d+(?:\.\d+)*)/', $constraint, $matches) !== 1) {
             return null;

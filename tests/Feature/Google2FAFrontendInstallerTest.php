@@ -8,8 +8,8 @@ use Lightitlabs\Tests\Fixtures\FakeGoogle2FAFrontendCommand;
 
 describe('Google2FAFrontendInstaller', function (): void {
     beforeEach(function (): void {
-        $this->root = sys_get_temp_dir().'/lightit-2fa-frontend-'.bin2hex(random_bytes(6));
-        File::copyDirectory(__DIR__.'/../Fixtures/frontend/react-project', $this->root);
+        $this->root = sys_get_temp_dir() . '/lightit-2fa-frontend-' . bin2hex(random_bytes(6));
+        File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->root);
     });
 
     afterEach(function (): void {
@@ -28,8 +28,8 @@ describe('Google2FAFrontendInstaller', function (): void {
             'src/services/auth/two-factor/actions.ts',
             'AUTH-2FA-FRONTEND-TODO.md',
         ] as $relative) {
-            expect(file_get_contents($this->root.'/'.$relative))
-                ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->toBe(file_get_contents(__DIR__ . '/../Fixtures/frontend/expected/' . $relative));
         }
     });
 
@@ -38,12 +38,34 @@ describe('Google2FAFrontendInstaller', function (): void {
 
         $this->artisan('google2fa-frontend-fake')->assertSuccessful();
 
-        expect(file_get_contents($this->root.'/AUTH-2FA-FRONTEND-TODO.md'))
+        expect(file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md'))
             ->toContain('Every dependency this layer needs is already installed.');
     });
 
+    it('reports the router as missing when the fixture project does not have it', function (): void {
+        File::put($this->root . '/package.json', json_encode([
+            'name' => 'sample',
+            'private' => true,
+            'dependencies' => [
+                '@tanstack/react-query' => '^5.91.2',
+                'axios' => '^1.13.5',
+                'react' => '^19.2.3',
+                'string-ts' => '^2.3.1',
+                'zod' => '^4.1.13',
+            ],
+        ]));
+
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md'))
+            ->toContain('Missing dependencies. Run:')
+            ->toContain('@tanstack/react-router');
+    });
+
     it('warns and skips instead of failing when no React project resolves', function (): void {
-        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand);
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand());
 
         $this->artisan('google2fa-frontend-fake')
             ->expectsOutputToContain('No React project found next to the application.')

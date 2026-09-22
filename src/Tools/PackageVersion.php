@@ -13,7 +13,8 @@ final class PackageVersion
 
     public function __construct(
         private readonly string $packageName = self::PACKAGE_NAME,
-    ) {}
+    ) {
+    }
 
     public function resolve(): string
     {

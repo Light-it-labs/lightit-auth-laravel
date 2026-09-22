@@ -11,9 +11,9 @@ final class StubRenderer
     private const LEFTOVER_TOKEN_PATTERN = '/\{\{\s*[a-z][a-zA-Z]*\s*\}\}/';
 
     /**
-     * @param  array<string, string>  $tokens
+     * @param array<string, string> $tokens
      */
-    public function render(string $stubPath, array $tokens): string
+    public function render(string $stubPath, array $tokens, OriginMarker|null $marker = null): string
     {
         $contents = @file_get_contents($stubPath);
 
@@ -29,15 +29,23 @@ final class StubRenderer
             );
         }
 
+        if ($marker instanceof OriginMarker) {
+            $rendered = $this->withMarker($rendered, $stubPath, $marker);
+        }
+
         return $rendered;
     }
 
     /**
-     * @param  array<string, string>  $tokens
+     * @param array<string, string> $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
-    {
-        $rendered = $this->render($stubPath, $tokens);
+    public function renderTo(
+        string $stubPath,
+        string $destination,
+        array $tokens,
+        OriginMarker|null $marker = null,
+    ): void {
+        $rendered = $this->render($stubPath, $tokens, $marker);
 
         $directory = \dirname($destination);
 
@@ -50,13 +58,23 @@ final class StubRenderer
         }
     }
 
+    private function withMarker(string $rendered, string $stubPath, OriginMarker $marker): string
+    {
+        $comment = str_ends_with($stubPath, '.md.stub')
+            ? "<!-- {$marker->forStub($stubPath)} -->"
+            : "// {$marker->forStub($stubPath)}";
+
+        return "{$comment}\n\n{$rendered}";
+    }
+
     /**
      * strtr() is deliberate: it is a single longest-match-first pass, so a token
      * whose value contains another token's placeholder cannot cascade. An array
      * str_replace() applies each pair in sequence over the already-replaced
      * subject and would corrupt that case silently.
      *
-     * @param  array<string, string>  $tokens
+     * @param array<string, string> $tokens
+     *
      * @return array<string, string>
      */
     private function replacements(array $tokens): array
@@ -64,8 +82,8 @@ final class StubRenderer
         $replacements = [];
 
         foreach ($tokens as $name => $value) {
-            $replacements['{{ '.$name.' }}'] = $value;
-            $replacements['{{'.$name.'}}'] = $value;
+            $replacements['{{ ' . $name . ' }}'] = $value;
+            $replacements['{{' . $name . '}}'] = $value;
         }
 
         return $replacements;

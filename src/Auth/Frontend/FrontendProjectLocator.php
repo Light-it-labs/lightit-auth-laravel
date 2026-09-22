@@ -10,9 +10,11 @@ final class FrontendProjectLocator
 {
     private const SIBLING_CANDIDATES = ['frontend', 'front'];
 
-    public function __construct(private readonly FrontendPackageManifest $manifest) {}
+    public function __construct(private readonly FrontendPackageManifest $manifest)
+    {
+    }
 
-    public function locate(string $laravelRoot, ?string $explicitPath = null): ?string
+    public function locate(string $laravelRoot, string|null $explicitPath = null): string|null
     {
         foreach ($this->candidates($laravelRoot, $explicitPath) as $candidate) {
             $resolved = realpath($candidate);
@@ -54,7 +56,7 @@ final class FrontendProjectLocator
             throw new RuntimeException("Frontend root does not exist: {$root}");
         }
 
-        $destination = $realRoot.\DIRECTORY_SEPARATOR.ltrim($relativePath, '/\\');
+        $destination = $realRoot . \DIRECTORY_SEPARATOR . ltrim($relativePath, '/\\');
 
         $this->assertContained($realRoot, $this->deepestExistingAncestor(\dirname($destination)));
 
@@ -68,7 +70,7 @@ final class FrontendProjectLocator
     /**
      * @return list<string>
      */
-    private function candidates(string $laravelRoot, ?string $explicitPath): array
+    private function candidates(string $laravelRoot, string|null $explicitPath): array
     {
         if ($explicitPath !== null && $explicitPath !== '') {
             return [$explicitPath];
@@ -78,10 +80,10 @@ final class FrontendProjectLocator
         $candidates = [];
 
         foreach (self::SIBLING_CANDIDATES as $sibling) {
-            $candidates[] = $parent.\DIRECTORY_SEPARATOR.$sibling;
+            $candidates[] = $parent . \DIRECTORY_SEPARATOR . $sibling;
         }
 
-        $candidates[] = $parent.\DIRECTORY_SEPARATOR.basename($laravelRoot).'-frontend';
+        $candidates[] = $parent . \DIRECTORY_SEPARATOR . basename($laravelRoot) . '-frontend';
 
         return $candidates;
     }
@@ -98,7 +100,7 @@ final class FrontendProjectLocator
     private function assertContained(string $root, string|false $path): void
     {
         $contained = $path !== false
-            && ($path === $root || str_starts_with($path, rtrim($root, '/\\').\DIRECTORY_SEPARATOR));
+            && ($path === $root || str_starts_with($path, rtrim($root, '/\\') . \DIRECTORY_SEPARATOR));
 
         if (! $contained) {
             throw new RuntimeException("Refusing to write outside the frontend root: {$root}");

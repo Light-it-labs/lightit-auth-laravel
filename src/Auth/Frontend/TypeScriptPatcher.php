@@ -67,7 +67,7 @@ final class TypeScriptPatcher
         return str_contains($contents, self::CONSTANT_DECLARATION);
     }
 
-    private function insertConstant(string $contents): ?string
+    private function insertConstant(string $contents): string|null
     {
         $matches = [];
 
@@ -89,11 +89,11 @@ final class TypeScriptPatcher
         }
 
         return substr($contents, 0, $insertAt)
-            ."\n\n".self::CONSTANT_DECLARATION
-            .substr($contents, $insertAt);
+            . "\n\n" . self::CONSTANT_DECLARATION
+            . substr($contents, $insertAt);
     }
 
-    private function insertStatus(string $contents): ?string
+    private function insertStatus(string $contents): string|null
     {
         $matches = [];
 
@@ -122,8 +122,8 @@ final class TypeScriptPatcher
             : substr_replace($text, ',', $lastCode + 1, 0);
 
         $replacement = rtrim($separated, " \t\n\r")
-            .$this->entrySeparator($text).self::CONSTANT_NAME.$this->entryTerminator($text)
-            .$this->trailingWhitespace($text);
+            . $this->entrySeparator($text) . self::CONSTANT_NAME . $this->entryTerminator($text)
+            . $this->trailingWhitespace($text);
 
         return substr_replace($contents, $replacement, $offset, strlen($text));
     }
@@ -131,7 +131,7 @@ final class TypeScriptPatcher
     private function entrySeparator(string $entries): string
     {
         return str_contains($entries, "\n")
-            ? "\n".$this->lastEntryIndentation($entries)
+            ? "\n" . $this->lastEntryIndentation($entries)
             : ' ';
     }
 
@@ -143,7 +143,7 @@ final class TypeScriptPatcher
     /**
      * Offset of the last character that is neither whitespace nor part of a comment.
      */
-    private function lastCodeOffset(string $text): ?int
+    private function lastCodeOffset(string $text): int|null
     {
         $length = \strlen($text);
         $last = null;
@@ -257,7 +257,7 @@ final class TypeScriptPatcher
             return '';
         }
 
-        $last = (string) end($lines);
+        $last = end($lines);
 
         return preg_match('/^([ \t]*)/', $last, $matches) === 1 ? $matches[1] : '';
     }

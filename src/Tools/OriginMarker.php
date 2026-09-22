@@ -10,11 +10,13 @@ final class OriginMarker
 
     private const BACKEND_FEATURE_PATTERN = '#/Stubs/([^/]+)/#';
 
-    public function __construct(private readonly string $version) {}
+    public function __construct(private readonly string $version)
+    {
+    }
 
     public static function resolved(): self
     {
-        return new self((new PackageVersion)->resolve());
+        return new self((new PackageVersion())->resolve());
     }
 
     public function forStub(string $stubPath): string

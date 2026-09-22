@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 describe('Google2FA routes stub', function (): void {
     it('declares exactly the route set from docs/google-2fa.md, at the package\'s own paths', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
         expect($stub)->toBe(<<<'PHP'
             <?php
@@ -45,9 +45,9 @@ describe('Google2FA routes stub', function (): void {
     });
 
     it('routes only to controllers Google2FAInstaller already copies into the consuming project', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
         $installer = (string) file_get_contents(
-            __DIR__.'/../../../src/Auth/Installers/Google2FAInstaller.php'
+            __DIR__ . '/../../../src/Auth/Installers/Google2FAInstaller.php'
         );
 
         preg_match_all('/(\w+Controller)::class/', $stub, $matches);

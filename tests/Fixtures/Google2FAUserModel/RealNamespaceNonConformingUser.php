@@ -15,4 +15,6 @@ declare(strict_types=1);
 
 namespace Lightit\Users\Domain\Models;
 
-class User {}
+class User
+{
+}

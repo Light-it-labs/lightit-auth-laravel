@@ -4,6 +4,7 @@
     "lib": ["ES2022", "DOM"],
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "verbatimModuleSyntax": true,
     "esModuleInterop": true,
@@ -16,5 +17,5 @@
     },
     "rootDirs": ["expected/src", "consumer-stubs"]
   },
-  "include": ["expected/src/**/*.ts", "consumer-stubs/**/*.ts"]
+  "include": ["expected/src/**/*.ts", "expected/src/**/*.tsx", "consumer-stubs/**/*.ts", "consumer-stubs/**/*.tsx"]
 }

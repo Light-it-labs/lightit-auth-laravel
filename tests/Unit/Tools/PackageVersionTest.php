@@ -6,7 +6,7 @@ use Lightitlabs\Tools\PackageVersion;
 
 describe('PackageVersion', function (): void {
     it('resolves a non-empty version string for the real package', function (): void {
-        $version = (new PackageVersion)->resolve();
+        $version = (new PackageVersion())->resolve();
 
         expect($version)->toBeString()
             ->and($version)->not->toBe('');

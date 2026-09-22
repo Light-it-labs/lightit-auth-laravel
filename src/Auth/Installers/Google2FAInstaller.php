@@ -13,6 +13,7 @@ use Lightitlabs\Tools\NativeLoginInjectionOutcome;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
+use RuntimeException;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -48,11 +49,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
-        private readonly LoginActionPatcher $loginActionPatcher = new LoginActionPatcher,
-        private readonly NativeLoginActionInjector $nativeLoginActionInjector = new NativeLoginActionInjector,
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
+        private readonly LoginActionPatcher $loginActionPatcher = new LoginActionPatcher(),
+        private readonly NativeLoginActionInjector $nativeLoginActionInjector = new NativeLoginActionInjector(),
         private readonly string $apiRoutesPath = 'routes/api.php',
-    ) {}
+    ) {
+    }
 
     public function install(): void
     {
@@ -61,9 +63,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
             'pragmarx/google2fa-qrcode',
             'bacon/bacon-qr-code',
         ])) {
-            $this->command->error('Installing Google 2FA laravel and QR Code');
-
-            return;
+            throw new RuntimeException(
+                'Could not install pragmarx/google2fa-laravel, pragmarx/google2fa-qrcode, and bacon/bacon-qr-code '
+                . 'via composer, so 2FA was not set up. Run `composer require pragmarx/google2fa-laravel '
+                . 'pragmarx/google2fa-qrcode bacon/bacon-qr-code` yourself, then re-run `php artisan auth:setup` '
+                . 'to finish setting up 2FA.'
+            );
         }
 
         $this->createAuthFiles();
@@ -107,8 +112,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! class_exists($userModelClass)) {
             $this->command->warn(
                 "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
-                ."extend {$requiredParentClass} - without it, every login throws BadMethodCallException as "
-                .'soon as 2FA is wired in.'
+                . "extend {$requiredParentClass} - without it, every login throws BadMethodCallException as "
+                . 'soon as 2FA is wired in.'
             );
 
             return;
@@ -122,10 +127,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->command->warn(
             "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
-            ."to true in config/google2fa.php, so every login calls {$requiredParentClass}-only methods on "
-            .'this class and throws BadMethodCallException. Change '.$userModelClass.' to extend '
-            .$requiredParentClass.' (instead of Authenticatable) before your first login - see step 2 in '
-            .'docs/google-2fa.md.'
+            . "to true in config/google2fa.php, so every login calls {$requiredParentClass}-only methods on "
+            . 'this class and throws BadMethodCallException. Change ' . $userModelClass . ' to extend '
+            . $requiredParentClass . ' (instead of Authenticatable) before your first login - see step 2 in '
+            . 'docs/google-2fa.md.'
         );
     }
 
@@ -140,7 +145,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->installLoginAction();
-        $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
+        $this->copyAuthFiles(__DIR__ . '/../../Stubs/Google2FA/Auth');
     }
 
     /**
@@ -166,8 +171,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $outcome = $this->loginActionPatcher->install(
             $this->stubCopier,
-            __DIR__.'/../../Stubs/Shared/Auth/Actions/LoginAction.stub',
-            __DIR__.'/../../Stubs/Google2FA/Auth/Actions/LoginAction.stub',
+            __DIR__ . '/../../Stubs/Shared/Auth/Actions/LoginAction.stub',
+            __DIR__ . '/../../Stubs/Google2FA/Auth/Actions/LoginAction.stub',
             base_path($label),
         );
 
@@ -210,24 +215,24 @@ final class Google2FAInstaller implements AuthInstallerInterface
             NativeLoginInjectionOutcome::Failed,
             NativeLoginInjectionOutcome::Corrupted => $this->command->warn(
                 "Could not wire 2FA into {$label} automatically ({$outcome->name}): it doesn't match the "
-                .'known shape (execute(Request, array, Closure $onFailure, Closure $onSuccess): User) this '
-                .'injector targets. Add this call yourself, right after the line that clears the rate '
-                ."limiter on a successful attempt and before the method returns the user:\n\n"
-                .$this->nativeLoginActionInjector->manualSnippet()
+                . 'known shape (execute(Request, array, Closure $onFailure, Closure $onSuccess): User) this '
+                . 'injector targets. Add this call yourself, right after the line that clears the rate '
+                . "limiter on a successful attempt and before the method returns the user:\n\n"
+                . $this->nativeLoginActionInjector->manualSnippet()
             ),
         };
     }
 
     private function copyAuthFiles(string $stubsPath): void
     {
-        $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
+        $sharedStubsPath = __DIR__ . '/../../Stubs/Shared/Auth';
         $sharedFiles = [
             '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
             '/DataTransferObjects/LoginDto.stub' => 'Domain/DataTransferObjects/LoginDto.php',
         ];
         foreach ($sharedFiles as $stub => $destination) {
             $this->writeStubIfMissing(
-                $sharedStubsPath.$stub,
+                $sharedStubsPath . $stub,
                 base_path("src/Authentication/{$destination}"),
                 "src/Authentication/{$destination}"
             );
@@ -280,7 +285,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $destination) {
             $this->writeStubIfMissing(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}"),
                 "src/Authentication/{$destination}"
             );
@@ -319,7 +324,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/config/google2fa.stub',
+            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
             config_path('google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php');
@@ -333,7 +338,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(lang_path('en'), 0755, true);
         }
         $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub',
+            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
             lang_path('en/google2fa.php')
         );
         $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php');
@@ -348,9 +353,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->writeStubIfMissing(
-            __DIR__.'/../../Stubs/Google2FA/routes/two-factor-auth.stub',
-            base_path('routes/'.self::ROUTES_FILE_NAME),
-            'routes/'.self::ROUTES_FILE_NAME
+            __DIR__ . '/../../Stubs/Google2FA/routes/two-factor-auth.stub',
+            base_path('routes/' . self::ROUTES_FILE_NAME),
+            'routes/' . self::ROUTES_FILE_NAME
         );
 
         $outcome = $this->routeFileRegistrar->register(
@@ -369,15 +374,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
             ),
             RouteRegistrationOutcome::ParentMissing => $this->command->warn(
                 "Could not find {$this->apiRoutesPath}. "
-                ."Please add {$requireStatement} to your API route file manually."
+                . "Please add {$requireStatement} to your API route file manually."
             ),
             RouteRegistrationOutcome::Failed => $this->command->warn(
                 "Could not append {$requireStatement} to {$this->apiRoutesPath} automatically. "
-                .'Please add it manually.'
+                . 'Please add it manually.'
             ),
             RouteRegistrationOutcome::Corrupted => $this->command->error(
                 "{$this->apiRoutesPath} was left in an inconsistent state while adding {$requireStatement}. "
-                .'Please inspect the file.'
+                . 'Please inspect the file.'
             ),
         };
     }

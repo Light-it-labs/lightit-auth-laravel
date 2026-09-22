@@ -9,22 +9,22 @@ use Lightitlabs\Tools\StubCopier;
 
 describe('LoginActionPatcher', function (): void {
     beforeEach(function (): void {
-        $this->directory = sys_get_temp_dir().'/login-action-patcher-'.uniqid();
+        $this->directory = sys_get_temp_dir() . '/login-action-patcher-' . uniqid();
         mkdir($this->directory, 0755, true);
 
-        $this->plainStub = $this->directory.'/LoginAction.plain.stub';
-        $this->pipelineStub = $this->directory.'/LoginAction.pipeline.stub';
-        $this->destination = $this->directory.'/LoginAction.php';
+        $this->plainStub = $this->directory . '/LoginAction.plain.stub';
+        $this->pipelineStub = $this->directory . '/LoginAction.pipeline.stub';
+        $this->destination = $this->directory . '/LoginAction.php';
 
         file_put_contents($this->plainStub, "<?php\n\n// plain sanctum login\n");
         file_put_contents($this->pipelineStub, "<?php\n\n// 2fa pipeline login\n");
 
         $this->stubCopier = new StubCopier(new OriginMarker('0.0.0-test'));
-        $this->patcher = new LoginActionPatcher;
+        $this->patcher = new LoginActionPatcher();
     });
 
     afterEach(function (): void {
-        array_map('unlink', glob($this->directory.'/*') ?: []);
+        array_map('unlink', glob($this->directory . '/*') ?: []);
         rmdir($this->directory);
     });
 
@@ -56,7 +56,7 @@ describe('LoginActionPatcher', function (): void {
 
     it('does not touch a LoginAction.php a consumer edited after Sanctum installed it', function (): void {
         $this->stubCopier->copy($this->plainStub, $this->destination);
-        file_put_contents($this->destination, '// customized by the consuming project'.PHP_EOL);
+        file_put_contents($this->destination, '// customized by the consuming project' . PHP_EOL);
 
         $outcome = $this->patcher->install(
             $this->stubCopier,
@@ -66,7 +66,9 @@ describe('LoginActionPatcher', function (): void {
         );
 
         expect($outcome)->toBe(LoginActionPatchOutcome::CustomizedSkipped)
-            ->and((string) file_get_contents($this->destination))->toBe('// customized by the consuming project'.PHP_EOL);
+            ->and((string) file_get_contents($this->destination))->toBe(
+                '// customized by the consuming project' . PHP_EOL
+            );
     });
 
     it('is idempotent when the pipeline version is already installed', function (): void {
@@ -89,7 +91,7 @@ describe('LoginActionPatcher', function (): void {
         $outcome = $this->patcher->install(
             $this->stubCopier,
             $this->plainStub,
-            $this->directory.'/does-not-exist.stub',
+            $this->directory . '/does-not-exist.stub',
             $this->destination,
         );
 

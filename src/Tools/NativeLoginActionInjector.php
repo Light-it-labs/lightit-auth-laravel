@@ -88,7 +88,7 @@ final class NativeLoginActionInjector
     /**
      * @return array{offset: int, indentation: string, variable: string}|null
      */
-    private function locateInsertionPoint(string $contents): ?array
+    private function locateInsertionPoint(string $contents): array|null
     {
         $bounds = $this->locateExecuteMethodBody($contents);
 
@@ -123,14 +123,14 @@ final class NativeLoginActionInjector
 
     private function snippet(string $indentation, string $variable): string
     {
-        return $this->guardCall($indentation, $variable)."\n";
+        return $this->guardCall($indentation, $variable) . "\n";
     }
 
     private function guardCall(string $indentation, string $variable): string
     {
-        return "{$indentation}".self::MARKER."\n"
-            ."{$indentation}app(\\Lightit\\Authentication\\Domain\\Actions\\TwoFactorLoginGate::class)"
-            ."->guardAgainstChallenge({$variable});\n";
+        return "{$indentation}" . self::MARKER . "\n"
+            . "{$indentation}app(\\Lightit\\Authentication\\Domain\\Actions\\TwoFactorLoginGate::class)"
+            . "->guardAgainstChallenge({$variable});\n";
     }
 
     /**
@@ -163,7 +163,7 @@ final class NativeLoginActionInjector
      *
      * @return array{open: int, close: int}|null
      */
-    private function locateExecuteMethodBody(string $contents): ?array
+    private function locateExecuteMethodBody(string $contents): array|null
     {
         if (preg_match(self::EXECUTE_METHOD_PATTERN, $contents, $methodMatch, PREG_OFFSET_CAPTURE) !== 1) {
             return null;
@@ -179,7 +179,7 @@ final class NativeLoginActionInjector
         return ['open' => $openBrace, 'close' => $closeBrace];
     }
 
-    private function matchingCloseBrace(string $contents, int $openBraceOffset): ?int
+    private function matchingCloseBrace(string $contents, int $openBraceOffset): int|null
     {
         $length = \strlen($contents);
         $depth = 0;
