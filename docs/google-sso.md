@@ -5,7 +5,7 @@ This module enables authentication via Google accounts using [googleapis/google-
 > [!NOTE]
 > Google SSO integration relies on Google's Identity Platform. Your frontend must handle the OAuth flow and provide a valid ID token to your API.
 
-> The actual access token issued by your backend follows the auth driver selected during `auth:setup` (Sanctum API Token).
+> The session your backend establishes is the one the boilerplate's own login flow uses.
 
 ### Setup
 
@@ -31,6 +31,6 @@ Route::prefix('auth')->group(static function () {
 3. The backend validates the token with Google's servers.
 4. If valid, it retrieves the user's profile info (e.g., email).
 5. The system locates or creates the corresponding user in the database.
-6. Finally, it issues a Sanctum access token for future authenticated API calls.
+6. Finally, it logs the user in through the boilerplate's own login flow.
 
 ---

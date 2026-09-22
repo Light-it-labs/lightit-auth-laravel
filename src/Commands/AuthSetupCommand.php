@@ -40,8 +40,8 @@ class AuthSetupCommand extends Command
         $this->output->writeln("\e[0;31m /_/   \_\__,_|\__|_| |_| |_|   \__,_|\___|_|\_\__,_|\__, |\___|  \e[0m");
         $this->output->writeln("\e[0;31m                                                     |___/       \e[0m");
         $this->output->writeln('');
-        $this->output->writeln("\e[0;35mLight-it's package to streamline authentication, authorization,\e[0m");
-        $this->output->writeln("\e[0;35mroles, and permissions setup in Laravel boilerplates.\e[0m");
+        $this->output->writeln("\e[0;35mLight-it's package to add optional auth features - 2FA, roles and\e[0m");
+        $this->output->writeln("\e[0;35mpermissions, OTP and social login - on top of Laravel boilerplates.\e[0m");
         $this->output->writeln('');
 
         $featureOptions = array_column(
