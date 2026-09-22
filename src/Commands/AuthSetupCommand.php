@@ -47,7 +47,7 @@ class AuthSetupCommand extends Command
         $featureOptions = array_column(
             array_map(
                 fn (Feature $f) => ['value' => $f->value, 'label' => $f->label()],
-                Feature::cases()
+                Feature::selectable()
             ),
             'label',
             'value'

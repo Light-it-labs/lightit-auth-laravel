@@ -9,8 +9,10 @@ Email-based one-time password delivery for identity verification.
 
 The OTP flow is automatically installed when selected during `auth:setup`.
 
- > Note: The generated `OtpVerifyController` logs the user in through the boilerplate's
- > own login flow; this package no longer installs a token driver.
+ > [!WARNING]
+ > Not offered by `auth:setup` yet. The generated `OtpVerifyController` still depends
+ > on the login action of the removed Bearer driver; it is rewired before the feature
+ > is exposed.
  
 #### 2. Run the migration
 

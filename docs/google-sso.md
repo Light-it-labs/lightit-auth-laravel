@@ -5,7 +5,10 @@ This module enables authentication via Google accounts using [googleapis/google-
 > [!NOTE]
 > Google SSO integration relies on Google's Identity Platform. Your frontend must handle the OAuth flow and provide a valid ID token to your API.
 
-> The session your backend establishes is the one the boilerplate's own login flow uses.
+> [!WARNING]
+> Not offered by `auth:setup` yet. The generated controller still returns the
+> `access_token` / `token_type` / `expires_in` shape of the removed Bearer driver;
+> it is rewired to the boilerplate's session login before the feature is exposed.
 
 ### Setup
 
@@ -31,6 +34,6 @@ Route::prefix('auth')->group(static function () {
 3. The backend validates the token with Google's servers.
 4. If valid, it retrieves the user's profile info (e.g., email).
 5. The system locates or creates the corresponding user in the database.
-6. Finally, it logs the user in through the boilerplate's own login flow.
+6. Finally, it logs the user in. That step still returns a token-shaped body today - see the warning above.
 
 ---

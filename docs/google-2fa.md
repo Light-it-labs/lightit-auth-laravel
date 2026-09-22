@@ -105,9 +105,10 @@ Route::prefix('2fa')->group(static function (): void {
 
 ### Flow
 
-> The `access_token` / `token_type: "Bearer"` shapes below came from the Sanctum Bearer
-> driver, which this package no longer installs. The sequence of calls still holds; the
-> response bodies are rewritten when the session-based login lands.
+> [!WARNING]
+> Not offered by `auth:setup` yet. The `access_token` / `token_type: "Bearer"` shapes
+> below came from the removed Bearer driver. The sequence of calls still holds; the
+> response bodies are rewritten before the feature is exposed.
 
 **First-time setup (mandatory 2FA or user-initiated):**
 

@@ -12,6 +12,23 @@ enum Feature: string
     case ForgotPassword = 'forgot-password';
     case GoogleSso = 'google-sso';
 
+    /**
+     * The features `auth:setup` offers.
+     *
+     * Two-factor authentication, OTP and Google SSO still emit Bearer-shaped code
+     * whose driver this package no longer installs, so they are withheld until the
+     * session-based login rewires them.
+     *
+     * @return array<int, self>
+     */
+    public static function selectable(): array
+    {
+        return [
+            self::RolesAndPermissions,
+            self::ForgotPassword,
+        ];
+    }
+
     public function label(): string
     {
         return match ($this) {

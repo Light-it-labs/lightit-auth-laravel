@@ -67,7 +67,8 @@ If you are using Laravel Sail, you can run:
 ./vendor/bin/sail artisan auth:setup
 ```
 
-This command will guide you through the configuration of your authentication driver(s), Two-Factor Authentication (2FA), and/or Role and Permission system.
+This command walks you through the optional features it can add on top of the
+boilerplate's own authentication. It no longer configures an authentication driver.
 
 ---
 
