@@ -6,7 +6,7 @@ use Lightitlabs\Tools\EnvironmentKeys;
 
 describe('EnvironmentKeys', function (): void {
     beforeEach(function (): void {
-        $this->keys = new EnvironmentKeys;
+        $this->keys = new EnvironmentKeys();
     });
 
     it('does not find a key that is absent', function (): void {

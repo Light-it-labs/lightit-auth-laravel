@@ -33,7 +33,7 @@ final class RouteFileRegistrar
             throw new InvalidArgumentException('Route registration label must be a single line.');
         }
 
-        return self::MARKER_PREFIX.$label.self::MARKER_SUFFIX;
+        return self::MARKER_PREFIX . $label . self::MARKER_SUFFIX;
     }
 
     public function requireStatement(string $routeFileName): string
@@ -66,9 +66,9 @@ final class RouteFileRegistrar
             return RouteRegistrationOutcome::AlreadyRegistered;
         }
 
-        $appended = rtrim($original).PHP_EOL.PHP_EOL
-            .$marker.PHP_EOL
-            .$this->requireStatement($routeFileName).PHP_EOL;
+        $appended = rtrim($original) . PHP_EOL . PHP_EOL
+            . $marker . PHP_EOL
+            . $this->requireStatement($routeFileName) . PHP_EOL;
 
         if (file_put_contents($parentRouteFile, $appended) === false) {
             return $this->restore($parentRouteFile, $original);
@@ -84,7 +84,8 @@ final class RouteFileRegistrar
     }
 
     /**
-     * @param  array<string, string>  $patterns  route label => regex
+     * @param array<string, string> $patterns route label => regex
+     *
      * @return list<string> labels whose pattern matched
      */
     public function shadowedRoutes(string $parentRouteFile, array $patterns): array

@@ -25,8 +25,7 @@ use Symfony\Component\Console\Output\NullOutput;
  */
 function invokeUserModelWarningGuard(string $userModelClass, string $requiredParentClass): array
 {
-    $command = new class extends Command
-    {
+    $command = new class() extends Command {
         protected $signature = 'google2fa-user-model-warning-test';
 
         /** @var list<string> */
@@ -40,8 +39,7 @@ function invokeUserModelWarningGuard(string $userModelClass, string $requiredPar
 
     $installer = new Google2FAInstaller(
         $command,
-        new ComposerInstaller(new class extends Command
-        {
+        new ComposerInstaller(new class() extends Command {
             protected $signature = 'google2fa-user-model-warning-test-composer';
         }),
         new StubCopier(new OriginMarker('0.0.0-test')),
@@ -65,24 +63,30 @@ describe('Google2FAInstaller warns instead of failing when the User model cannot
         expect($warnings[0])->toContain('Could not find');
     });
 
-    it('warns when the consumer User model does not extend the two-factor authenticatable base class, and does not throw', function (): void {
-        $warnings = invokeUserModelWarningGuard(
-            UserNotExtendingFakeTwoFactorAuthenticatable::class,
-            FakeTwoFactorAuthenticatable::class,
-        );
+    it(
+        'warns when the consumer User model does not extend the two-factor authenticatable base class, and does not throw',
+        function (): void {
+            $warnings = invokeUserModelWarningGuard(
+                UserNotExtendingFakeTwoFactorAuthenticatable::class,
+                FakeTwoFactorAuthenticatable::class,
+            );
+    
+            expect($warnings)->toHaveCount(1);
+            expect($warnings[0])->toContain('does not extend');
+        }
+    );
 
-        expect($warnings)->toHaveCount(1);
-        expect($warnings[0])->toContain('does not extend');
-    });
-
-    it('stays silent when the consumer User model extends the two-factor authenticatable base class', function (): void {
-        $warnings = invokeUserModelWarningGuard(
-            UserExtendingFakeTwoFactorAuthenticatable::class,
-            FakeTwoFactorAuthenticatable::class,
-        );
-
-        expect($warnings)->toBe([]);
-    });
+    it(
+        'stays silent when the consumer User model extends the two-factor authenticatable base class',
+        function (): void {
+            $warnings = invokeUserModelWarningGuard(
+                UserExtendingFakeTwoFactorAuthenticatable::class,
+                FakeTwoFactorAuthenticatable::class,
+            );
+    
+            expect($warnings)->toBe([]);
+        }
+    );
 });
 
 describe("install()'s own call order", function (): void {
@@ -117,9 +121,9 @@ describe("install()'s own call order", function (): void {
 
 describe("install()'s real create-then-warn sequence, against a real fresh project", function (): void {
     beforeEach(function (): void {
-        require_once __DIR__.'/../../../Fixtures/Google2FAUserModel/RealNamespaceNonConformingUser.php';
+        require_once __DIR__ . '/../../../Fixtures/Google2FAUserModel/RealNamespaceNonConformingUser.php';
 
-        $this->tempBase = sys_get_temp_dir().'/google2fa-user-model-warning-'.uniqid();
+        $this->tempBase = sys_get_temp_dir() . '/google2fa-user-model-warning-' . uniqid();
         mkdir($this->tempBase, 0755, true);
         $this->originalBasePath = $this->app->basePath();
         $this->app->setBasePath($this->tempBase);
@@ -140,48 +144,56 @@ describe("install()'s real create-then-warn sequence, against a real fresh proje
         rmdir($this->tempBase);
     });
 
-    it('writes TwoFactorAuthenticatable.php, then warns against the real User model FQCN instead of failing the install', function (): void {
-        $command = new class extends Command
-        {
-            protected $signature = 'google2fa-user-model-warning-sequence-test';
-
-            /** @var list<string> */
-            public array $warnings = [];
-
-            public function warn($string, $verbosity = null): void
-            {
-                $this->warnings[] = (string) $string;
-            }
-
-            public function handle(): int
-            {
-                $composerInstaller = new ComposerInstaller($this);
-                $installer = new Google2FAInstaller($this, $composerInstaller, new StubCopier(new OriginMarker('0.0.0-test')));
-
-                // Mirrors install()'s own order: write the auth files - the
-                // step that produces TwoFactorAuthenticatable.php - before
-                // checking whether the User model extends it.
-                $createAuthFiles = new ReflectionMethod($installer, 'createAuthFiles');
-                $createAuthFiles->setAccessible(true);
-                $createAuthFiles->invoke($installer);
-
-                $warnGuard = new ReflectionMethod($installer, 'warnIfUserModelCannotSupportTwoFactor');
-                $warnGuard->setAccessible(true);
-                $warnGuard->invoke($installer);
-
-                return self::SUCCESS;
-            }
-        };
-
-        $command->setLaravel($this->app);
-        $command->run(new ArrayInput([]), new NullOutput);
-
-        expect(file_exists($this->tempBase.'/src/Authentication/Domain/TwoFactorAuthenticatable.php'))->toBeTrue();
-
-        expect($command->warnings)->toHaveCount(1);
-        expect($command->warnings[0])
-            ->toContain('Lightit\Users\Domain\Models\User')
-            ->toContain('does not extend')
-            ->toContain('Lightit\Authentication\Domain\TwoFactorAuthenticatable');
-    });
+    it(
+        'writes TwoFactorAuthenticatable.php, then warns against the real User model FQCN instead of failing the install',
+        function (): void {
+            $command = new class() extends Command {
+                protected $signature = 'google2fa-user-model-warning-sequence-test';
+    
+                /** @var list<string> */
+                public array $warnings = [];
+    
+                public function warn($string, $verbosity = null): void
+                {
+                    $this->warnings[] = (string) $string;
+                }
+    
+                public function handle(): int
+                {
+                    $composerInstaller = new ComposerInstaller($this);
+                    $installer = new Google2FAInstaller(
+                        $this,
+                        $composerInstaller,
+                        new StubCopier(new OriginMarker('0.0.0-test'))
+                    );
+    
+                    // Mirrors install()'s own order: write the auth files - the
+                    // step that produces TwoFactorAuthenticatable.php - before
+                    // checking whether the User model extends it.
+                    $createAuthFiles = new ReflectionMethod($installer, 'createAuthFiles');
+                    $createAuthFiles->setAccessible(true);
+                    $createAuthFiles->invoke($installer);
+    
+                    $warnGuard = new ReflectionMethod($installer, 'warnIfUserModelCannotSupportTwoFactor');
+                    $warnGuard->setAccessible(true);
+                    $warnGuard->invoke($installer);
+    
+                    return self::SUCCESS;
+                }
+            };
+    
+            $command->setLaravel($this->app);
+            $command->run(new ArrayInput([]), new NullOutput());
+    
+            expect(
+                file_exists($this->tempBase . '/src/Authentication/Domain/TwoFactorAuthenticatable.php')
+            )->toBeTrue();
+    
+            expect($command->warnings)->toHaveCount(1);
+            expect($command->warnings[0])
+                ->toContain('Lightit\Users\Domain\Models\User')
+                ->toContain('does not extend')
+                ->toContain('Lightit\Authentication\Domain\TwoFactorAuthenticatable');
+        }
+    );
 });

@@ -9,4 +9,6 @@ namespace Lightitlabs\Tests\Fixtures\Google2FAUserModel;
  * `Google2FAInstallerUserModelGuardTest` - the guard only cares about class
  * ancestry, not what the real abstract class does.
  */
-abstract class FakeTwoFactorAuthenticatable {}
+abstract class FakeTwoFactorAuthenticatable
+{
+}

@@ -12,13 +12,13 @@ final class EnvironmentKeys
      */
     public function isSet(string $contents, string $key): bool
     {
-        return preg_match('/^[ \t]*'.preg_quote($key, '/').'[ \t]*=/m', $contents) === 1;
+        return preg_match('/^[ \t]*' . preg_quote($key, '/') . '[ \t]*=/m', $contents) === 1;
     }
 
     /**
      * @return array{key: string, value: string}|null
      */
-    public function parse(string $line): ?array
+    public function parse(string $line): array|null
     {
         $matches = [];
 

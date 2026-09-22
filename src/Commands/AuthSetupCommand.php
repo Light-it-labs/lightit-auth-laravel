@@ -20,6 +20,8 @@ use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubRenderer;
 
+use Throwable;
+
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
@@ -50,6 +52,24 @@ class AuthSetupCommand extends Command
         $this->output->writeln("\e[0;35mroles, and permissions setup in Laravel boilerplates.\e[0m");
         $this->output->writeln('');
 
+        try {
+            $this->setupFeatures($this->resolveFeatures());
+        } catch (Throwable $exception) {
+            $this->printFailure('Authentication setup failed: ' . $exception->getMessage());
+
+            return self::FAILURE;
+        }
+
+        $this->printSuccess('Authentication setup completed!');
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @return list<Feature>
+     */
+    protected function resolveFeatures(): array
+    {
         $featureOptions = array_column(
             array_map(
                 fn (Feature $f) => ['value' => $f->value, 'label' => $f->label()],
@@ -65,17 +85,10 @@ class AuthSetupCommand extends Command
             hint: 'Press [space] to select, [enter] to confirm.'
         );
 
-        $selected = [];
-
-        foreach ($selectedValues as $value) {
-            $selected[] = Feature::from((string) $value);
-        }
-
-        $this->setupFeatures($selected);
-
-        $this->printSuccess('Authentication setup completed!');
-
-        return self::SUCCESS;
+        return array_map(
+            fn (int|string $value) => Feature::from((string) $value),
+            array_values($selectedValues)
+        );
     }
 
     /**
@@ -122,11 +135,12 @@ class AuthSetupCommand extends Command
     {
         $this->printBoxedMessage('🛠 Setting up 2FA frontend...');
 
-        $manifest = new FrontendPackageManifest;
+        $manifest = new FrontendPackageManifest();
 
         $frontendInstaller = new Google2FAFrontendInstaller(
             $this,
-            new StubRenderer,
+            new StubRenderer(),
+            OriginMarker::resolved(),
             new FrontendProjectLocator($manifest),
             $manifest,
             base_path(),

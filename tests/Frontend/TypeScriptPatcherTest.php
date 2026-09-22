@@ -7,20 +7,20 @@ use Lightitlabs\Auth\Frontend\TypeScriptPatchOutcome;
 
 describe('TypeScriptPatcher', function (): void {
     beforeEach(function (): void {
-        $this->directory = sys_get_temp_dir().'/ts-patcher-'.uniqid();
+        $this->directory = sys_get_temp_dir() . '/ts-patcher-' . uniqid();
         mkdir($this->directory, 0755, true);
-        $this->path = $this->directory.'/query-client.ts';
+        $this->path = $this->directory . '/query-client.ts';
     });
 
     afterEach(function (): void {
-        array_map('unlink', glob($this->directory.'/*') ?: []);
+        array_map('unlink', glob($this->directory . '/*') ?: []);
         rmdir($this->directory);
     });
 
     $patch = static function (string $path, string $contents): string {
         file_put_contents($path, $contents);
 
-        expect((new TypeScriptPatcher)->addCsrfMismatchToRetryList($path))
+        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($path))
             ->toBe(TypeScriptPatchOutcome::Patched);
 
         return (string) file_get_contents($path);
@@ -211,7 +211,7 @@ describe('TypeScriptPatcher', function (): void {
 
     it('leaves an already patched file untouched', function () use ($queryClient): void {
         file_put_contents($this->path, $queryClient);
-        $patcher = new TypeScriptPatcher;
+        $patcher = new TypeScriptPatcher();
         $patcher->addCsrfMismatchToRetryList($this->path);
         $patched = file_get_contents($this->path);
 
@@ -225,14 +225,14 @@ describe('TypeScriptPatcher', function (): void {
         $withoutRetryList = "import { QueryClient } from \"@tanstack/react-query\";\n\nexport const queryClient = new QueryClient({});\n";
         file_put_contents($this->path, $withoutRetryList);
 
-        expect((new TypeScriptPatcher)->addCsrfMismatchToRetryList($this->path))
+        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->path))
             ->toBe(TypeScriptPatchOutcome::AnchorNotFound);
 
         expect(file_get_contents($this->path))->toBe($withoutRetryList);
     });
 
     it('reports a missing file', function (): void {
-        expect((new TypeScriptPatcher)->addCsrfMismatchToRetryList($this->directory.'/absent.ts'))
+        expect((new TypeScriptPatcher())->addCsrfMismatchToRetryList($this->directory . '/absent.ts'))
             ->toBe(TypeScriptPatchOutcome::Missing);
     });
 

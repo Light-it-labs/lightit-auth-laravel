@@ -7,14 +7,14 @@ use Lightitlabs\Tools\RouteRegistrationOutcome;
 
 describe('RouteFileRegistrar', function (): void {
     beforeEach(function (): void {
-        $this->directory = sys_get_temp_dir().'/route-file-registrar-'.uniqid();
+        $this->directory = sys_get_temp_dir() . '/route-file-registrar-' . uniqid();
         mkdir($this->directory, 0755, true);
-        $this->parent = $this->directory.'/api.php';
-        $this->registrar = new RouteFileRegistrar;
+        $this->parent = $this->directory . '/api.php';
+        $this->registrar = new RouteFileRegistrar();
     });
 
     afterEach(function (): void {
-        array_map('unlink', glob($this->directory.'/*') ?: []);
+        array_map('unlink', glob($this->directory . '/*') ?: []);
         rmdir($this->directory);
     });
 
@@ -56,8 +56,8 @@ describe('RouteFileRegistrar', function (): void {
             expect($outcome)->toBe(RouteRegistrationOutcome::Registered)
                 ->and((string) file_get_contents($this->parent))->toBe(
                     "<?php\n\ndeclare(strict_types=1);\n\n"
-                    ."// lightit-auth: authentication routes\n"
-                    ."require __DIR__.'/auth.php';\n"
+                    . "// lightit-auth: authentication routes\n"
+                    . "require __DIR__.'/auth.php';\n"
                 );
         });
 
@@ -68,8 +68,8 @@ describe('RouteFileRegistrar', function (): void {
 
             expect((string) file_get_contents($this->parent))->toBe(
                 "<?php\n\ndeclare(strict_types=1);\n\n"
-                ."// lightit-auth: authentication routes\n"
-                ."require __DIR__.'/auth.php';\n"
+                . "// lightit-auth: authentication routes\n"
+                . "require __DIR__.'/auth.php';\n"
             );
         });
 
@@ -95,10 +95,10 @@ describe('RouteFileRegistrar', function (): void {
             expect($outcome)->toBe(RouteRegistrationOutcome::Registered)
                 ->and((string) file_get_contents($this->parent))->toBe(
                     "<?php\n\n"
-                    ."// lightit-auth: authentication routes\n"
-                    ."require __DIR__.'/auth.php';\n\n"
-                    ."// lightit-auth: roles and permissions routes\n"
-                    ."require __DIR__.'/roles.php';\n"
+                    . "// lightit-auth: authentication routes\n"
+                    . "require __DIR__.'/auth.php';\n\n"
+                    . "// lightit-auth: roles and permissions routes\n"
+                    . "require __DIR__.'/roles.php';\n"
                 );
         });
 
@@ -109,20 +109,23 @@ describe('RouteFileRegistrar', function (): void {
                 ->and($this->parent)->not->toBeFile();
         });
 
-        it('reports Corrupted and leaves the original content intact when the parent cannot be written', function (): void {
-            $original = "<?php\n\ndeclare(strict_types=1);\n";
-            file_put_contents($this->parent, $original);
-            chmod($this->parent, 0444);
-
-            try {
-                $outcome = @$this->registrar->register($this->parent, 'auth.php', 'authentication');
-            } finally {
-                chmod($this->parent, 0644);
+        it(
+            'reports Corrupted and leaves the original content intact when the parent cannot be written',
+            function (): void {
+                $original = "<?php\n\ndeclare(strict_types=1);\n";
+                file_put_contents($this->parent, $original);
+                chmod($this->parent, 0444);
+    
+                try {
+                    $outcome = @$this->registrar->register($this->parent, 'auth.php', 'authentication');
+                } finally {
+                    chmod($this->parent, 0644);
+                }
+    
+                expect($outcome)->toBe(RouteRegistrationOutcome::Corrupted)
+                    ->and((string) file_get_contents($this->parent))->toBe($original);
             }
-
-            expect($outcome)->toBe(RouteRegistrationOutcome::Corrupted)
-                ->and((string) file_get_contents($this->parent))->toBe($original);
-        })->skip(
+        )->skip(
             fn (): bool => ! function_exists('posix_getuid') || posix_getuid() === 0,
             'root bypasses file permissions'
         );
@@ -150,18 +153,21 @@ describe('RouteFileRegistrar', function (): void {
             expect($this->registrar->shadowedRoutes($this->parent, $patterns))->toBe([]);
         });
 
-        it('fails closed and reports every pattern as shadowed when the parent cannot be read', function () use ($patterns): void {
-            file_put_contents($this->parent, "<?php\n\nRoute::get('/health', fn () => null);\n");
-            chmod($this->parent, 0000);
-
-            try {
-                $shadowed = @$this->registrar->shadowedRoutes($this->parent, $patterns);
-            } finally {
-                chmod($this->parent, 0644);
+        it(
+            'fails closed and reports every pattern as shadowed when the parent cannot be read',
+            function () use ($patterns): void {
+                file_put_contents($this->parent, "<?php\n\nRoute::get('/health', fn () => null);\n");
+                chmod($this->parent, 0000);
+    
+                try {
+                    $shadowed = @$this->registrar->shadowedRoutes($this->parent, $patterns);
+                } finally {
+                    chmod($this->parent, 0644);
+                }
+    
+                expect($shadowed)->toEqualCanonicalizing(array_keys($patterns));
             }
-
-            expect($shadowed)->toEqualCanonicalizing(array_keys($patterns));
-        })->skip(
+        )->skip(
             fn (): bool => ! function_exists('posix_getuid') || posix_getuid() === 0,
             'root bypasses file permissions'
         );
