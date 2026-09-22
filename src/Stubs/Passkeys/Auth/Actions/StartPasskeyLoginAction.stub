@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginOptionsDto;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+
+final readonly class StartPasskeyLoginAction
+{
+    public function __construct(
+        private PasskeyCeremonyService $ceremonyService,
+    ) {
+    }
+
+    /**
+     * Usernameless/discoverable: no `allowCredentials` is passed, so the
+     * authenticator itself surfaces which accounts it holds credentials for.
+     * The serialized options are cached under a freshly minted, opaque
+     * `ceremony_id`, single-use, and read back with `Cache::pull()` in
+     * `PasskeyLoginAction` - a challenge answered twice is a replay.
+     */
+    public function execute(): PasskeyLoginOptionsDto
+    {
+        $options = $this->ceremonyService->requestOptions();
+
+        $optionsJson = $this->ceremonyService->serializer()->serialize($options, 'json');
+        $ceremonyId = $this->ceremonyService->cacheLoginRequestOptions($options);
+
+        return new PasskeyLoginOptionsDto(
+            ceremonyId: $ceremonyId,
+            optionsJson: $optionsJson,
+        );
+    }
+}
