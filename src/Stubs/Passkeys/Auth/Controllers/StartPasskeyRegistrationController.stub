@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Resources\PasskeyCreationOptionsResource;
+use Lightit\Authentication\Domain\Actions\StartPasskeyRegistrationAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class StartPasskeyRegistrationController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        StartPasskeyRegistrationAction $startPasskeyRegistrationAction,
+    ): JsonResponse {
+        $options = $startPasskeyRegistrationAction->execute($user);
+
+        return PasskeyCreationOptionsResource::make($options)->response();
+    }
+}
