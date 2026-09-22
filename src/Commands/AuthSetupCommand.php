@@ -11,11 +11,15 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubRenderer;
 
 use function Laravel\Prompts\multiselect;
 
@@ -155,6 +159,27 @@ class AuthSetupCommand extends Command
         $stubCopier = new StubCopier(OriginMarker::resolved());
         $passkeysInstaller = new PasskeysInstaller($this, $composerInstaller, $stubCopier);
         $passkeysInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->setupPasskeysFrontend();
+    }
+
+    protected function setupPasskeysFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up Passkeys frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new PasskeysFrontendInstaller(
+            $this,
+            new StubRenderer,
+            OriginMarker::resolved(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 }

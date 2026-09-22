@@ -13,7 +13,7 @@ final class StubRenderer
     /**
      * @param  array<string, string>  $tokens
      */
-    public function render(string $stubPath, array $tokens): string
+    public function render(string $stubPath, array $tokens, ?OriginMarker $marker = null): string
     {
         $contents = @file_get_contents($stubPath);
 
@@ -29,15 +29,23 @@ final class StubRenderer
             );
         }
 
+        if ($marker !== null) {
+            $rendered = $this->prependMarker($rendered, $stubPath, $marker);
+        }
+
         return $rendered;
     }
 
     /**
      * @param  array<string, string>  $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
-    {
-        $rendered = $this->render($stubPath, $tokens);
+    public function renderTo(
+        string $stubPath,
+        string $destination,
+        array $tokens,
+        ?OriginMarker $marker = null,
+    ): void {
+        $rendered = $this->render($stubPath, $tokens, $marker);
 
         $directory = \dirname($destination);
 
@@ -48,6 +56,22 @@ final class StubRenderer
         if (file_put_contents($destination, $rendered) === false) {
             throw new RuntimeException("Unable to write file: {$destination}");
         }
+    }
+
+    private function prependMarker(string $rendered, string $stubPath, OriginMarker $marker): string
+    {
+        $text = $marker->forStub($stubPath);
+
+        // Strip the .stub suffix to get the real extension for comment style detection.
+        $base = preg_replace('/\.stub$/', '', $stubPath) ?? $stubPath;
+        $ext = strtolower(pathinfo($base, PATHINFO_EXTENSION));
+
+        $comment = match ($ext) {
+            'md' => "<!-- {$text} -->",
+            default => "// {$text}",
+        };
+
+        return $comment."\n\n".$rendered;
     }
 
     /**
