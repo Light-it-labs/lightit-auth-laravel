@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class PasskeyCeremonyFailedException extends HttpException
+{
+    protected int $status = JsonResponse::HTTP_UNPROCESSABLE_ENTITY;
+
+    protected string $errorCode = 'passkey_ceremony_failed';
+
+    public function __construct(string|null $message = null, int|null $status = null, string|null $errorCode = null)
+    {
+        parent::__construct($message ?? 'The passkey ceremony could not be verified.');
+
+        $this->status = $status ?? $this->status;
+        $this->errorCode = $errorCode ?? $this->errorCode;
+    }
+}
