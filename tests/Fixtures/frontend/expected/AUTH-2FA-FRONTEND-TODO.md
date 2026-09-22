@@ -78,8 +78,7 @@ are the ones that are actually live once `two-factor-auth.php` is required.
   screen, calling `verifyRecoveryCode` instead of `completeTwoFactor`.
 
 **Account management - designed fresh, no IDR screen exists for these, shipped as
-`src/routes/_private/security/-components/two-factor-section.tsx` and the three
-dialogs it composes:**
+`src/routes/_private/2fa/account/page.tsx` and the three dialogs it composes:**
 
 - **Disable 2FA (self-service)** - IDR only ships an *admin* reset dialog against a
   different, admin-scoped endpoint; it has no end-user "turn off my own 2FA" screen.

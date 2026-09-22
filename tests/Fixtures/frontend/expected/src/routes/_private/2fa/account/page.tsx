@@ -2,11 +2,11 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { getAccessToken } from "@/services/auth/session";
-import { DisableTwoFactorDialog } from "./disable-two-factor-dialog";
-import { RegenerateRecoveryCodesDialog } from "./regenerate-recovery-codes-dialog";
-import { RequestTwoFactorResetDialog } from "./request-two-factor-reset-dialog";
+import { DisableTwoFactorDialog } from "./-components/disable-two-factor-dialog";
+import { RegenerateRecoveryCodesDialog } from "./-components/regenerate-recovery-codes-dialog";
+import { RequestTwoFactorResetDialog } from "./-components/request-two-factor-reset-dialog";
 
-export const TwoFactorSection = () => {
+export default function TwoFactorAccountPage() {
   const token = getAccessToken();
   const [disableOpen, setDisableOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -18,7 +18,7 @@ export const TwoFactorSection = () => {
 
   return (
     <div>
-      <h2>Two-factor authentication</h2>
+      <h1>Two-factor authentication</h1>
       <p>Manage the second factor on your account, or recover access if you&apos;ve lost it.</p>
       <Button type="button" onClick={() => setRegenerateOpen(true)}>
         Regenerate recovery codes
@@ -34,4 +34,4 @@ export const TwoFactorSection = () => {
       <DisableTwoFactorDialog open={disableOpen} onOpenChange={setDisableOpen} token={token} />
     </div>
   );
-};
+}

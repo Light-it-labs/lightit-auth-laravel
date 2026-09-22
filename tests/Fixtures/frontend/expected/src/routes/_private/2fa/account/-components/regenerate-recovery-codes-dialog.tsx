@@ -16,7 +16,7 @@ import { useRegenerateRecoveryCodes } from "@/services/auth/two-factor/actions";
 import { getPasswordConfirmationSchema } from "@/services/auth/two-factor/schemas";
 // Reaches into the guest-side setup flow's -components folder rather than duplicating
 // the display - this is the same recovery-codes list shown right after initial setup.
-import { RecoveryCodes } from "../../../(public)/_guest/two-factor/-components/recovery-codes";
+import { RecoveryCodes } from "../../../../(public)/_guest/two-factor/-components/recovery-codes";
 
 type RegenerateRecoveryCodesDialogProps = {
   open: boolean;

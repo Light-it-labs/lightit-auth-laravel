@@ -46,6 +46,11 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
         'routes/(public)/_guest/two-factor/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/page.tsx',
         'routes/(public)/_guest/two-factor/recovery-code/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx',
+        'routes/(public)/_guest/two-factor/reset/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/reset/page.tsx',
+        'routes/_private/2fa/account/page.tsx.stub' => 'src/routes/_private/2fa/account/page.tsx',
+        'routes/_private/2fa/account/-components/disable-two-factor-dialog.tsx.stub' => 'src/routes/_private/2fa/account/-components/disable-two-factor-dialog.tsx',
+        'routes/_private/2fa/account/-components/request-two-factor-reset-dialog.tsx.stub' => 'src/routes/_private/2fa/account/-components/request-two-factor-reset-dialog.tsx',
+        'routes/_private/2fa/account/-components/regenerate-recovery-codes-dialog.tsx.stub' => 'src/routes/_private/2fa/account/-components/regenerate-recovery-codes-dialog.tsx',
     ];
 
     public function __construct(
@@ -97,8 +102,8 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         );
 
         $this->command->info(
-            'Frontend two-factor authentication layer and login screens generated. Read '
-            . self::TODO_FILE . ' before building the remaining account-management screens.'
+            'Frontend two-factor authentication layer, login screens, and account-management screens generated. Read '
+            . self::TODO_FILE . ' for wiring instructions.'
         );
     }
 
