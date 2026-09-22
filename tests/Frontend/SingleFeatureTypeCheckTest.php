@@ -131,5 +131,39 @@ describe(
     
             expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
         });
+
+        it('type-checks a two-factor install with the account-management screens', function () use (
+            $scaffoldProject,
+            $copyFeatureFiles,
+            $generateRouteTree,
+            $typeCheck
+        ): void {
+            $scaffoldProject($this->projectDir);
+    
+            $copyFeatureFiles($this->projectDir, [
+                'services/auth/session.ts' => 'src/services/auth/session.ts',
+                'services/auth/two-factor/types.ts' => 'src/services/auth/two-factor/types.ts',
+                'services/auth/two-factor/schemas.ts' => 'src/services/auth/two-factor/schemas.ts',
+                'services/auth/two-factor/api.ts' => 'src/services/auth/two-factor/api.ts',
+                'services/auth/two-factor/actions.ts' => 'src/services/auth/two-factor/actions.ts',
+                'routes/(public)/_guest/two-factor/setup/page.tsx' => 'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+                'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
+                'routes/(public)/_guest/two-factor/page.tsx' => 'src/routes/(public)/_guest/two-factor/page.tsx',
+                'routes/(public)/_guest/two-factor/recovery-code/page.tsx' => 'src/routes/(public)/_guest/two-factor/recovery-code/page.tsx',
+                'routes/(public)/_guest/two-factor/reset/page.tsx' => 'src/routes/(public)/_guest/two-factor/reset/page.tsx',
+                'routes/_private/2fa/account/page.tsx' => 'src/routes/_private/2fa/account/page.tsx',
+                'routes/_private/2fa/account/-components/disable-two-factor-dialog.tsx' => 'src/routes/_private/2fa/account/-components/disable-two-factor-dialog.tsx',
+                'routes/_private/2fa/account/-components/request-two-factor-reset-dialog.tsx' => 'src/routes/_private/2fa/account/-components/request-two-factor-reset-dialog.tsx',
+                'routes/_private/2fa/account/-components/regenerate-recovery-codes-dialog.tsx' => 'src/routes/_private/2fa/account/-components/regenerate-recovery-codes-dialog.tsx',
+            ]);
+    
+            $generation = $generateRouteTree($this->projectDir);
+    
+            expect($generation->isSuccessful())->toBeTrue($generation->getOutput() . $generation->getErrorOutput());
+    
+            $process = $typeCheck($this->projectDir);
+    
+            expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
+        });
     }
 );
