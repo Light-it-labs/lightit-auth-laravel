@@ -1,0 +1,21 @@
+import { z } from "zod";
+
+import i18n from "@/i18n";
+
+export const getPasskeyNameSchema = () => {
+  return z.object({
+    name: z
+      .string()
+      .min(1, { message: i18n.t("form.errors.required", { field: i18n.t("form.passkeyName") }) })
+      .max(255, { message: i18n.t("form.errors.maxLength", { field: i18n.t("form.passkeyName"), max: 255 }) }),
+  });
+};
+
+export const getPasskeySchema = () => {
+  return z.object({
+    id: z.number(),
+    name: z.string(),
+    createdAt: z.string().nullable(),
+    lastUsedAt: z.string().nullable(),
+  });
+};

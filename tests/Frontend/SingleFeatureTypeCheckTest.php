@@ -131,5 +131,34 @@ describe(
     
             expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
         });
+
+        it('type-checks a passkeys-only install on its own', function () use (
+            $scaffoldProject,
+            $copyFeatureFiles,
+            $generateRouteTree,
+            $typeCheck
+        ): void {
+            $scaffoldProject($this->projectDir);
+    
+            $copyFeatureFiles($this->projectDir, [
+                'services/auth/session.ts' => 'src/services/auth/session.ts',
+                'services/auth/passkeys/types.ts' => 'src/services/auth/passkeys/types.ts',
+                'services/auth/passkeys/schemas.ts' => 'src/services/auth/passkeys/schemas.ts',
+                'services/auth/passkeys/api.ts' => 'src/services/auth/passkeys/api.ts',
+                'services/auth/passkeys/actions.ts' => 'src/services/auth/passkeys/actions.ts',
+                'routes/(public)/_guest/login/-components/passkey-login-button.tsx' => 'src/routes/(public)/_guest/login/-components/passkey-login-button.tsx',
+                'routes/_private/security/page.tsx' => 'src/routes/_private/security/page.tsx',
+                'routes/_private/security/-components/passkeys-section.tsx' => 'src/routes/_private/security/-components/passkeys-section.tsx',
+                'routes/_private/security/-components/enrol-passkey-dialog.tsx' => 'src/routes/_private/security/-components/enrol-passkey-dialog.tsx',
+            ]);
+    
+            $generation = $generateRouteTree($this->projectDir);
+    
+            expect($generation->isSuccessful())->toBeTrue($generation->getOutput() . $generation->getErrorOutput());
+    
+            $process = $typeCheck($this->projectDir);
+    
+            expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
+        });
     }
 );
