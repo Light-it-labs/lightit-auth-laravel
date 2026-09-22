@@ -131,5 +131,42 @@ describe(
     
             expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
         });
+
+        it('type-checks a google-sso-only install on its own', function () use (
+            $scaffoldProject,
+            $copyFeatureFiles,
+            $generateRouteTree,
+            $typeCheck
+        ): void {
+            $scaffoldProject($this->projectDir);
+    
+            // The installer patches the consuming app's env.ts to add the client id, so a
+            // google-sso install always has the key that consumer-stubs/config/env.ts lacks.
+            File::ensureDirectoryExists($this->projectDir . '/src/config');
+            file_put_contents($this->projectDir . '/src/config/env.ts', <<<'TS'
+                export declare const env: {
+                  readonly VITE_API_URL: string;
+                  readonly VITE_GOOGLE_CLIENT_ID: string;
+                };
+                TS);
+    
+            $copyFeatureFiles($this->projectDir, [
+                'services/auth/session.ts' => 'src/services/auth/session.ts',
+                'services/auth/sso/google/types.ts' => 'src/services/auth/sso/google/types.ts',
+                'services/auth/sso/google/schemas.ts' => 'src/services/auth/sso/google/schemas.ts',
+                'services/auth/sso/google/api.ts' => 'src/services/auth/sso/google/api.ts',
+                'services/auth/sso/google/actions.ts' => 'src/services/auth/sso/google/actions.ts',
+                'hooks/use-google-identity-services.ts' => 'src/hooks/use-google-identity-services.ts',
+                'routes/(public)/_guest/login/-components/google-login-button.tsx' => 'src/routes/(public)/_guest/login/-components/google-login-button.tsx',
+            ]);
+    
+            $generation = $generateRouteTree($this->projectDir);
+    
+            expect($generation->isSuccessful())->toBeTrue($generation->getOutput() . $generation->getErrorOutput());
+    
+            $process = $typeCheck($this->projectDir);
+    
+            expect($process->isSuccessful())->toBeTrue($process->getOutput() . $process->getErrorOutput());
+        });
     }
 );
