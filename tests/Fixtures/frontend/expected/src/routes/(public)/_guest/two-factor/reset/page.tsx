@@ -1,16 +1,13 @@
 import { type FormEvent } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useResetTwoFactor } from "@/services/auth/two-factor/actions";
 
-type ResetSearch = {
-  token: string;
-};
-
-export default function TwoFactorResetPage() {
-  const { token } = useSearch({ strict: false }) as unknown as ResetSearch;
+const TwoFactorResetPage = () => {
+  const { token } = Route.useSearch();
   const navigate = useNavigate();
 
   const { mutate, isPending, isSuccess, isError } = useResetTwoFactor();
@@ -47,4 +44,11 @@ export default function TwoFactorResetPage() {
       </Button>
     </div>
   );
-}
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/reset/")({
+  component: TwoFactorResetPage,
+  validateSearch: z.object({
+    token: z.string(),
+  }),
+});
