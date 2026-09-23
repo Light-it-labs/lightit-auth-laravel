@@ -73,7 +73,7 @@ class UnauthorizedException extends HttpException
 
 #### 5. Configure the authentication guard
 
-Follow the guard configuration from your chosen driver — see [Sanctum setup](sanctum.md#3-update-environment-and-config).
+Use the guard the boilerplate already configures for its own login flow; this package does not add one.
 
 #### 6. Define 2FA-related routes
 
@@ -104,6 +104,11 @@ Route::prefix('2fa')->group(static function (): void {
 ---
 
 ### Flow
+
+> [!WARNING]
+> Not offered by `auth:setup` yet. The `access_token` / `token_type: "Bearer"` shapes
+> below came from the removed Bearer driver. The sequence of calls still holds; the
+> response bodies are rewritten before the feature is exposed.
 
 **First-time setup (mandatory 2FA or user-initiated):**
 

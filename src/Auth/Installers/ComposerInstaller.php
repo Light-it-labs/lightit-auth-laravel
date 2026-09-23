@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Symfony\Component\Process\Process;
+
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
 
