@@ -6,7 +6,6 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Enums\AuthDriver;
 
 final class Google2FAInstaller implements AuthInstallerInterface
 {
@@ -24,7 +23,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-        private readonly AuthDriver $driver,
     ) {
     }
 
@@ -59,22 +57,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
-        $sharedStubsPath = __DIR__ . '/../../Stubs/Google2FA/Auth';
-        $driverStubsPath = $this->resolveDriverStubsPath();
+        $stubsPath = __DIR__ . '/../../Stubs/Google2FA/Auth';
 
-        $this->copySharedAuthFiles($sharedStubsPath);
-        $this->copyDriverSpecificFiles($driverStubsPath);
+        $this->copyAuthFiles($stubsPath);
     }
 
-    private function resolveDriverStubsPath(): string
-    {
-        return match ($this->driver) {
-            AuthDriver::SanctumApiToken => __DIR__ . '/../../Stubs/Google2FA/Sanctum/Auth',
-            default => __DIR__ . '/../../Stubs/Google2FA/JWT/Auth',
-        };
-    }
-
-    private function copySharedAuthFiles(string $stubsPath): void
+    private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
@@ -113,25 +101,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Requests/VerifyRecoveryCodeRequest.stub' => 'App/Requests/VerifyRecoveryCodeRequest.php',
             '/Requests/RequestTwoFactorResetRequest.stub' => 'App/Requests/RequestTwoFactorResetRequest.php',
             '/Requests/ResetTwoFactorAuthenticationRequest.stub' => 'App/Requests/ResetTwoFactorAuthenticationRequest.php',
-        ];
-
-        foreach ($files as $stub => $destination) {
-            copy(
-                $stubsPath . $stub,
-                base_path("src/Authentication/{$destination}")
-            );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
-        }
-    }
-
-    private function copyDriverSpecificFiles(string $stubsPath): void
-    {
-        $files = [
-            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
-            '/Actions/LoginAction.stub' => 'Domain/Actions/LoginAction.php',
-            '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
-            '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
-            '/Actions/Pipes/IssueAccessTokenIfNoFinalToken.stub' => 'Domain/Actions/Pipes/IssueAccessTokenIfNoFinalToken.php',
         ];
 
         foreach ($files as $stub => $destination) {

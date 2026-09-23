@@ -9,9 +9,10 @@ Email-based one-time password delivery for identity verification.
 
 The OTP flow is automatically installed when selected during `auth:setup`.
 
- > Note: The generated `OtpVerifyController` issues API tokens using your configured token driver.  
- > OTP therefore **requires** either JWT or Sanctum to be installed and enabled.  
- > The `auth:setup` command enforces this by asking you to choose a token driver when you enable OTP.
+ > [!WARNING]
+ > Not offered by `auth:setup` yet. The generated `OtpVerifyController` still depends
+ > on the login action of the removed Bearer driver; it is rewired before the feature
+ > is exposed.
  
 #### 2. Run the migration
 

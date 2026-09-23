@@ -9,15 +9,11 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
-use Lightitlabs\Auth\Installers\JwtInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
-use Lightitlabs\Auth\Installers\SanctumInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
-use Lightitlabs\Enums\AuthDriver;
-use Lightitlabs\Tools\FileManipulator;
-use function Laravel\Prompts\confirm;
-use function Laravel\Prompts\error;
+use Lightitlabs\Enums\Feature;
+
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
@@ -44,69 +40,32 @@ class AuthSetupCommand extends Command
         $this->output->writeln("\e[0;31m /_/   \_\__,_|\__|_| |_| |_|   \__,_|\___|_|\_\__,_|\__, |\___|  \e[0m");
         $this->output->writeln("\e[0;31m                                                     |___/       \e[0m");
         $this->output->writeln('');
-        $this->output->writeln("\e[0;35mLight-it's package to streamline authentication, authorization,\e[0m");
-        $this->output->writeln("\e[0;35mroles, and permissions setup in Laravel boilerplates.\e[0m");
+        $this->output->writeln("\e[0;35mLight-it's package to add optional auth features - 2FA, roles and\e[0m");
+        $this->output->writeln("\e[0;35mpermissions, OTP and social login - on top of Laravel boilerplates.\e[0m");
         $this->output->writeln('');
 
-        $driversValues = array_map(
-            fn ($v) => $v->value,
-            AuthDriver::cases()
+        $featureOptions = array_column(
+            array_map(
+                fn (Feature $f) => ['value' => $f->value, 'label' => $f->label()],
+                Feature::selectable()
+            ),
+            'label',
+            'value'
         );
 
-        do {
-            $drivers = multiselect(
-                label: 'Select authentication drivers',
-                options: $driversValues,
-                required: true,
-                hint: 'Press [space] to select, [enter] to confirm.'
-            );
-
-            if (in_array(AuthDriver::Jwt->value, $drivers) && in_array(AuthDriver::SanctumApiToken->value, $drivers)) {
-                error('You cannot select both JWT and Sanctum authentication drivers.');
-                $drivers = null;
-            }
-        } while (empty($drivers));
-
-        $enable2FA = confirm(
-            label: 'Would you like to enable Two-Factor Authentication?',
-            default: false,
+        $selectedValues = multiselect(
+            label: 'Select features',
+            options: $featureOptions,
+            hint: 'Press [space] to select, [enter] to confirm.'
         );
 
-        $enableRolesAndPermissions = confirm(
-            label: 'Would you like to enable Roles and Permissions?',
-            default: false,
-        );
+        $selected = [];
 
-        $hasTokenDriver = in_array(AuthDriver::Jwt->value, $drivers) || in_array(AuthDriver::SanctumApiToken->value, $drivers);
-
-        $enableOtp = $hasTokenDriver && confirm(
-            label: 'Would you like to enable OTP (one-time password)?',
-            default: false,
-        );
-
-        $enableForgotPassword = confirm(
-            label: 'Would you like to enable the Forgot Password flow?',
-            default: false,
-        );
-
-        /** @var array<string> $drivers */
-        $this->setupDrivers($drivers);
-
-        if ($enable2FA) {
-            $this->setup2FA($drivers);
+        foreach ($selectedValues as $value) {
+            $selected[] = Feature::from((string) $value);
         }
 
-        if ($enableRolesAndPermissions) {
-            $this->setupRolesAndPermissions();
-        }
-
-        if ($enableOtp) {
-            $this->setupOtp();
-        }
-        
-        if ($enableForgotPassword) {
-            $this->setupForgotPassword();
-        }
+        $this->setupFeatures($selected);
 
         $this->printSuccess('Authentication setup completed!');
 
@@ -114,73 +73,44 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<string> $drivers
+     * @param array<Feature> $features
      */
-    protected function setupDrivers(array $drivers): void
+    protected function setupFeatures(array $features): void
     {
-        $setup = [
-            AuthDriver::Jwt->value => fn () => $this->setupJWT(),
-            AuthDriver::SanctumApiToken->value => fn () => $this->setupSanctum(),
-            AuthDriver::GoogleSso->value => fn () => $this->setupGoogleSSO(),
-        ];
-
-        foreach ($drivers as $driver) {
-            $key = AuthDriver::from($driver)->value;
-            $setup[$key]();
+        foreach ($features as $feature) {
+            match ($feature) {
+                Feature::TwoFactorAuthentication => $this->setup2FA(),
+                Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
+                Feature::Otp => $this->setupOtp(),
+                Feature::ForgotPassword => $this->setupForgotPassword(),
+                Feature::GoogleSso => $this->setupGoogleSSO(),
+            };
         }
-    }
-
-    protected function setupJWT(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up JWT...');
-
-        $composerInstaller = new ComposerInstaller($this);
-        $fileManipulator = new FileManipulator($this);
-        $jwtInstaller = new JwtInstaller($this, $composerInstaller, $fileManipulator);
-        $jwtInstaller->install();
-        $this->printSectionSeparator();
-    }
-
-    protected function setupSanctum(): void
-    {
-        $this->printBoxedMessage('🛠 Setting up Sanctum...');
-
-        $composerInstaller = new ComposerInstaller($this);
-        $sanctumInstaller = new SanctumInstaller($this, $composerInstaller);
-        $sanctumInstaller->install();
-        $this->printSectionSeparator();
     }
 
     protected function setupGoogleSSO(): void
     {
-        $this->printBoxedMessage('🛠 Setting up Google SSO...');
+        $this->printBoxedMessage('Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $jwtInstaller = new GoogleSSOInstaller($this, $composerInstaller);
-        $jwtInstaller->install();
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller);
+        $googleSSOInstaller->install();
         $this->printSectionSeparator();
     }
 
-    /**
-     * @param array<string> $drivers
-     */
-    protected function setup2FA(array $drivers): void
+    protected function setup2FA(): void
     {
-        $this->printBoxedMessage('🛠 Setting up 2FA...');
-
-        $driver = in_array(AuthDriver::SanctumApiToken->value, $drivers)
-            ? AuthDriver::SanctumApiToken
-            : AuthDriver::Jwt;
+        $this->printBoxedMessage('Setting up 2FA...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $driver);
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
         $google2FAInstaller->install();
         $this->printSectionSeparator();
     }
 
     protected function setupRolesAndPermissions(): void
     {
-        $this->printBoxedMessage('🛠 Setting up Roles and Permissions...');
+        $this->printBoxedMessage('Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
@@ -190,7 +120,7 @@ class AuthSetupCommand extends Command
 
     protected function setupOtp(): void
     {
-        $this->printBoxedMessage('🛠 Setting up OTP...');
+        $this->printBoxedMessage('Setting up OTP...');
 
         $composerInstaller = new ComposerInstaller($this);
         $otpInstaller = new OtpInstaller($composerInstaller);
@@ -200,7 +130,7 @@ class AuthSetupCommand extends Command
 
     protected function setupForgotPassword(): void
     {
-        $this->printBoxedMessage('🛠 Setting up Forgot Password...');
+        $this->printBoxedMessage('Setting up Forgot Password...');
 
         $composerInstaller = new ComposerInstaller($this);
         $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller);

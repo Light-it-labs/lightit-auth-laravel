@@ -2,12 +2,10 @@
 
 # Laravel Auth Package
 
-Laravel Auth Package simplifies authentication, authorization, roles and permissions setup for Laravel applications.
+Laravel Auth Package adds optional auth features - 2FA, roles and permissions, OTP,
+forgot password and social login - on top of the Light-it Laravel Boilerplate, which
+owns the base authentication.
 Supporting the following packages
-
-[//]: # (- [PHP-Open-Source-Saver/jwt-auth]&#40;https://github.com/PHP-Open-Source-Saver/jwt-auth&#41;)
-
-[//]: # (- [Laravel Sanctum &#40;Api Token Authentication&#41;]&#40;https://laravel.com/docs/12.x/sanctum&#41;)
 
 [//]: # (- [Google SSO]&#40;https://github.com/googleapis/google-api-php-client&#41;)
 
@@ -18,8 +16,6 @@ Supporting the following packages
 ## Contents
 
 - [Installation](#installation)
-- [JWT](docs/jwt.md)
-- [Sanctum](docs/sanctum.md)
 - [Google SSO](docs/google-sso.md)
 - [Google 2FA](docs/google-2fa.md)
 - [Roles & Permissions](docs/permission.md)
@@ -71,7 +67,8 @@ If you are using Laravel Sail, you can run:
 ./vendor/bin/sail artisan auth:setup
 ```
 
-This command will guide you through the configuration of your authentication driver(s), Two-Factor Authentication (2FA), and/or Role and Permission system.
+This command walks you through the optional features it can add on top of the
+boilerplate's own authentication. It no longer configures an authentication driver.
 
 ---
 
