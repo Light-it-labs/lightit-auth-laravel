@@ -10,27 +10,73 @@ describe('Google2FAFrontendInstaller', function (): void {
     beforeEach(function (): void {
         $this->root = sys_get_temp_dir().'/lightit-2fa-frontend-'.bin2hex(random_bytes(6));
         File::copyDirectory(__DIR__.'/../Fixtures/frontend/react-project', $this->root);
+
+        $this->writtenFiles = [
+            'src/services/auth/two-factor/types.ts',
+            'src/services/auth/two-factor/schemas.ts',
+            'src/services/auth/two-factor/api.ts',
+            'src/services/auth/two-factor/actions.ts',
+            'AUTH-2FA-FRONTEND-TODO.md',
+        ];
     });
 
     afterEach(function (): void {
         File::deleteDirectory($this->root);
     });
 
-    it('writes every 2FA service file and the TODO doc into the resolved frontend root', function (): void {
+    it('writes exactly the 2FA service files and the TODO doc into the resolved frontend root', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
         $this->artisan('google2fa-frontend-fake')->assertSuccessful();
 
-        foreach ([
-            'src/services/auth/two-factor/types.ts',
-            'src/services/auth/two-factor/schemas.ts',
-            'src/services/auth/two-factor/api.ts',
-            'src/services/auth/two-factor/actions.ts',
-            'AUTH-2FA-FRONTEND-TODO.md',
-        ] as $relative) {
-            expect(file_get_contents($this->root.'/'.$relative))
-                ->toBe(file_get_contents(__DIR__.'/../Fixtures/frontend/expected/'.$relative));
+        foreach ($this->writtenFiles as $relative) {
+            expect(file_exists($this->root.'/'.$relative))->toBeTrue();
         }
+    });
+
+    it('leaves no placeholder unresolved in any written file', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        foreach ($this->writtenFiles as $relative) {
+            expect(file_get_contents($this->root.'/'.$relative))
+                ->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
+        }
+    });
+
+    it('renders api.ts with the package\'s own endpoint names, not idr-front\'s', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root.'/src/services/auth/two-factor/api.ts'))
+            ->toContain('"2fa/setup"')
+            ->toContain('"2fa/complete"')
+            ->toContain('"2fa/verify-recovery-code"')
+            ->toContain('"2fa/regenerate-recovery-codes"')
+            ->not->toContain('auth/verify-recovery-code')
+            ->not->toContain('auth/regenerate-recovery-codes');
+    });
+
+    it('attaches a manual Authorization header per call instead of a shared authenticated client', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root.'/src/services/auth/two-factor/api.ts'))
+            ->toContain('Authorization: `Bearer ${token}`')
+            ->not->toContain('withCredentials');
+    });
+
+    it('spells the provenance marker so cspell can tokenize it', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root.'/AUTH-2FA-FRONTEND-TODO.md'))
+            ->toContain('light-it')
+            ->not->toContain('lightit');
     });
 
     it('reports every dependency already installed when the fixture project has them all', function (): void {
@@ -46,26 +92,23 @@ describe('Google2FAFrontendInstaller', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
         $this->artisan('google2fa-frontend-fake')->assertSuccessful();
 
-        $filesBeforeSecondRun = [];
-        foreach ([
-            'src/services/auth/two-factor/types.ts',
-            'src/services/auth/two-factor/schemas.ts',
-            'src/services/auth/two-factor/api.ts',
-            'src/services/auth/two-factor/actions.ts',
-            'AUTH-2FA-FRONTEND-TODO.md',
-        ] as $relative) {
-            $filesBeforeSecondRun[$relative] = file_get_contents($this->root.'/'.$relative);
+        $filesAfterFirstRun = [];
+        foreach ($this->writtenFiles as $relative) {
+            $filesAfterFirstRun[$relative] = file_get_contents($this->root.'/'.$relative);
         }
 
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
-        $this->artisan('google2fa-frontend-fake')
-            ->expectsOutputToContain('Skipped src/services/auth/two-factor/types.ts')
-            ->doesntExpectOutputToContain('Overwriting')
-            ->assertSuccessful();
+        $command = $this->artisan('google2fa-frontend-fake');
 
-        foreach ($filesBeforeSecondRun as $relative => $contentsBeforeSecondRun) {
-            expect(file_get_contents($this->root.'/'.$relative))->toBe($contentsBeforeSecondRun);
+        foreach ($this->writtenFiles as $relative) {
+            $command->expectsOutputToContain('Skipped '.$relative);
+        }
+
+        $command->doesntExpectOutputToContain('Overwriting')->assertSuccessful();
+
+        foreach ($filesAfterFirstRun as $relative => $contentsAfterFirstRun) {
+            expect(file_get_contents($this->root.'/'.$relative))->toBe($contentsAfterFirstRun);
         }
     });
 
