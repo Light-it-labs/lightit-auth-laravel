@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Lightitlabs\Tests\Support\TruncatingStreamWrapper;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 
@@ -107,6 +108,22 @@ describe('RouteFileRegistrar', function (): void {
 
             expect($outcome)->toBe(RouteRegistrationOutcome::ParentMissing)
                 ->and($this->parent)->not->toBeFile();
+        });
+
+        it('does not report Registered when the write silently drops content the marker-only check would miss', function (): void {
+            $protocol = 'lightit-test-truncate';
+            TruncatingStreamWrapper::register($protocol);
+            $original = "<?php\n\ndeclare(strict_types=1);\n";
+            file_put_contents($this->parent, $original);
+
+            try {
+                $outcome = $this->registrar->register("{$protocol}://{$this->parent}", 'auth.php', 'authentication');
+            } finally {
+                TruncatingStreamWrapper::unregister($protocol);
+            }
+
+            expect($outcome)->not->toBe(RouteRegistrationOutcome::Registered)
+                ->and((string) file_get_contents($this->parent))->not->toContain("require __DIR__.'/auth.php';");
         });
 
         it('reports Corrupted and leaves the original content intact when the parent cannot be written', function (): void {

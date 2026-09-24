@@ -76,7 +76,7 @@ final class RouteFileRegistrar
 
         $written = file_get_contents($parentRouteFile);
 
-        if ($written === false || ! str_contains($written, $marker)) {
+        if ($written !== $appended) {
             return $this->restore($parentRouteFile, $original);
         }
 
