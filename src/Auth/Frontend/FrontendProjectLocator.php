@@ -58,7 +58,7 @@ final class FrontendProjectLocator
 
         $this->assertContained($realRoot, $this->deepestExistingAncestor(\dirname($destination)));
 
-        if (file_exists($destination)) {
+        if (file_exists($destination) || is_link($destination)) {
             $this->assertContained($realRoot, realpath($destination));
         }
 

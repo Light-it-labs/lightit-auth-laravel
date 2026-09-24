@@ -81,6 +81,22 @@ describe('FrontendProjectLocator', function () use (
         expect($locator()->resolveDestination($reactProject, 'src/config/api.ts'))
             ->toBe(realpath($reactProject).'/src/config/api.ts');
     });
+
+    it('refuses a destination that is a dangling symlink instead of silently accepting it', function () use (
+        $locator,
+        $reactProject
+    ): void {
+        $destination = realpath($reactProject).'/src/dangling.ts';
+        symlink(realpath($reactProject).'/src/does-not-exist.ts', $destination);
+
+        try {
+            expect(function () use ($locator, $reactProject): void {
+                $locator()->resolveDestination($reactProject, 'src/dangling.ts');
+            })->toThrow(RuntimeException::class, 'Refusing to write outside the frontend root');
+        } finally {
+            unlink($destination);
+        }
+    });
 });
 
 describe('FrontendPackageManifest', function () use ($reactProject, $apiProject): void {
