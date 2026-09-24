@@ -82,9 +82,18 @@ final class OtpInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 3, 'Copying migration files');
 
+        $migrationName = 'create_otps_table';
+        $migrationsDirectory = base_path('database/migrations');
+
+        if ($this->migrationAlreadyExists($migrationsDirectory, $migrationName)) {
+            $this->composerInstaller->printSkipped("database/migrations/*_{$migrationName}.php");
+
+            return;
+        }
+
         $stub = __DIR__.'/../../Stubs/Otp/database/migrations/create_otps_table.stub';
         $timestamp = date('Y_m_d_His');
-        $destination = "database/migrations/{$timestamp}_create_otps_table.php";
+        $destination = "database/migrations/{$timestamp}_{$migrationName}.php";
 
         $outcome = $this->stubCopier->copy(
             $stub,
@@ -95,6 +104,18 @@ final class OtpInstaller implements AuthInstallerInterface
             StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Created: {$destination}"),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($destination),
         };
+    }
+
+    /**
+     * The migration file is timestamped at copy time, so the destination path is never stable
+     * enough for `StubCopier`'s own no-overwrite guard to catch a re-run. Glob for any existing
+     * migration ending in the same name instead of trusting the exact filename.
+     */
+    private function migrationAlreadyExists(string $migrationsDirectory, string $migrationName): bool
+    {
+        $matches = glob("{$migrationsDirectory}/*_{$migrationName}.php");
+
+        return $matches !== false && $matches !== [];
     }
 
     private function copyConfigFile(): void
