@@ -8,7 +8,12 @@ use RuntimeException;
 
 final class StubCopier
 {
-    private const PHP_HEADER = "<?php\n\n";
+    /**
+     * Matches the opening `<?php` tag line, whatever follows it on that same line: a bare tag
+     * (`<?php` then newline), or a tag immediately followed by a statement (`<?php declare(...)`,
+     * `<?php return [`).
+     */
+    private const PHP_OPEN_TAG_LINE_PATTERN = '/^<\?php[^\r\n]*\r?\n/';
 
     public function __construct(private readonly OriginMarker $originMarker) {}
 
@@ -26,8 +31,8 @@ final class StubCopier
 
         $marker = $this->originMarker->forStub($source);
 
-        $withMarker = str_starts_with($contents, self::PHP_HEADER)
-            ? self::PHP_HEADER."// {$marker}\n\n".substr($contents, strlen(self::PHP_HEADER))
+        $withMarker = preg_match(self::PHP_OPEN_TAG_LINE_PATTERN, $contents, $matches) === 1
+            ? $matches[0]."// {$marker}\n".substr($contents, strlen($matches[0]))
             : "// {$marker}\n".$contents;
 
         if (@file_put_contents($destination, $withMarker) === false) {
