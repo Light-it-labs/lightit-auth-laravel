@@ -106,11 +106,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            copy(
+            $outcome = $this->stubCopier->copy(
                 $stubsPath.$stub,
                 base_path("src/Authentication/{$destination}")
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
+
+            match ($outcome) {
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}"),
+                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
+            };
         }
     }
 
