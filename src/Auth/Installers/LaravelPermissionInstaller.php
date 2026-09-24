@@ -48,8 +48,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             return;
         }
 
-        copy($source, $destination);
-        $this->composerInstaller->printConfigPublished('Config file published: config/permission.php');
+        $outcome = $this->stubCopier->copy($source, $destination);
+
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/permission.php'),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/permission.php'),
+        };
     }
 
     private function clearCacheConfig(): void
@@ -76,9 +80,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $relativePath = "database/migrations/{$filename}";
         $destination = base_path($relativePath);
 
-        copy($source, $destination);
+        $outcome = $this->stubCopier->copy($source, $destination);
 
-        $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}");
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}"),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($relativePath),
+        };
     }
 
     private function copyPackageFiles(): void
