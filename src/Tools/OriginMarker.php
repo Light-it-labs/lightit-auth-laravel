@@ -26,11 +26,13 @@ final class OriginMarker
 
     private function featureFor(string $stubPath): string
     {
-        if (preg_match(self::FRONTEND_FEATURE_PATTERN, $stubPath, $matches) === 1) {
+        $normalizedPath = str_replace('\\', '/', $stubPath);
+
+        if (preg_match(self::FRONTEND_FEATURE_PATTERN, $normalizedPath, $matches) === 1) {
             return $matches[1];
         }
 
-        if (preg_match(self::BACKEND_FEATURE_PATTERN, $stubPath, $matches) === 1) {
+        if (preg_match(self::BACKEND_FEATURE_PATTERN, $normalizedPath, $matches) === 1) {
             return $matches[1];
         }
 
