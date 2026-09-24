@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
 
 $writeStub = static function (string $contents): string {
@@ -54,9 +55,28 @@ describe('StubRenderer', function () use ($writeStub): void {
         $destination = sys_get_temp_dir().'/lightit-render-'.bin2hex(random_bytes(6))
             .'/deep/nested/out.ts';
 
-        (new StubRenderer)->renderTo($stub, $destination, ['body' => 'written']);
+        $outcome = (new StubRenderer)->renderTo($stub, $destination, ['body' => 'written']);
 
+        expect($outcome)->toBe(StubCopyOutcome::Written);
         expect(file_get_contents($destination))->toBe('written');
+
+        unlink($destination);
+    });
+
+    it('never overwrites an existing destination file on a second renderTo() run', function () use ($writeStub): void {
+        $stub = $writeStub('{{ body }}');
+        $destination = sys_get_temp_dir().'/lightit-render-'.bin2hex(random_bytes(6))
+            .'/deep/nested/out.ts';
+
+        $first = (new StubRenderer)->renderTo($stub, $destination, ['body' => 'written']);
+        $contentAfterFirstRun = (string) file_get_contents($destination);
+
+        $second = (new StubRenderer)->renderTo($stub, $destination, ['body' => 'changed']);
+        $contentAfterSecondRun = (string) file_get_contents($destination);
+
+        expect($first)->toBe(StubCopyOutcome::Written);
+        expect($second)->toBe(StubCopyOutcome::Skipped);
+        expect($contentAfterSecondRun)->toBe($contentAfterFirstRun);
 
         unlink($destination);
     });

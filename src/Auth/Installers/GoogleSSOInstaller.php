@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubCopyOutcome;
 
 final class GoogleSSOInstaller implements AuthInstallerInterface
 {
@@ -20,8 +21,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-    ) {
-    }
+    ) {}
 
     public function install(): void
     {
@@ -47,7 +47,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__ . '/../../Stubs/GoogleSSO/Auth';
+        $stubsPath = __DIR__.'/../../Stubs/GoogleSSO/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -61,11 +61,11 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            $this->stubCopier->copy(
-                $stubsPath . $stub,
+            $outcome = $this->stubCopier->copy(
+                $stubsPath.$stub,
                 base_path("src/Authentication/{$destination}")
             );
-            $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}");
+            $this->reportCopy($outcome, "src/Authentication/{$destination}");
         }
     }
 
@@ -73,7 +73,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 2, 'Creating shared exception file');
 
-        $sharedStubPath = __DIR__ . '/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
+        $sharedStubPath = __DIR__.'/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
         $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
 
         $sharedDir = dirname($sharedDestPath);
@@ -82,9 +82,15 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
             mkdir($sharedDir, 0755, true);
         }
 
-        $this->stubCopier->copy($sharedStubPath, $sharedDestPath);
-        $this->composerInstaller->printFileCreated(
-            'Created: src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php'
-        );
+        $outcome = $this->stubCopier->copy($sharedStubPath, $sharedDestPath);
+        $this->reportCopy($outcome, 'src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
+    }
+
+    private function reportCopy(StubCopyOutcome $outcome, string $label): void
+    {
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: {$label}"),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($label),
+        };
     }
 }

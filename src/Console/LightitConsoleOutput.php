@@ -25,9 +25,9 @@ trait LightitConsoleOutput
     public function printBoxedMessage(string $message): void
     {
         $length = mb_strlen($message) + 4;
-        $top = '╭' . str_repeat('─', $length) . '╮';
-        $bottom = '╰' . str_repeat('─', $length) . '╯';
-        $middle = '│  ' . $message . '  │';
+        $top = '╭'.str_repeat('─', $length).'╮';
+        $bottom = '╰'.str_repeat('─', $length).'╯';
+        $middle = '│  '.$message.'  │';
 
         $this->command->line('');
         $this->command->line("\e[0;35m{$top}\e[0m");
@@ -44,12 +44,12 @@ trait LightitConsoleOutput
 
     public function printSuccess(string $message): void
     {
-        $this->printBoxedMessage('🚀 ' . $message);
+        $this->printBoxedMessage('🚀 '.$message);
     }
 
     public function printFailure(string $message): void
     {
-        $this->printBoxedMessage('❌ ' . $message);
+        $this->printBoxedMessage('❌ '.$message);
     }
 
     public function printFileCreated(string $message): void
@@ -70,5 +70,10 @@ trait LightitConsoleOutput
     public function printMiddlewareCreated(string $message): void
     {
         $this->command->line("\e[0;35m🛡️ {$message}\e[0m");
+    }
+
+    public function printSkipped(string $label): void
+    {
+        $this->command->line("\e[0;33m⏭️ Skipped {$label}: the file already exists.\e[0m");
     }
 }

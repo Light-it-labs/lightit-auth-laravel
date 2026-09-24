@@ -12,8 +12,12 @@ final class StubCopier
 
     public function __construct(private readonly OriginMarker $originMarker) {}
 
-    public function copy(string $source, string $destination): void
+    public function copy(string $source, string $destination): StubCopyOutcome
     {
+        if (is_file($destination)) {
+            return StubCopyOutcome::Skipped;
+        }
+
         $contents = @file_get_contents($source);
 
         if ($contents === false) {
@@ -29,5 +33,7 @@ final class StubCopier
         if (@file_put_contents($destination, $withMarker) === false) {
             throw new RuntimeException("Unable to write file: {$destination}");
         }
+
+        return StubCopyOutcome::Written;
     }
 }

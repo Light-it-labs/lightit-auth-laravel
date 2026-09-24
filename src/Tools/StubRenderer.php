@@ -35,8 +35,12 @@ final class StubRenderer
     /**
      * @param  array<string, string>  $tokens
      */
-    public function renderTo(string $stubPath, string $destination, array $tokens): void
+    public function renderTo(string $stubPath, string $destination, array $tokens): StubCopyOutcome
     {
+        if (is_file($destination)) {
+            return StubCopyOutcome::Skipped;
+        }
+
         $rendered = $this->render($stubPath, $tokens);
 
         $directory = \dirname($destination);
@@ -48,6 +52,8 @@ final class StubRenderer
         if (file_put_contents($destination, $rendered) === false) {
             throw new RuntimeException("Unable to write file: {$destination}");
         }
+
+        return StubCopyOutcome::Written;
     }
 
     /**
