@@ -8,12 +8,16 @@ use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
+use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
 use RuntimeException;
 
 final class Google2FAFrontendInstaller implements AuthInstallerInterface
 {
+    use LightitConsoleOutput;
+
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
 
     private const REQUIRED_DEPENDENCIES = [
@@ -31,13 +35,15 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly Command $command,
+        protected Command $command,
         private readonly StubRenderer $stubRenderer,
         private readonly FrontendProjectLocator $locator,
         private readonly FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
         private readonly ?string $frontendPath = null,
-    ) {}
+    ) {
+        $this->initializeOutput($this->command);
+    }
 
     public static function stubDirectory(): string
     {
@@ -76,13 +82,12 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     {
         $destination = $this->locator->resolveDestination($root, $relative);
 
-        if (file_exists($destination)) {
-            $this->command->warn("Overwriting: {$relative}");
-        }
+        $outcome = $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens);
 
-        $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens);
-
-        $this->command->line("Created: {$relative}");
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->command->line("Created: {$relative}"),
+            StubCopyOutcome::Skipped => $this->printSkipped($relative),
+        };
     }
 
     private function reportUnresolvedRoot(): void

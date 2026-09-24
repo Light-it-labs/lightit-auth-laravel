@@ -42,6 +42,33 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->toContain('Every dependency this layer needs is already installed.');
     });
 
+    it('reports Skipped instead of Overwriting on a second run, and leaves every file byte-identical', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $filesBeforeSecondRun = [];
+        foreach ([
+            'src/services/auth/two-factor/types.ts',
+            'src/services/auth/two-factor/schemas.ts',
+            'src/services/auth/two-factor/api.ts',
+            'src/services/auth/two-factor/actions.ts',
+            'AUTH-2FA-FRONTEND-TODO.md',
+        ] as $relative) {
+            $filesBeforeSecondRun[$relative] = file_get_contents($this->root.'/'.$relative);
+        }
+
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')
+            ->expectsOutputToContain('Skipped src/services/auth/two-factor/types.ts')
+            ->doesntExpectOutputToContain('Overwriting')
+            ->assertSuccessful();
+
+        foreach ($filesBeforeSecondRun as $relative => $contentsBeforeSecondRun) {
+            expect(file_get_contents($this->root.'/'.$relative))->toBe($contentsBeforeSecondRun);
+        }
+    });
+
     it('warns and skips instead of failing when no React project resolves', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand);
 
