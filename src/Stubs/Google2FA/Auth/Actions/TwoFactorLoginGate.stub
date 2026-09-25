@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
@@ -17,6 +20,12 @@ use Lightit\Users\Domain\Models\User;
  */
 final class TwoFactorLoginGate
 {
+    public function __construct(
+        private readonly AuthFactory $auth,
+        private readonly Request $request,
+    ) {
+    }
+
     /**
      * @throws TwoFactorChallengeException
      */
@@ -30,6 +39,8 @@ final class TwoFactorLoginGate
         $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
 
         if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory')) {
+            $this->tearDownSession();
+
             throw new TwoFactorChallengeException(
                 token: $user->create2faToken($ttlMinutes, TwoFactorReason::SetupRequired),
                 tokenType: TwoFactorReason::SetupRequired->value,
@@ -38,11 +49,33 @@ final class TwoFactorLoginGate
         }
 
         if ($user->hasTwoFactorAuthenticationSecretStored()) {
+            $this->tearDownSession();
+
             throw new TwoFactorChallengeException(
                 token: $user->create2faToken($ttlMinutes, TwoFactorReason::VerificationRequired),
                 tokenType: TwoFactorReason::VerificationRequired->value,
                 expiresIn: $ttlMinutes * 60,
             );
         }
+    }
+
+    /**
+     * The host login this package cannot generate (see the class docblock)
+     * already called `$guard->attempt()` and `$request->session()->regenerate()`
+     * before this gate ever runs, so an authenticated session exists the
+     * instant a challenge is required. Tearing it down here - before the
+     * exception carries the challenge response back to the client - is what
+     * stops that response from doubling as a bypass of the challenge it asks
+     * for.
+     */
+    private function tearDownSession(): void
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $guard->logout();
+
+        $this->request->session()->invalidate();
+        $this->request->session()->regenerateToken();
     }
 }
