@@ -83,6 +83,17 @@ are the ones that are actually live once `two-factor-auth.php` is required.
   resulting challenge token) is a two-step flow with no reference UI to copy; design
   it to fit your own account-recovery patterns.
 
+## Manual step: add the i18n keys
+
+`schemas.ts` looks up `form.otp` and `form.recoveryCode` through `i18n.t()`, and
+neither key exists in the boilerplate yet. Add them under `form` in both
+`src/i18n/locales/en.json` and `src/i18n/locales/es.json`:
+
+```json
+"otp": "One-time code",
+"recoveryCode": "Recovery code"
+```
+
 ## Dependencies
 
 Package manager detected: `{{ packageManager }}`

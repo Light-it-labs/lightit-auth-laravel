@@ -92,6 +92,16 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->not->toContain('lightit');
     });
 
+    it('tells the reader which i18n keys the generated schemas need', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root.'/AUTH-2FA-FRONTEND-TODO.md'))
+            ->toContain('form.otp')
+            ->toContain('form.recoveryCode');
+    });
+
     it('reports every dependency already installed when the fixture project has them all', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
