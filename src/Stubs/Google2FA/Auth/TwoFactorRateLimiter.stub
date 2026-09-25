@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+/**
+ * Registers the `2fa` limiter the `throttle:2fa` middleware on the
+ * complete/verify-recovery-code/reset routes needs. This package cannot
+ * write to a ServiceProvider it did not generate, so calling `register()`
+ * from `AppServiceProvider::boot()` is the second manual step documented
+ * in AUTH-2FA-TODO.md, next to the login gate line.
+ */
+final class TwoFactorRateLimiter
+{
+    public static function register(): void
+    {
+        RateLimiter::for('2fa', function (Request $request): Limit {
+            $token = (string) $request->input('token');
+
+            return Limit::perMinute(5)->by($token.'|'.$request->ip());
+        });
+    }
+}
