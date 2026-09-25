@@ -1,0 +1,47 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Http\Request;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * The single place every login path this package generates funnels through -
+ * OTP today, Google SSO and passkeys as they land. `execute()` is what a
+ * fresh, not-yet-2FA-cleared login calls: it gates $user for 2FA before
+ * establishing a session. `executeAfterChallenge()` skips that gate, and may
+ * only be called by CompleteTwoFactorAuthenticationAction and
+ * VerifyRecoveryCodeAction - the user just cleared the challenge those
+ * actions gate on, so re-running it would throw the same challenge again and
+ * the login could never complete.
+ */
+final class LoginByUserAction
+{
+    public function __construct(
+        private readonly AuthFactory $auth,
+        private readonly Request $request,
+        private readonly TwoFactorLoginGate $twoFactorLoginGate,
+    ) {
+    }
+
+    public function execute(User $user): void
+    {
+        $this->twoFactorLoginGate->guardAgainstChallenge($user);
+
+        $this->executeAfterChallenge($user);
+    }
+
+    public function executeAfterChallenge(User $user): void
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $guard->login($user);
+
+        $this->request->session()->regenerate();
+    }
+}
