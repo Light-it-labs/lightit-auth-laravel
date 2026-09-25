@@ -93,7 +93,7 @@ Route::prefix('2fa')->group(static function (): void {
     Route::post('verify-recovery-code', VerifyRecoveryCodeController::class);
     Route::post('reset', ResetTwoFactorAuthenticationController::class);
 
-    Route::middleware('auth')->group(static function (): void {
+    Route::middleware('auth:sanctum')->group(static function (): void {
         Route::post('disable', DisableTwoFactorAuthenticationController::class);
         Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class);
         Route::post('request-reset', RequestTwoFactorResetController::class);
