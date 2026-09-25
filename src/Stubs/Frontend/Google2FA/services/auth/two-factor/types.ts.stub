@@ -19,11 +19,15 @@ export const isTwoFactorChallenge = (result: unknown): result is TwoFactorChalle
   );
 };
 
-export const isSetupRequired = (result: TwoFactorChallengeResult): boolean => {
+export const isSetupRequired = (
+  result: TwoFactorChallengeResult,
+): result is TwoFactorChallengeResult & { tokenType: "setup_required" } => {
   return result.tokenType === "setup_required";
 };
 
-export const isVerificationRequired = (result: TwoFactorChallengeResult): boolean => {
+export const isVerificationRequired = (
+  result: TwoFactorChallengeResult,
+): result is TwoFactorChallengeResult & { tokenType: "verification_required" } => {
   return result.tokenType === "verification_required";
 };
 
