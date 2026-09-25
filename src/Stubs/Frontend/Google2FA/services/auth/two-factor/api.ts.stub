@@ -1,7 +1,4 @@
-import axios from "axios";
-import { deepCamelKeys } from "string-ts";
-
-import { env } from "@/config/env";
+import { api } from "@/config/api";
 import type {
   BearerTokenResult,
   MessageResult,
@@ -15,28 +12,17 @@ import type {
 } from "./types";
 
 // The 2FA exchange endpoints authenticate via a short-lived, encrypted challenge
-// token resent as a manual Authorization header - never through the app's normal
-// authenticated client, since the holder isn't fully logged in yet.
-const twoFactorApi = axios.create({
-  baseURL: env.VITE_API_URL,
-  headers: {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  },
-});
-
-twoFactorApi.interceptors.response.use((response) => {
-  response.data = deepCamelKeys(response.data);
-
-  return response;
-});
-
+// token that isn't a session yet - it identifies a user who hasn't fully logged
+// in, so it travels as a manual Authorization header on each call below rather
+// than relying on the shared client's cookie session. The shared client is used
+// regardless, so cookies and CSRF are still handled the way the rest of the app
+// expects.
 const bearer = (token: string) => {
   return { headers: { Authorization: `Bearer ${token}` } };
 };
 
 export const setupTwoFactor = async ({ token }: { token: string }): Promise<TwoFactorSetupPayload> => {
-  const response = await twoFactorApi.post("{{ twoFactorSetupEndpoint }}", undefined, bearer(token));
+  const response = await api.post("{{ twoFactorSetupEndpoint }}", undefined, bearer(token));
 
   return {{ currentUserResponseAccessor }};
 };
@@ -45,7 +31,7 @@ export const completeTwoFactor = async ({
   token,
   oneTimePassword,
 }: { token: string } & OneTimePasswordPayload): Promise<BearerTokenResult> => {
-  const response = await twoFactorApi.post(
+  const response = await api.post(
     "{{ twoFactorCompleteEndpoint }}",
     { one_time_password: oneTimePassword },
     bearer(token),
@@ -58,7 +44,7 @@ export const verifyRecoveryCode = async ({
   token,
   recoveryCode,
 }: { token: string } & RecoveryCodePayload): Promise<VerifyRecoveryCodeResult> => {
-  const response = await twoFactorApi.post(
+  const response = await api.post(
     "{{ twoFactorVerifyRecoveryCodeEndpoint }}",
     { recovery_code: recoveryCode },
     bearer(token),
@@ -71,7 +57,7 @@ export const requestTwoFactorReset = async ({
   token,
   password,
 }: { token: string } & PasswordPayload): Promise<TwoFactorResetChallengeResult> => {
-  const response = await twoFactorApi.post(
+  const response = await api.post(
     "{{ twoFactorRequestResetEndpoint }}",
     { password },
     bearer(token),
@@ -81,7 +67,7 @@ export const requestTwoFactorReset = async ({
 };
 
 export const resetTwoFactor = async ({ token }: { token: string }): Promise<MessageResult> => {
-  const response = await twoFactorApi.post("{{ twoFactorResetEndpoint }}", undefined, bearer(token));
+  const response = await api.post("{{ twoFactorResetEndpoint }}", undefined, bearer(token));
 
   return {{ currentUserResponseAccessor }};
 };
@@ -90,7 +76,7 @@ export const disableTwoFactor = async ({
   token,
   password,
 }: { token: string } & PasswordPayload): Promise<MessageResult> => {
-  const response = await twoFactorApi.post("{{ twoFactorDisableEndpoint }}", { password }, bearer(token));
+  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password }, bearer(token));
 
   return {{ currentUserResponseAccessor }};
 };
@@ -99,7 +85,7 @@ export const regenerateRecoveryCodes = async ({
   token,
   password,
 }: { token: string } & PasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
-  const response = await twoFactorApi.post(
+  const response = await api.post(
     "{{ twoFactorRegenerateRecoveryCodesEndpoint }}",
     { password },
     bearer(token),

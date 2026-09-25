@@ -23,7 +23,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     private const REQUIRED_DEPENDENCIES = [
         '@tanstack/react-query',
         'axios',
-        'string-ts',
         'zod',
     ];
 
