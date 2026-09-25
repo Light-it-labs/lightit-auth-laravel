@@ -41,6 +41,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const GATE_SNIPPET = 'app(\\Lightit\\Authentication\\Domain\\Actions\\TwoFactorLoginGate::class)->guardAgainstChallenge($user);';
 
     /**
+     * The second manual step: this package cannot write to a ServiceProvider
+     * it did not generate either, so registering the `2fa` rate limiter the
+     * `throttle:2fa` middleware needs (see TwoFactorRateLimiter.stub and
+     * routes/two-factor-auth.stub) is left to the consumer, same as the gate
+     * snippet above.
+     */
+    private const RATE_LIMITER_SNIPPET = 'Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
+
+    /**
      * The consuming boilerplate's own User model - the same FQCN every
      * generated 2FA stub already assumes (see TwoFactorLoginGate.stub,
      * LoginByUserAction.stub). Those stubs call methods that only exist on
@@ -156,6 +165,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         $files = [
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
+            '/TwoFactorRateLimiter.stub' => 'Domain/TwoFactorRateLimiter.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',
@@ -317,9 +327,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * The one manual step left in the whole install: this package cannot
-     * edit a login it did not generate, so it prints the exact line to
-     * paste into LoginAction::execute() and writes the same line into
+     * The two manual steps left in the whole install: this package cannot
+     * edit a login or a ServiceProvider it did not generate, so it prints
+     * the exact lines to paste into LoginAction::execute() and
+     * AppServiceProvider::boot(), and writes the same lines into
      * AUTH-2FA-TODO.md for later reference.
      */
     private function writeManualIntegrationGuide(): void
@@ -329,7 +340,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $outcome = $this->stubRenderer->renderTo(
             __DIR__.'/../../Stubs/Google2FA/'.self::TODO_FILE.'.stub',
             base_path(self::TODO_FILE),
-            ['gateSnippet' => self::GATE_SNIPPET],
+            [
+                'gateSnippet' => self::GATE_SNIPPET,
+                'rateLimiterSnippet' => self::RATE_LIMITER_SNIPPET,
+            ],
         );
 
         match ($outcome) {
@@ -341,5 +355,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             'Paste this line into LoginAction::execute(), right after "$request->session()->regenerate();" and before "return $user;":',
         );
         $this->composerInstaller->printBoxedMessage(self::GATE_SNIPPET);
+
+        $this->command->line('Paste this line into AppServiceProvider::boot(), to register the 2FA rate limiter:');
+        $this->composerInstaller->printBoxedMessage(self::RATE_LIMITER_SNIPPET);
     }
 }
