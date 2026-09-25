@@ -9,34 +9,34 @@ read it.
 
 | File | Contents |
 | --- | --- |
-| `src/services/auth/two-factor/types.ts` | Response/payload types, `LoginResult` discriminant and its guards |
+| `src/services/auth/two-factor/types.ts` | Response/payload types, the `TwoFactorChallengeResult` discriminant and its guards |
 | `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code and password zod schemas |
-| `src/services/auth/two-factor/api.ts` | One function per 2FA endpoint, each attaching its own `Authorization: Bearer` header |
+| `src/services/auth/two-factor/api.ts` | One function per 2FA endpoint; the challenge-token endpoints attach a manual `Authorization: Bearer` header, the session endpoints call the app's normal cookie-authenticated client |
 | `src/services/auth/two-factor/actions.ts` | `useMutation`-based hooks wrapping each `api.ts` function |
 
 ## The login branch
 
-Your login response carries a `token_type` that is *not always* `"Bearer"`. Branch on it
-before treating the response as a session:
+`login()` returns `void` and authenticates by cookie, so it never hands you the
+response body. When 2FA needs to interrupt the flow, the backend still replies
+`200` with a challenge body that `login()` ignores - read the raw response of
+`auth/login` yourself to catch it:
 
 ```ts
-import { isSetupRequired, isVerificationRequired, type LoginResult } from "@/services/auth/two-factor/types";
+import { api } from "@/config/api";
+import { isTwoFactorChallenge } from "@/services/auth/two-factor/types";
 
-const result: LoginResult = await login(credentials);
+const { data } = await api.post("auth/login", payload);
 
-if (isSetupRequired(result)) {
-  // no 2FA configured yet - navigate to the setup screen, carrying result.accessToken
-} else if (isVerificationRequired(result)) {
-  // 2FA already configured - navigate to the OTP challenge, carrying result.accessToken
-} else {
-  // result.tokenType === "Bearer" - a normal session, no 2FA involved
+if (isTwoFactorChallenge(data.data)) {
+  // navigate to /two-factor, carrying data.data.accessToken in memory
 }
 ```
 
-`result.accessToken` in the two 2FA branches is **not a session token** - it's a
-short-lived, encrypted challenge token. Hold it in memory only (a store that is not
-persisted to `localStorage`/`sessionStorage`), and resend it as the `token` argument
-to every `two-factor/api.ts` function below until the flow completes.
+`data.data.accessToken` in a challenge response is **not a session token** - it's
+a short-lived, encrypted challenge token. Hold it in memory only (a store that is
+not persisted to `localStorage`/`sessionStorage`), and resend it as the `token`
+argument to `setupTwoFactor`, `completeTwoFactor`, `verifyRecoveryCode`, and
+`resetTwoFactor` until the flow completes.
 
 ## API contract
 
@@ -44,11 +44,11 @@ to every `two-factor/api.ts` function below until the flow completes.
 | --- | --- | --- | --- |
 | `setupTwoFactor` | `{{ twoFactorSetupEndpoint }}` | challenge token | Returns the QR SVG, the manual-entry secret, and the recovery codes - show all three once |
 | `completeTwoFactor` | `{{ twoFactorCompleteEndpoint }}` | challenge token | Same OTP screen serves setup-confirm and login-verify - see "Screens" below |
-| `verifyRecoveryCode` | `{{ twoFactorVerifyRecoveryCodeEndpoint }}` | challenge token | Lost-device path; returns `remainingRecoveryCodes` so the UI can warn near zero |
-| `requestTwoFactorReset` | `{{ twoFactorRequestResetEndpoint }}` | real access token | Re-validates the password before issuing a reset challenge token |
+| `verifyRecoveryCode` | `{{ twoFactorVerifyRecoveryCodeEndpoint }}` | challenge token | Lost-device path; resolves once the recovery code has been verified |
+| `requestTwoFactorReset` | `{{ twoFactorRequestResetEndpoint }}` | cookie session | Re-validates the password before issuing a reset challenge token |
 | `resetTwoFactor` | `{{ twoFactorResetEndpoint }}` | reset challenge token | Clears the secret; the user re-enrolls through setup afterward |
-| `disableTwoFactor` | `{{ twoFactorDisableEndpoint }}` | real access token | Fails with 403 when `google2fa.mandatory` is `true` on the backend - surface that error, don't hide the button |
-| `regenerateRecoveryCodes` | `{{ twoFactorRegenerateRecoveryCodesEndpoint }}` | real access token | No dedicated screen shipped; wire it into wherever your settings page lives |
+| `disableTwoFactor` | `{{ twoFactorDisableEndpoint }}` | cookie session | Fails with 403 when `google2fa.mandatory` is `true` on the backend - surface that error, don't hide the button |
+| `regenerateRecoveryCodes` | `{{ twoFactorRegenerateRecoveryCodesEndpoint }}` | cookie session | No dedicated screen shipped; wire it into wherever your settings page lives |
 
 Two of these paths are a deliberate departure from the IDR reference this package's
 backend contract otherwise matches almost exactly: IDR groups its equivalents under
@@ -79,7 +79,7 @@ are the ones that are actually live once `two-factor-auth.php` is required.
   Build a password-confirmation form calling `disableTwoFactor`, and handle the 403
   `mandatory` case above instead of assuming the action always succeeds.
 - **Reset flow** - also absent from IDR. `requestTwoFactorReset` (password confirm,
-  while still holding a real access token) followed by `resetTwoFactor` (spends the
+  while still holding a cookie session) followed by `resetTwoFactor` (spends the
   resulting challenge token) is a two-step flow with no reference UI to copy; design
   it to fit your own account-recovery patterns.
 

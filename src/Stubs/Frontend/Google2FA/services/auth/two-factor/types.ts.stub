@@ -1,9 +1,3 @@
-export type BearerTokenResult = {
-  accessToken: string;
-  tokenType: "Bearer";
-  expiresIn: number;
-};
-
 export type TwoFactorChallengeResult = {
   accessToken: string;
   tokenType: "setup_required" | "verification_required";
@@ -16,17 +10,20 @@ export type TwoFactorResetChallengeResult = {
   expiresIn: number;
 };
 
-export type LoginResult = BearerTokenResult | TwoFactorChallengeResult;
-
-export const isTwoFactorChallenge = (result: LoginResult): result is TwoFactorChallengeResult => {
-  return result.tokenType === "setup_required" || result.tokenType === "verification_required";
+export const isTwoFactorChallenge = (result: unknown): result is TwoFactorChallengeResult => {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "tokenType" in result &&
+    (result.tokenType === "setup_required" || result.tokenType === "verification_required")
+  );
 };
 
-export const isSetupRequired = (result: LoginResult): boolean => {
+export const isSetupRequired = (result: TwoFactorChallengeResult): boolean => {
   return result.tokenType === "setup_required";
 };
 
-export const isVerificationRequired = (result: LoginResult): boolean => {
+export const isVerificationRequired = (result: TwoFactorChallengeResult): boolean => {
   return result.tokenType === "verification_required";
 };
 
@@ -46,10 +43,6 @@ export type RecoveryCodePayload = {
 
 export type PasswordPayload = {
   password: string;
-};
-
-export type VerifyRecoveryCodeResult = BearerTokenResult & {
-  remainingRecoveryCodes: number;
 };
 
 export type RegenerateRecoveryCodesResult = {

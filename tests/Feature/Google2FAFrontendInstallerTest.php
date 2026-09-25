@@ -69,6 +69,19 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->not->toContain('withCredentials');
     });
 
+    it('never emits the removed Bearer-login contract', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        foreach ($this->writtenFiles as $relative) {
+            expect(file_get_contents($this->root.'/'.$relative))
+                ->not->toContain('Bearer"')
+                ->not->toContain('BearerTokenResult')
+                ->not->toContain('persistSession');
+        }
+    });
+
     it('spells the provenance marker so cspell can tokenize it', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
