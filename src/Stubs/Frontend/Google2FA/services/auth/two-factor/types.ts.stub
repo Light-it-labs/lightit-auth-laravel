@@ -1,0 +1,58 @@
+export type TwoFactorChallengeResult = {
+  accessToken: string;
+  tokenType: "setup_required" | "verification_required";
+  expiresIn: number;
+};
+
+export type TwoFactorResetChallengeResult = {
+  accessToken: string;
+  tokenType: "reset_required";
+  expiresIn: number;
+};
+
+export const isTwoFactorChallenge = (result: unknown): result is TwoFactorChallengeResult => {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    "tokenType" in result &&
+    (result.tokenType === "setup_required" || result.tokenType === "verification_required")
+  );
+};
+
+export const isSetupRequired = (
+  result: TwoFactorChallengeResult,
+): result is TwoFactorChallengeResult & { tokenType: "setup_required" } => {
+  return result.tokenType === "setup_required";
+};
+
+export const isVerificationRequired = (
+  result: TwoFactorChallengeResult,
+): result is TwoFactorChallengeResult & { tokenType: "verification_required" } => {
+  return result.tokenType === "verification_required";
+};
+
+export type TwoFactorSetupPayload = {
+  qr: string;
+  secret: string;
+  recoveryCodes: string[];
+};
+
+export type OneTimePasswordPayload = {
+  oneTimePassword: string;
+};
+
+export type RecoveryCodePayload = {
+  recoveryCode: string;
+};
+
+export type PasswordPayload = {
+  password: string;
+};
+
+export type RegenerateRecoveryCodesResult = {
+  recoveryCodes: string[];
+};
+
+export type MessageResult = {
+  message: string;
+};

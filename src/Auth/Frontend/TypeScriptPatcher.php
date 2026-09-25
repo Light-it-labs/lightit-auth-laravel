@@ -64,7 +64,7 @@ final class TypeScriptPatcher
 
     private function alreadyPatched(string $contents): bool
     {
-        return str_contains($contents, self::CONSTANT_NAME);
+        return str_contains($contents, self::CONSTANT_DECLARATION);
     }
 
     private function insertConstant(string $contents): ?string
