@@ -337,7 +337,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped(self::TODO_FILE),
         };
 
-        $this->command->line('Paste this line into LoginAction::execute(), right before "return $user;":');
+        $this->command->line(
+            'Paste this line into LoginAction::execute(), right after "$request->session()->regenerate();" and before "return $user;":',
+        );
         $this->composerInstaller->printBoxedMessage(self::GATE_SNIPPET);
     }
 }
