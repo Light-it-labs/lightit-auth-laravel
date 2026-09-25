@@ -11,18 +11,12 @@ import type {
   TwoFactorSetupPayload,
 } from "./types";
 
-// The 2FA exchange endpoints authenticate via a short-lived, encrypted challenge
-// token that isn't a session yet - it identifies a user who hasn't fully logged
-// in, so it travels as a manual Authorization header on each call below rather
-// than relying on the shared client's cookie session. The shared client is used
-// regardless, so cookies and CSRF are still handled the way the rest of the app
-// expects.
-const bearer = (token: string) => {
+const withChallengeToken = (token: string) => {
   return { headers: { Authorization: `Bearer ${token}` } };
 };
 
 export const setupTwoFactor = async ({ token }: { token: string }): Promise<TwoFactorSetupPayload> => {
-  const response = await api.post("{{ twoFactorSetupEndpoint }}", undefined, bearer(token));
+  const response = await api.post("{{ twoFactorSetupEndpoint }}", undefined, withChallengeToken(token));
 
   return {{ currentUserResponseAccessor }};
 };
@@ -34,7 +28,7 @@ export const completeTwoFactor = async ({
   const response = await api.post(
     "{{ twoFactorCompleteEndpoint }}",
     { one_time_password: oneTimePassword },
-    bearer(token),
+    withChallengeToken(token),
   );
 
   return {{ userSchemaFactory }}().parse(response.data.data);
@@ -47,7 +41,7 @@ export const verifyRecoveryCode = async ({
   const response = await api.post(
     "{{ twoFactorVerifyRecoveryCodeEndpoint }}",
     { recovery_code: recoveryCode },
-    bearer(token),
+    withChallengeToken(token),
   );
 
   return {{ userSchemaFactory }}().parse(response.data.data);
@@ -60,7 +54,7 @@ export const requestTwoFactorReset = async ({ password }: PasswordPayload): Prom
 };
 
 export const resetTwoFactor = async ({ token }: { token: string }): Promise<MessageResult> => {
-  const response = await api.post("{{ twoFactorResetEndpoint }}", undefined, bearer(token));
+  const response = await api.post("{{ twoFactorResetEndpoint }}", undefined, withChallengeToken(token));
 
   return {{ currentUserResponseAccessor }};
 };
