@@ -5,14 +5,20 @@ declare(strict_types=1);
 namespace Lightitlabs\Commands;
 
 use Illuminate\Console\Command;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
+use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
+use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubRenderer;
 
 use function Laravel\Prompts\multiselect;
 
@@ -73,7 +79,7 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param array<Feature> $features
+     * @param  array<Feature>  $features
      */
     protected function setupFeatures(array $features): void
     {
@@ -93,7 +99,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up Google SSO...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
         $googleSSOInstaller->install();
         $this->printSectionSeparator();
     }
@@ -103,8 +110,29 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up 2FA...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $stubCopier);
         $google2FAInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->setup2FAFrontend();
+    }
+
+    protected function setup2FAFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up 2FA frontend...');
+
+        $manifest = new FrontendPackageManifest;
+
+        $frontendInstaller = new Google2FAFrontendInstaller(
+            $this,
+            new StubRenderer,
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+        );
+
+        $frontendInstaller->install();
         $this->printSectionSeparator();
     }
 
@@ -113,7 +141,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up Roles and Permissions...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
         $laravelPermission->install();
         $this->printSectionSeparator();
     }
@@ -123,7 +152,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up OTP...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $otpInstaller = new OtpInstaller($composerInstaller);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $otpInstaller = new OtpInstaller($composerInstaller, $stubCopier);
         $otpInstaller->install();
         $this->printSectionSeparator();
     }
@@ -133,7 +163,8 @@ class AuthSetupCommand extends Command
         $this->printBoxedMessage('Setting up Forgot Password...');
 
         $composerInstaller = new ComposerInstaller($this);
-        $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller, $stubCopier);
         $forgotPasswordInstaller->install();
         $this->printSectionSeparator();
     }

@@ -1,0 +1,74 @@
+import { api } from "@/config/api";
+import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
+import type { User } from "{{ userTypeImportPath }}";
+import type {
+  MessageResult,
+  OneTimePasswordPayload,
+  PasswordPayload,
+  RecoveryCodePayload,
+  RegenerateRecoveryCodesResult,
+  TwoFactorResetChallengeResult,
+  TwoFactorSetupPayload,
+} from "./types";
+
+const withChallengeToken = (token: string) => {
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
+
+export const setupTwoFactor = async ({ token }: { token: string }): Promise<TwoFactorSetupPayload> => {
+  const response = await api.post("{{ twoFactorSetupEndpoint }}", undefined, withChallengeToken(token));
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const completeTwoFactor = async ({
+  token,
+  oneTimePassword,
+}: { token: string } & OneTimePasswordPayload): Promise<User> => {
+  const response = await api.post(
+    "{{ twoFactorCompleteEndpoint }}",
+    { one_time_password: oneTimePassword },
+    withChallengeToken(token),
+  );
+
+  return {{ userSchemaFactory }}().parse(response.data.data);
+};
+
+export const verifyRecoveryCode = async ({
+  token,
+  recoveryCode,
+}: { token: string } & RecoveryCodePayload): Promise<User> => {
+  const response = await api.post(
+    "{{ twoFactorVerifyRecoveryCodeEndpoint }}",
+    { recovery_code: recoveryCode },
+    withChallengeToken(token),
+  );
+
+  return {{ userSchemaFactory }}().parse(response.data.data);
+};
+
+export const requestTwoFactorReset = async ({ password }: PasswordPayload): Promise<TwoFactorResetChallengeResult> => {
+  const response = await api.post("{{ twoFactorRequestResetEndpoint }}", { password });
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const resetTwoFactor = async ({ token }: { token: string }): Promise<MessageResult> => {
+  const response = await api.post("{{ twoFactorResetEndpoint }}", undefined, withChallengeToken(token));
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const disableTwoFactor = async ({ password }: PasswordPayload): Promise<MessageResult> => {
+  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password });
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const regenerateRecoveryCodes = async ({
+  password,
+}: PasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
+  const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", { password });
+
+  return {{ currentUserResponseAccessor }};
+};

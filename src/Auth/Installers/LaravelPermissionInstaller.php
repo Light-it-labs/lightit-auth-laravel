@@ -6,14 +6,16 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tools\StubCopyOutcome;
 
 final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
-    ) {
-    }
+        private readonly StubCopier $stubCopier,
+    ) {}
 
     public function install(): void
     {
@@ -46,8 +48,12 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             return;
         }
 
-        copy($source, $destination);
-        $this->composerInstaller->printConfigPublished('Config file published: config/permission.php');
+        $outcome = $this->stubCopier->copy($source, $destination);
+
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/permission.php'),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/permission.php'),
+        };
     }
 
     private function clearCacheConfig(): void
@@ -74,16 +80,19 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $relativePath = "database/migrations/{$filename}";
         $destination = base_path($relativePath);
 
-        copy($source, $destination);
+        $outcome = $this->stubCopier->copy($source, $destination);
 
-        $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}");
+        match ($outcome) {
+            StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}"),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($relativePath),
+        };
     }
 
     private function copyPackageFiles(): void
     {
         $this->composerInstaller->printStep(4, 4, 'Copying permission structure');
 
-        $stubsPath = __DIR__ . '/../../Stubs/LaravelPermissions';
+        $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
         $seederBase = base_path('database/seeders');
 
@@ -101,12 +110,15 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
             $this->ensureDirectoryExists(dirname($targetPath));
 
-            copy(
-                $stubsPath . $stub,
+            $outcome = $this->stubCopier->copy(
+                $stubsPath.$stub,
                 $targetPath
             );
 
-            $this->composerInstaller->printFileCreated("Created: {$relativeTarget}");
+            match ($outcome) {
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: {$relativeTarget}"),
+                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($relativeTarget),
+            };
         }
     }
 
