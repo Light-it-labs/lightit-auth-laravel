@@ -34,6 +34,34 @@ final readonly class VerifyTwoFactorToken
         return $user;
     }
 
+    public function executeForAny(string $token, TwoFactorReason ...$expected): User
+    {
+        $payload = $this->decrypt($token);
+
+        $this->assertIs2faToken($payload);
+
+        if (! in_array($payload['reason'], array_map(static fn (TwoFactorReason $reason): string => $reason->value, $expected), true)) {
+            throw new TwoFactorAuthException(
+                message: __('This token cannot be used for this action.'),
+                reason: 'invalid_token_reason'
+            );
+        }
+
+        $dto = TwoFactorTokenPayloadDto::fromArray($payload);
+
+        $this->assertNotExpired($dto);
+
+        $user = User::query()->find($dto->sub);
+
+        if (! $user instanceof User) {
+            throw new TwoFactorAuthException(
+                'The token does not contain a valid user identifier.'
+            );
+        }
+
+        return $user;
+    }
+
     /**
      * @return array{sub:string, exp:int, typ:string, reason:string, mandatory:bool}
      */
