@@ -34,6 +34,6 @@ final class FakeGoogle2FAFrontendCommand extends Command
 
         $installer->install();
 
-        return self::SUCCESS;
+        return $installer->failed() ? self::FAILURE : self::SUCCESS;
     }
 }
