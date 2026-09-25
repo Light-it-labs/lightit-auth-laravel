@@ -26,7 +26,11 @@ final class CompleteTwoFactorAuthenticationRequest extends FormRequest
         $token = $this->bearerToken();
 
         if ($token) {
-            $user = $this->verifyTwoFactorToken->execute($token, TwoFactorReason::VerificationRequired);
+            $user = $this->verifyTwoFactorToken->executeForAny(
+                $token,
+                TwoFactorReason::SetupRequired,
+                TwoFactorReason::VerificationRequired,
+            );
 
             if (! $user->hasTwoFactorAuthenticationSecretStored()) {
                 throw new TwoFactorAuthException(

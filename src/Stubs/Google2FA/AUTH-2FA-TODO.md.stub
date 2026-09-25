@@ -33,13 +33,11 @@ Completing the challenge - the one-time password or a recovery code -
 creates the session and returns the same `UserResource` a normal login does.
 
 Each challenge token only completes the endpoint its reason was issued for:
-a `setup_required` token only unlocks `/2fa/setup`, and only a
-`verification_required` token completes `/2fa/complete` or
-`/2fa/verify-recovery-code`. A user who just finished `/2fa/setup` needs to
-log in again to get a `verification_required` token before completing the
-challenge - the same token cannot do both. The token is valid until its
-TTL expires; that TTL is `google2fa.challenge_ttl_minutes` in
-`config/google2fa.php`.
+a `setup_required` or `verification_required` token both unlock
+`/2fa/complete` - the same token used for `/2fa/setup` works to confirm
+enrollment right after - but only a `verification_required` token unlocks
+`/2fa/verify-recovery-code`. The token is valid until its TTL expires; that
+TTL is `google2fa.challenge_ttl_minutes` in `config/google2fa.php`.
 
 ### 2. The rate limiter
 
