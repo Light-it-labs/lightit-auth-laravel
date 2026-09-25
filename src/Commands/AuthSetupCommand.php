@@ -32,9 +32,11 @@ class AuthSetupCommand extends Command
         $this->initializeOutput($this);
     }
 
-    protected $signature = 'auth:setup';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend)}';
 
     protected $description = 'Setup the authentication structure';
+
+    private bool $frontendPathInvalid = false;
 
     public function handle(): int
     {
@@ -72,6 +74,10 @@ class AuthSetupCommand extends Command
         }
 
         $this->setupFeatures($selected);
+
+        if ($this->frontendPathInvalid) {
+            return self::FAILURE;
+        }
 
         $this->printSuccess('Authentication setup completed!');
 
@@ -130,10 +136,25 @@ class AuthSetupCommand extends Command
             new FrontendProjectLocator($manifest),
             $manifest,
             base_path(),
+            $this->frontendPathOption(),
         );
 
         $frontendInstaller->install();
+
+        if ($frontendInstaller->failed()) {
+            $this->frontendPathInvalid = true;
+
+            return;
+        }
+
         $this->printSectionSeparator();
+    }
+
+    private function frontendPathOption(): ?string
+    {
+        $value = $this->option('frontend-path');
+
+        return \is_string($value) ? $value : null;
     }
 
     protected function setupRolesAndPermissions(): void
