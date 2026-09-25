@@ -31,9 +31,9 @@ describe('Google2FA routes stub', function (): void {
             Route::prefix('2fa')
                 ->group(static function (): void {
                     Route::post('setup', SetupTwoFactorAuthenticationController::class);
-                    Route::post('complete', CompleteTwoFactorAuthenticationController::class);
-                    Route::post('verify-recovery-code', VerifyRecoveryCodeController::class);
-                    Route::post('reset', ResetTwoFactorAuthenticationController::class);
+                    Route::post('complete', CompleteTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                    Route::post('verify-recovery-code', VerifyRecoveryCodeController::class)->middleware('throttle:2fa');
+                    Route::post('reset', ResetTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
 
                     Route::middleware('auth:sanctum')
                         ->group(static function (): void {
@@ -85,5 +85,15 @@ describe('Google2FA routes stub', function (): void {
         }
 
         expect($routeSegments)->toBe($tokenSegments);
+    });
+
+    it('throttles the code-verification endpoints', function (): void {
+        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+
+        foreach (['complete', 'verify-recovery-code', 'reset'] as $route) {
+            expect($stub)->toMatch(
+                "/Route::post\\('{$route}', \\w+Controller::class\\)->middleware\\('throttle:2fa'\\);/"
+            );
+        }
     });
 });

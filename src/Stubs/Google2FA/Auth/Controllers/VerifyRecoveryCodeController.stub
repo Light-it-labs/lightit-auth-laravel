@@ -6,8 +6,8 @@ namespace Lightit\Authentication\App\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Lightit\Authentication\App\Requests\VerifyRecoveryCodeRequest;
-use Lightit\Authentication\App\Resources\VerifyRecoveryCodeResource;
 use Lightit\Authentication\Domain\Actions\VerifyRecoveryCodeAction;
+use Lightit\Users\App\Resources\UserResource;
 
 final readonly class VerifyRecoveryCodeController
 {
@@ -15,8 +15,8 @@ final readonly class VerifyRecoveryCodeController
         VerifyRecoveryCodeRequest $request,
         VerifyRecoveryCodeAction $verifyRecoveryCodeAction,
     ): JsonResponse {
-        $result = $verifyRecoveryCodeAction->execute($request->getAuthenticatedUser(), $request->getRecoveryCode());
+        $user = $verifyRecoveryCodeAction->execute($request->getAuthenticatedUser(), $request->getRecoveryCode());
 
-        return VerifyRecoveryCodeResource::make($result)->response();
+        return UserResource::make($user)->response();
     }
 }

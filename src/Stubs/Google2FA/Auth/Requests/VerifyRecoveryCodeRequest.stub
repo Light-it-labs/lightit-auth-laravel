@@ -6,6 +6,7 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Users\Domain\Models\User;
 
 final class VerifyRecoveryCodeRequest extends FormRequest
@@ -24,7 +25,7 @@ final class VerifyRecoveryCodeRequest extends FormRequest
         $token = $this->bearerToken();
 
         if ($token) {
-            $this->authenticatedUser = $this->verifyTwoFactorToken->execute($token);
+            $this->authenticatedUser = $this->verifyTwoFactorToken->execute($token, TwoFactorReason::VerificationRequired);
 
             return true;
         }

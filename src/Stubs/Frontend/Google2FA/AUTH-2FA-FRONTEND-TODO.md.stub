@@ -44,7 +44,7 @@ argument to `setupTwoFactor`, `completeTwoFactor`, `verifyRecoveryCode`, and
 | --- | --- | --- | --- |
 | `setupTwoFactor` | `{{ twoFactorSetupEndpoint }}` | challenge token | Returns the QR SVG, the manual-entry secret, and the recovery codes - show all three once |
 | `completeTwoFactor` | `{{ twoFactorCompleteEndpoint }}` | challenge token | Same OTP screen serves setup-confirm and login-verify - see "Screens" below |
-| `verifyRecoveryCode` | `{{ twoFactorVerifyRecoveryCodeEndpoint }}` | challenge token | Lost-device path; resolves once the recovery code has been verified |
+| `verifyRecoveryCode` | `{{ twoFactorVerifyRecoveryCodeEndpoint }}` | challenge token | Lost-device path; returns `remainingRecoveryCodes` so the UI can warn near zero |
 | `requestTwoFactorReset` | `{{ twoFactorRequestResetEndpoint }}` | cookie session | Re-validates the password before issuing a reset challenge token |
 | `resetTwoFactor` | `{{ twoFactorResetEndpoint }}` | reset challenge token | Clears the secret; the user re-enrolls through setup afterward |
 | `disableTwoFactor` | `{{ twoFactorDisableEndpoint }}` | cookie session | Fails with 403 when `google2fa.mandatory` is `true` on the backend - surface that error, don't hide the button |
