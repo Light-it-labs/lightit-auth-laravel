@@ -70,6 +70,10 @@ If you are using Laravel Sail, you can run:
 This command walks you through the optional features it can add on top of the
 boilerplate's own authentication. It no longer configures an authentication driver.
 
+If the 2FA frontend layer can't find a React project next to your Laravel app (a
+sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
+explicitly with `--frontend-path=<path>`. An invalid explicit path fails the command.
+
 ---
 
 ## Changelog

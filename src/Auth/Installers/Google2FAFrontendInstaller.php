@@ -12,13 +12,14 @@ use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
-use RuntimeException;
 
 final class Google2FAFrontendInstaller implements AuthInstallerInterface
 {
     use LightitConsoleOutput;
 
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
+
+    private bool $failed = false;
 
     private const REQUIRED_DEPENDENCIES = [
         '@tanstack/react-query',
@@ -47,6 +48,11 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     public static function stubDirectory(): string
     {
         return __DIR__.'/../../Stubs/Frontend/Google2FA';
+    }
+
+    public function failed(): bool
+    {
+        return $this->failed;
     }
 
     public function install(): void
@@ -92,9 +98,12 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     private function reportUnresolvedRoot(): void
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
-            throw new RuntimeException(
-                'Rejected --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
+            $this->command->error(
+                'Invalid --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
             );
+            $this->failed = true;
+
+            return;
         }
 
         $this->command->warn(
