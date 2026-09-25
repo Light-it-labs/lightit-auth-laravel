@@ -45,7 +45,7 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     });
 
-    it('renders api.ts with the package\'s own endpoint names, not idr-front\'s', function (): void {
+    it('renders api.ts with the package\'s own /2fa/* endpoint names, not the /auth/* alternative', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
         $this->artisan('google2fa-frontend-fake')->assertSuccessful();
