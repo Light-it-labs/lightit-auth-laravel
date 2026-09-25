@@ -28,12 +28,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private const ROUTES_FILE_NAME = 'two-factor-auth.php';
 
+    private const API_ROUTES_PATH = 'routes/api.php';
+
     public function __construct(
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
-        private readonly string $apiRoutesPath = 'routes/api.php',
     ) {}
 
     public function install(): void
@@ -206,7 +207,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         };
 
         $outcome = $this->routeFileRegistrar->register(
-            base_path($this->apiRoutesPath),
+            base_path(self::API_ROUTES_PATH),
             self::ROUTES_FILE_NAME,
             self::ROUTES_LABEL
         );
@@ -214,21 +215,21 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         match ($outcome) {
             RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
-                "Updated {$this->apiRoutesPath}: {$requireStatement}"
+                'Updated '.self::API_ROUTES_PATH.": {$requireStatement}"
             ),
             RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
-                "Two-factor authentication routes already required in {$this->apiRoutesPath}"
+                'Two-factor authentication routes already required in '.self::API_ROUTES_PATH
             ),
             RouteRegistrationOutcome::ParentMissing => $this->command->warn(
-                "Could not find {$this->apiRoutesPath}. "
+                'Could not find '.self::API_ROUTES_PATH.'. '
                 ."Please add {$requireStatement} to your API route file manually."
             ),
             RouteRegistrationOutcome::Failed => $this->command->warn(
-                "Could not append {$requireStatement} to {$this->apiRoutesPath} automatically. "
+                "Could not append {$requireStatement} to ".self::API_ROUTES_PATH.' automatically. '
                 .'Please add it manually.'
             ),
             RouteRegistrationOutcome::Corrupted => $this->command->error(
-                "{$this->apiRoutesPath} was left in an inconsistent state while adding {$requireStatement}. "
+                self::API_ROUTES_PATH." was left in an inconsistent state while adding {$requireStatement}. "
                 .'Please inspect the file.'
             ),
         };
