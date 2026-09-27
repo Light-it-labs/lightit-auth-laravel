@@ -40,6 +40,10 @@ class AuthSetupCommand extends Command
 
     public function handle(): int
     {
+        if (! $this->frontendPathIsValid()) {
+            return self::FAILURE;
+        }
+
         $this->output->writeln('');
         $this->output->writeln("\e[0;31m     _         _   _       ____            _                     \e[0m");
         $this->output->writeln("\e[0;31m    / \  _   _| |_| |__   |  _ \ __ _  ___| | ____ _  __ _  ___  \e[0m");
@@ -155,6 +159,25 @@ class AuthSetupCommand extends Command
         $value = $this->option('frontend-path');
 
         return \is_string($value) ? $value : null;
+    }
+
+    private function frontendPathIsValid(): bool
+    {
+        $path = $this->frontendPathOption();
+
+        if ($path === null || $path === '') {
+            return true;
+        }
+
+        $locator = new FrontendProjectLocator(new FrontendPackageManifest);
+
+        if ($locator->locate(base_path(), $path) !== null) {
+            return true;
+        }
+
+        $this->error('Invalid --frontend-path: '.$locator->rejectionReason($path));
+
+        return false;
     }
 
     protected function setupRolesAndPermissions(): void
