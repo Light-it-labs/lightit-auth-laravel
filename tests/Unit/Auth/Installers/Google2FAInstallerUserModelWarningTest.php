@@ -85,35 +85,6 @@ describe('Google2FAInstaller warns instead of failing when the User model cannot
     });
 });
 
-describe("install()'s own call order", function (): void {
-    /**
-     * The guard must run after `createAuthFiles()` has written
-     * `TwoFactorAuthenticatable.php` - checking before it exists can never
-     * pass, and would demand the consumer's User model extend a class that
-     * doesn't exist yet on every single install. The other tests in this
-     * file exercise the guard in isolation with both fixture classes
-     * already present, so they could never see that ordering bug - this
-     * inspects `install()`'s own source so a future edit that swaps the two
-     * calls back fails loudly here instead of on a live install.
-     */
-    it('writes the auth files before checking whether the User model can support 2FA', function (): void {
-        $install = new ReflectionMethod(Google2FAInstaller::class, 'install');
-        $lines = (array) file((string) $install->getFileName());
-        $body = implode('', array_slice(
-            $lines,
-            $install->getStartLine() - 1,
-            $install->getEndLine() - $install->getStartLine() + 1,
-        ));
-
-        $createAuthFilesPosition = strpos($body, 'createAuthFiles(');
-        $warnGuardPosition = strpos($body, 'warnIfUserModelCannotSupportTwoFactor(');
-
-        expect($createAuthFilesPosition)->not->toBeFalse();
-        expect($warnGuardPosition)->not->toBeFalse();
-        expect($createAuthFilesPosition)->toBeLessThan($warnGuardPosition);
-    });
-});
-
 describe("install()'s real create-then-warn sequence, against a real fresh project", function (): void {
     beforeEach(function (): void {
         require_once __DIR__.'/../../../Fixtures/Google2FAUserModel/RealNamespaceNonConformingUser.php';
