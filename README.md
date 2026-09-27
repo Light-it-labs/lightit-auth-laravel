@@ -73,6 +73,7 @@ boilerplate's own authentication. It no longer configures an authentication driv
 If the 2FA frontend layer can't find a React project next to your Laravel app (a
 sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
 explicitly with `--frontend-path=<path>`. An invalid explicit path fails the command.
+This option only applies when Two-Factor Authentication is selected.
 
 ---
 

@@ -32,7 +32,7 @@ class AuthSetupCommand extends Command
         $this->initializeOutput($this);
     }
 
-    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend)}';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend); only used when Two-Factor Authentication is selected}';
 
     protected $description = 'Setup the authentication structure';
 
