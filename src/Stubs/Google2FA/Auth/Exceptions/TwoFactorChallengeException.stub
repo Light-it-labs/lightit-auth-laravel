@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Exceptions;
 
 use Exception;
+use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -17,7 +18,7 @@ use Illuminate\Http\Request;
  * package's usual HttpException base, because that base's
  * {error_code, message} shape doesn't fit a continuation response.
  */
-final class TwoFactorChallengeException extends Exception
+final class TwoFactorChallengeException extends Exception implements ShouldntReport
 {
     public function __construct(
         public readonly string $token,
