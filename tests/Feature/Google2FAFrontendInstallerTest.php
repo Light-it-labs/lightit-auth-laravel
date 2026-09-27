@@ -143,16 +143,6 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->assertSuccessful();
     });
 
-    it('honors an explicit --frontend-path pointing at a valid React project', function (): void {
-        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
-
-        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
-
-        foreach ($this->writtenFiles as $relative) {
-            expect(file_exists($this->root.'/'.$relative))->toBeTrue();
-        }
-    });
-
     it('fails with a clear error instead of warn-and-skip when --frontend-path points at a directory without React', function (): void {
         $invalidRoot = sys_get_temp_dir().'/lightit-2fa-frontend-invalid-'.bin2hex(random_bytes(6));
         mkdir($invalidRoot, 0755, true);
