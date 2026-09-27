@@ -10,14 +10,10 @@ use Illuminate\Http\Request;
 use Lightit\Users\Domain\Models\User;
 
 /**
- * The single place every login path this package generates funnels through -
- * OTP today, Google SSO and passkeys as they land. `execute()` is what a
- * fresh, not-yet-2FA-cleared login calls: it gates $user for 2FA before
- * establishing a session. `executeAfterChallenge()` skips that gate, and may
- * only be called by CompleteTwoFactorAuthenticationAction and
- * VerifyRecoveryCodeAction - the user just cleared the challenge those
- * actions gate on, so re-running it would throw the same challenge again and
- * the login could never complete.
+ * `execute()` gates $user for 2FA before establishing a session.
+ * `executeAfterChallenge()` skips that gate and may only be called by an
+ * action that just cleared the 2FA challenge itself - calling it any earlier
+ * would let the challenge be bypassed.
  */
 final class LoginByUserAction
 {
