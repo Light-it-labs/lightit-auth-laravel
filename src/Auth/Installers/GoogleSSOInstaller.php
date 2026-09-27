@@ -32,6 +32,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         }
 
         $this->createAuthFiles();
+        $this->copySharedLoginFiles();
         $this->copySharedFiles();
 
         $this->composerInstaller->printSuccess('Client library for Google APIs installed successfully!');
@@ -39,7 +40,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 2, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 3, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -69,9 +70,33 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         }
     }
 
+    /**
+     * `GoogleLoginAction` routes through `LoginByUserAction`, which depends
+     * on `TwoFactorLoginGate`. Both are shared with Google2FAInstaller so a
+     * Google-SSO-only install still resolves the container binding.
+     */
+    private function copySharedLoginFiles(): void
+    {
+        $this->composerInstaller->printStep(2, 3, 'Creating shared login primitives');
+
+        $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
+        $sharedFiles = [
+            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
+            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
+        ];
+
+        foreach ($sharedFiles as $stub => $destination) {
+            $outcome = $this->stubCopier->copy(
+                $sharedStubsPath.$stub,
+                base_path("src/Authentication/{$destination}")
+            );
+            $this->reportCopy($outcome, "src/Authentication/{$destination}");
+        }
+    }
+
     private function copySharedFiles(): void
     {
-        $this->composerInstaller->printStep(2, 2, 'Creating shared exception file');
+        $this->composerInstaller->printStep(3, 3, 'Creating shared exception file');
 
         $sharedStubPath = __DIR__.'/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
         $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');

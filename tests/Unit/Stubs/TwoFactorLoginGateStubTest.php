@@ -19,7 +19,7 @@ use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\TwoFactorLoginGate;
  */
 function renderTwoFactorGateStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/Auth/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
 
     return str_replace(
         [
@@ -49,9 +49,9 @@ function requireRenderedGateStub(string $relativePath): void
     require_once $tempFile;
 }
 
-requireRenderedGateStub('Enums/TwoFactorReason.stub');
-requireRenderedGateStub('Exceptions/TwoFactorChallengeException.stub');
-requireRenderedGateStub('Actions/TwoFactorLoginGate.stub');
+requireRenderedGateStub('Google2FA/Auth/Enums/TwoFactorReason.stub');
+requireRenderedGateStub('Google2FA/Auth/Exceptions/TwoFactorChallengeException.stub');
+requireRenderedGateStub('Shared/Auth/Actions/TwoFactorLoginGate.stub');
 
 /**
  * Builds a gate backed by a real `SessionGuard` over an array session store,
@@ -83,6 +83,10 @@ function makeTwoFactorLoginGate(): array
     return [new TwoFactorLoginGate($authFactory, $request), $guard, $session];
 }
 
+it('never reports a 2FA challenge to the app\'s exception handler', function (): void {
+    expect(is_a(TwoFactorChallengeException::class, \Illuminate\Contracts\Debug\ShouldntReport::class, true))->toBeTrue();
+});
+
 describe('TwoFactorLoginGate stub', function (): void {
     beforeEach(function (): void {
         config(['google2fa.challenge_ttl_minutes' => 15]);
@@ -90,6 +94,14 @@ describe('TwoFactorLoginGate stub', function (): void {
 
     it('does nothing when 2FA is disabled', function (): void {
         config(['google2fa.enabled' => false]);
+
+        [$gate] = makeTwoFactorLoginGate();
+
+        $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: true, hasConfigured: true));
+    })->throwsNoExceptions();
+
+    it('does nothing when google2fa.enabled is entirely absent, as in an OTP-only or Google-SSO-only install', function (): void {
+        config(['google2fa' => null]);
 
         [$gate] = makeTwoFactorLoginGate();
 
