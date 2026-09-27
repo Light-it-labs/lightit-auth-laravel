@@ -47,7 +47,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
      * routes/two-factor-auth.stub) is left to the consumer, same as the gate
      * snippet above.
      */
-    private const RATE_LIMITER_SNIPPET = 'Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
+    private const RATE_LIMITER_SNIPPET = '\\Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
 
     /**
      * The consuming boilerplate's own User model - the same FQCN every
@@ -82,7 +82,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->createAuthFiles();
         $this->warnIfUserModelCannotSupportTwoFactor();
-        $this->publishConfiguration();
         $this->copyMigration();
         $this->copyConfigFiles();
         $this->copyLangFiles();
@@ -141,7 +140,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 7, 'Creating authentication files');
+        $this->composerInstaller->printStep(1, 6, 'Creating authentication files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -152,6 +151,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
         $sharedFiles = [
             '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
+            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
         ];
 
         foreach ($sharedFiles as $stub => $destination) {
@@ -175,7 +175,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/PasswordValidatorAction.stub' => 'Domain/Actions/PasswordValidatorAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
-            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/DataTransferObjects/TwoFactorTokenPayloadDto.stub' => 'Domain/DataTransferObjects/TwoFactorTokenPayloadDto.php',
             '/Enums/TwoFactorReason.stub' => 'Domain/Enums/TwoFactorReason.php',
@@ -215,18 +214,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         };
     }
 
-    private function publishConfiguration(): void
-    {
-        $this->composerInstaller->printStep(2, 7, 'Publishing configuration');
-
-        $this->command->call('vendor:publish', [
-            '--provider' => 'PragmaRX\Google2FALaravel\ServiceProvider',
-        ]);
-    }
-
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 7, 'Copying migration files');
+        $this->composerInstaller->printStep(2, 6, 'Copying migration files');
 
         $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
@@ -244,7 +234,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyConfigFiles(): void
     {
-        $this->composerInstaller->printStep(4, 7, 'Copying config files');
+        $this->composerInstaller->printStep(3, 6, 'Copying config files');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
@@ -263,7 +253,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function copyLangFiles(): void
     {
-        $this->composerInstaller->printStep(5, 7, 'Copying lang files');
+        $this->composerInstaller->printStep(4, 6, 'Copying lang files');
 
         if (! is_dir(lang_path('en'))) {
             mkdir(lang_path('en'), 0755, true);
@@ -281,7 +271,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private function registerRoutes(): void
     {
-        $this->composerInstaller->printStep(6, 7, 'Registering routes');
+        $this->composerInstaller->printStep(5, 6, 'Registering routes');
 
         if (! is_dir(base_path('routes'))) {
             mkdir(base_path('routes'), 0755, true);
@@ -327,15 +317,16 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * The two manual steps left in the whole install: this package cannot
-     * edit a login or a ServiceProvider it did not generate, so it prints
-     * the exact lines to paste into LoginAction::execute() and
-     * AppServiceProvider::boot(), and writes the same lines into
+     * The three manual steps left in the whole install: this package cannot
+     * edit a login, a ServiceProvider or a User model it did not generate,
+     * so it prints the exact lines to paste into LoginAction::execute() and
+     * AppServiceProvider::boot(), reminds the consumer to extend
+     * TwoFactorAuthenticatable, and writes the same three steps into
      * AUTH-2FA-TODO.md for later reference.
      */
     private function writeManualIntegrationGuide(): void
     {
-        $this->composerInstaller->printStep(7, 7, 'Writing manual integration guide');
+        $this->composerInstaller->printStep(6, 6, 'Writing manual integration guide');
 
         $outcome = $this->stubRenderer->renderTo(
             __DIR__.'/../../Stubs/Google2FA/'.self::TODO_FILE.'.stub',
@@ -358,5 +349,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->command->line('Paste this line into AppServiceProvider::boot(), to register the 2FA rate limiter:');
         $this->composerInstaller->printBoxedMessage(self::RATE_LIMITER_SNIPPET);
+
+        $this->command->line(
+            self::USER_MODEL_CLASS.' must extend '.self::TWO_FACTOR_AUTHENTICATABLE_CLASS
+            .' instead of Illuminate\\Foundation\\Auth\\User - see '.self::TODO_FILE.'.',
+        );
     }
 }

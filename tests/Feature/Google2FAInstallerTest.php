@@ -60,6 +60,29 @@ describe('Google2FAInstaller', function (): void {
             ->toContain('app(\Lightit\Authentication\Domain\Actions\TwoFactorLoginGate::class)->guardAgainstChallenge($user);');
     });
 
+    it('prints the fully-qualified rate limiter line to paste into AppServiceProvider::boot(), matching AUTH-2FA-TODO.md', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain('\Lightit\Authentication\Domain\TwoFactorRateLimiter::register();')
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
+            ->toContain('\Lightit\Authentication\Domain\TwoFactorRateLimiter::register();');
+    });
+
+    it('prints and documents the third manual step: extending TwoFactorAuthenticatable', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain('Lightit\Users\Domain\Models\User must extend Lightit\Authentication\Domain\TwoFactorAuthenticatable')
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
+            ->toContain('\Lightit\Users\Domain\Models\User` must extend')
+            ->toContain('\Lightit\Authentication\Domain\TwoFactorAuthenticatable`');
+    });
+
     it('reports Skipped instead of recreating any file on a second run', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
         $this->artisan('google2fa-installer-fake')->assertSuccessful();
@@ -81,5 +104,35 @@ describe('Google2FAInstaller', function (): void {
         foreach ($filesAfterFirstRun as $relative => $contentsAfterFirstRun) {
             expect(file_get_contents($this->tempBase.'/'.$relative))->toBe($contentsAfterFirstRun);
         }
+    });
+
+    it('writes the package config with mandatory and challenge_ttl_minutes, without ever calling vendor:publish', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->doesntExpectOutputToContain('Publishing configuration')
+            ->assertSuccessful();
+
+        $config = require $this->tempBase.'/config/google2fa.php';
+
+        expect($config)->toHaveKeys(['enabled', 'mandatory', 'challenge_ttl_minutes']);
+    });
+
+    it('never overwrites an already-published config/google2fa.php, even one shaped like a bare vendor publish', function (): void {
+        mkdir($this->tempBase.'/config', 0755, true);
+        file_put_contents(
+            $this->tempBase.'/config/google2fa.php',
+            "<?php\n\nreturn ['enabled' => true, 'lifetime' => 0, 'guard' => ''];\n",
+        );
+
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain('Skipped config/google2fa.php')
+            ->assertSuccessful();
+
+        $config = require $this->tempBase.'/config/google2fa.php';
+
+        expect($config)->toBe(['enabled' => true, 'lifetime' => 0, 'guard' => '']);
     });
 });

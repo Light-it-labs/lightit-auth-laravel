@@ -34,11 +34,6 @@ return [
     'auth' => 'auth',
 
     /*
-     * Guard.
-     */
-    'guard' => env('AUTH_GUARD', 'api'),
-
-    /*
      * 2FA verified session var.
      */
     'session_var' => 'google2fa',

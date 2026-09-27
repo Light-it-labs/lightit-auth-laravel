@@ -13,10 +13,9 @@ use ReflectionMethod;
 
 /**
  * Drives Google2FAInstaller's file-writing steps directly through
- * reflection, skipping requirePackages() and publishConfiguration() - both
- * shell out to composer / PragmaRX's own vendor:publish, neither of which
- * belongs in this package's own composer.json (they're only ever required
- * inside the *consuming* project). Mirrors the pattern
+ * reflection, skipping requirePackages() - it shells out to composer, which
+ * does not belong in this package's own composer.json (it's only ever
+ * required inside the *consuming* project). Mirrors the pattern
  * Google2FAInstallerUserModelWarningTest uses for the same reason.
  */
 final class FakeGoogle2FAInstallerCommand extends Command
