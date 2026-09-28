@@ -32,11 +32,10 @@ final class TwoFactorLoginGate
             return;
         }
 
-        /** @var int $ttlMinutes */
-        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
-
-        if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory')) {
+        if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory', true)) {
             $this->tearDownSession();
+
+            $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes', 15);
 
             throw new TwoFactorChallengeException(
                 token: $user->create2faToken($ttlMinutes, TwoFactorReason::SetupRequired),
@@ -47,6 +46,8 @@ final class TwoFactorLoginGate
 
         if ($user->hasTwoFactorAuthenticationSecretStored()) {
             $this->tearDownSession();
+
+            $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes', 15);
 
             throw new TwoFactorChallengeException(
                 token: $user->create2faToken($ttlMinutes, TwoFactorReason::VerificationRequired),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Contracts\Auth\Guard;
+use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\Request;
 use Illuminate\Session\Store as SessionStore;
 use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\FakeUser;
@@ -84,7 +85,7 @@ function makeTwoFactorLoginGate(): array
 }
 
 it('never reports a 2FA challenge to the app\'s exception handler', function (): void {
-    expect(is_a(TwoFactorChallengeException::class, \Illuminate\Contracts\Debug\ShouldntReport::class, true))->toBeTrue();
+    expect(is_a(TwoFactorChallengeException::class, ShouldntReport::class, true))->toBeTrue();
 });
 
 describe('TwoFactorLoginGate stub', function (): void {
@@ -142,6 +143,20 @@ describe('TwoFactorLoginGate stub', function (): void {
 
         $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: false, hasConfigured: false));
     })->throwsNoExceptions();
+
+    it('falls back to safe defaults when a vendor-shaped config is missing mandatory and challenge_ttl_minutes', function (): void {
+        config(['google2fa' => ['enabled' => true]]);
+
+        [$gate] = makeTwoFactorLoginGate();
+
+        try {
+            $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: false, hasConfigured: false));
+            test()->fail('Expected a TwoFactorChallengeException to be thrown.');
+        } catch (TwoFactorChallengeException $exception) {
+            expect($exception->tokenType)->toBe('setup_required');
+            expect($exception->expiresIn)->toBe(15 * 60);
+        }
+    });
 
     it('tears the host login session down before throwing a challenge', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
