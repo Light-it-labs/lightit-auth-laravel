@@ -113,9 +113,17 @@ describe('Google2FAInstaller', function (): void {
             ->doesntExpectOutputToContain('Publishing configuration')
             ->assertSuccessful();
 
-        $config = require $this->tempBase.'/config/google2fa.php';
+        // Asserted from the source text, not `require`d: the config
+        // references `TwoFactorAuthenticatable` and PragmaRX's own
+        // `Constants` class, neither of which this package's own test
+        // process autoloads (both only exist in the consuming project once
+        // the package and its stubs are installed there).
+        $config = (string) file_get_contents($this->tempBase.'/config/google2fa.php');
 
-        expect($config)->toHaveKeys(['enabled', 'mandatory', 'challenge_ttl_minutes']);
+        expect($config)
+            ->toContain("'enabled' =>")
+            ->and($config)->toContain("'mandatory' =>")
+            ->and($config)->toContain("'challenge_ttl_minutes' =>");
     });
 
     it('never overwrites an already-published config/google2fa.php, even one shaped like a bare vendor publish', function (): void {

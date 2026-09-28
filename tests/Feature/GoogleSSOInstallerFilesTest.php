@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-use Lightitlabs\Auth\Installers\ComposerInstaller;
-use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
-use Lightitlabs\Tools\OriginMarker;
-use Lightitlabs\Tools\StubCopier;
+use Illuminate\Support\Facades\Artisan;
+use Lightitlabs\Tests\Fixtures\FakeGoogleSSOInstallerFilesCommand;
 
 /**
  * `GoogleLoginAction.stub` routes through `LoginByUserAction`, which depends
@@ -42,22 +40,9 @@ describe('GoogleSSOInstaller writes the shared login primitives', function (): v
     });
 
     it('writes LoginByUserAction and TwoFactorLoginGate alongside the Google SSO stubs', function (): void {
-        $command = new class extends Illuminate\Console\Command
-        {
-            protected $signature = 'google-sso-installer-files-test';
-        };
+        Artisan::registerCommand(new FakeGoogleSSOInstallerFilesCommand);
 
-        $installer = new GoogleSSOInstaller(
-            $command,
-            new ComposerInstaller($command),
-            new StubCopier(new OriginMarker('0.0.0-test')),
-        );
-
-        foreach (['createAuthFiles', 'copySharedLoginFiles', 'copySharedFiles'] as $step) {
-            $method = new ReflectionMethod($installer, $step);
-            $method->setAccessible(true);
-            $method->invoke($installer);
-        }
+        $this->artisan('google-sso-installer-files-fake')->assertSuccessful();
 
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/LoginByUserAction.php'))->toBeTrue();
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/TwoFactorLoginGate.php'))->toBeTrue();

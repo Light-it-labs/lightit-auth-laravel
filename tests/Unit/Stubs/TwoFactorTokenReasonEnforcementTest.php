@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Crypt;
 use Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\FakeUser;
+use Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorAuthException;
+use Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason;
+use Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
 
 describe('Two-factor challenge token reason enforcement', function (): void {
     it('lets CompleteTwoFactorAuthenticationRequest accept a setup token (enrolment confirmation)', function (): void {
@@ -111,18 +114,20 @@ function validTwoFactorPayload(string $reason, string $userId = 'user-1'): array
 
 describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): void {
     beforeEach(function (): void {
+        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
         FakeUser::$registry['user-1'] = new FakeUser('user-1');
     });
 
     it('accepts a setup-required token', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('setup_required'));
 
-        $verifyTwoFactorToken = new Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken;
 
         $user = $verifyTwoFactorToken->executeForAny(
             $token,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::SetupRequired,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::VerificationRequired,
+            TwoFactorReason::SetupRequired,
+            TwoFactorReason::VerificationRequired,
         );
 
         expect($user->id)->toBe('user-1');
@@ -131,12 +136,12 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
     it('accepts a verification-required token', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('verification_required'));
 
-        $verifyTwoFactorToken = new Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken;
 
         $user = $verifyTwoFactorToken->executeForAny(
             $token,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::SetupRequired,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::VerificationRequired,
+            TwoFactorReason::SetupRequired,
+            TwoFactorReason::VerificationRequired,
         );
 
         expect($user->id)->toBe('user-1');
@@ -145,13 +150,13 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
     it('rejects a reset-required token when only setup or verification reasons are accepted', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('reset_required'));
 
-        $verifyTwoFactorToken = new Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken;
 
         expect(fn () => $verifyTwoFactorToken->executeForAny(
             $token,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::SetupRequired,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::VerificationRequired,
-        ))->toThrow(Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorAuthException::class);
+            TwoFactorReason::SetupRequired,
+            TwoFactorReason::VerificationRequired,
+        ))->toThrow(TwoFactorAuthException::class);
     });
 
     it('rejects an expired token', function (): void {
@@ -159,11 +164,11 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
         $payload['exp'] = now()->subMinute()->timestamp;
         $token = Crypt::encrypt($payload);
 
-        $verifyTwoFactorToken = new Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken;
 
         expect(fn () => $verifyTwoFactorToken->executeForAny(
             $token,
-            Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorReason::VerificationRequired,
-        ))->toThrow(Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\TwoFactorAuthException::class);
+            TwoFactorReason::VerificationRequired,
+        ))->toThrow(TwoFactorAuthException::class);
     });
 });

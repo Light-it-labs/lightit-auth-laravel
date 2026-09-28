@@ -2,10 +2,8 @@
 
 declare(strict_types=1);
 
-use Lightitlabs\Auth\Installers\ComposerInstaller;
-use Lightitlabs\Auth\Installers\OtpInstaller;
-use Lightitlabs\Tools\OriginMarker;
-use Lightitlabs\Tools\StubCopier;
+use Illuminate\Support\Facades\Artisan;
+use Lightitlabs\Tests\Fixtures\FakeOtpInstallerCommand;
 
 /**
  * `ConsumeOtpAction.stub` type-hints `LoginByUserAction`, which in turn
@@ -38,17 +36,9 @@ describe('OtpInstaller writes the shared login primitives', function (): void {
     });
 
     it('writes LoginByUserAction and TwoFactorLoginGate alongside the OTP stubs', function (): void {
-        $command = new class extends Illuminate\Console\Command
-        {
-            protected $signature = 'otp-installer-files-test';
-        };
+        Artisan::registerCommand(new FakeOtpInstallerCommand);
 
-        $installer = new OtpInstaller(
-            new ComposerInstaller($command),
-            new StubCopier(new OriginMarker('0.0.0-test')),
-        );
-
-        $installer->install();
+        $this->artisan('otp-installer-fake')->assertSuccessful();
 
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/LoginByUserAction.php'))->toBeTrue();
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/TwoFactorLoginGate.php'))->toBeTrue();

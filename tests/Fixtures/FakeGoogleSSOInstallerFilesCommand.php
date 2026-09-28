@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightitlabs\Tests\Fixtures;
+
+use Illuminate\Console\Command;
+use Lightitlabs\Auth\Installers\ComposerInstaller;
+use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
+use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\StubCopier;
+use ReflectionMethod;
+
+/**
+ * Drives GoogleSSOInstaller's file-writing steps directly through
+ * reflection, skipping `install()`'s `requirePackages()` call - it shells
+ * out to `composer require`, which does not belong in this package's own
+ * test suite. Runs through a real Artisan command (rather than a bare
+ * `Command` instance) so `ComposerInstaller`'s `line()` calls have a
+ * console output to write to.
+ */
+final class FakeGoogleSSOInstallerFilesCommand extends Command
+{
+    protected $signature = 'google-sso-installer-files-fake';
+
+    private const STEPS = [
+        'createAuthFiles',
+        'copySharedLoginFiles',
+        'copySharedFiles',
+    ];
+
+    public function handle(): int
+    {
+        $installer = new GoogleSSOInstaller(
+            $this,
+            new ComposerInstaller($this),
+            new StubCopier(new OriginMarker('0.0.0-test')),
+        );
+
+        foreach (self::STEPS as $step) {
+            $method = new ReflectionMethod($installer, $step);
+            $method->setAccessible(true);
+            $method->invoke($installer);
+        }
+
+        return self::SUCCESS;
+    }
+}
