@@ -33,19 +33,34 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const TODO_FILE = 'AUTH-2FA-TODO.md';
 
     /**
-     * The single line a consumer must paste into their own login - this
-     * package cannot write to a login it does not generate. Printed at the
-     * end of install() and mirrored, word for word, into AUTH-2FA-TODO.md
-     * via the `gateSnippet` token so the two never drift apart.
+     * The import + constructor injection a consumer must add to their own
+     * login - this package cannot write to a login it does not generate.
+     * Printed at the end of install() and mirrored, word for word, into
+     * AUTH-2FA-TODO.md via the `gateConstructorSnippet` token so the two
+     * never drift apart.
      */
-    private const GATE_SNIPPET = 'app(\\Lightit\\Authentication\\Domain\\Actions\\IssueTwoFactorChallengeAction::class)->execute($user);';
+    private const GATE_CONSTRUCTOR_SNIPPET = <<<'PHP'
+        use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
+
+        public function __construct(
+            private readonly AuthFactory $authFactory,
+            private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
+        ) {}
+        PHP;
+
+    /**
+     * The call to the injected challenge action, pasted right before
+     * `return $user;`. Mirrored, word for word, into AUTH-2FA-TODO.md via
+     * the `gateCallSnippet` token so the two never drift apart.
+     */
+    private const GATE_CALL_SNIPPET = '$this->issueTwoFactorChallengeAction->execute($user);';
 
     /**
      * The second manual step: this package cannot write to a ServiceProvider
      * it did not generate either, so registering the `2fa` rate limiter the
      * `throttle:2fa` middleware needs (see TwoFactorRateLimiter.stub and
      * routes/two-factor-auth.stub) is left to the consumer, same as the
-     * challenge action snippet above.
+     * challenge action snippets above.
      */
     private const RATE_LIMITER_SNIPPET = '\\Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
 
@@ -319,10 +334,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     /**
      * The three manual steps left in the whole install: this package cannot
      * edit a login, a ServiceProvider or a User model it did not generate,
-     * so it prints the exact lines to paste into LoginAction::execute() and
-     * AppServiceProvider::boot(), reminds the consumer to extend
-     * TwoFactorAuthenticatable, and writes the same three steps into
-     * AUTH-2FA-TODO.md for later reference.
+     * so it prints the exact lines to add to LoginAction's constructor and
+     * execute() body, and to AppServiceProvider::boot(), reminds the
+     * consumer to extend TwoFactorAuthenticatable, and writes the same three
+     * steps into AUTH-2FA-TODO.md for later reference.
      */
     private function writeManualIntegrationGuide(): void
     {
@@ -332,7 +347,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             __DIR__.'/../../Stubs/Google2FA/'.self::TODO_FILE.'.stub',
             base_path(self::TODO_FILE),
             [
-                'gateSnippet' => self::GATE_SNIPPET,
+                'gateConstructorSnippet' => self::GATE_CONSTRUCTOR_SNIPPET,
+                'gateCallSnippet' => self::GATE_CALL_SNIPPET,
                 'rateLimiterSnippet' => self::RATE_LIMITER_SNIPPET,
             ],
         );
@@ -342,10 +358,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped(self::TODO_FILE),
         };
 
+        $this->command->line('Inject the challenge action into LoginAction via its constructor:');
+        $this->printMultilineSnippet(self::GATE_CONSTRUCTOR_SNIPPET);
+
         $this->command->line(
-            'Paste this line into LoginAction::execute(), right after "$request->session()->regenerate();" and before "return $user;":',
+            'Then call it right after "$request->session()->regenerate();" and before "return $user;":',
         );
-        $this->composerInstaller->printBoxedMessage(self::GATE_SNIPPET);
+        $this->composerInstaller->printBoxedMessage(self::GATE_CALL_SNIPPET);
 
         $this->command->line('Paste this line into AppServiceProvider::boot(), to register the 2FA rate limiter:');
         $this->composerInstaller->printBoxedMessage(self::RATE_LIMITER_SNIPPET);
@@ -354,5 +373,18 @@ final class Google2FAInstaller implements AuthInstallerInterface
             self::USER_MODEL_CLASS.' must extend '.self::TWO_FACTOR_AUTHENTICATABLE_CLASS
             .' instead of Illuminate\\Foundation\\Auth\\User - see '.self::TODO_FILE.'.',
         );
+    }
+
+    /**
+     * Prints a multi-line snippet one line at a time, so each line reaches
+     * the console as its own write - unlike a single multi-line string,
+     * this keeps assertions against one specific line of the snippet from
+     * colliding with assertions against another line of the same snippet.
+     */
+    private function printMultilineSnippet(string $snippet): void
+    {
+        foreach (explode("\n", $snippet) as $line) {
+            $this->command->line($line);
+        }
     }
 }

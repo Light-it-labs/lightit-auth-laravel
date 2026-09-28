@@ -49,15 +49,32 @@ describe('Google2FAInstaller', function (): void {
         }
     });
 
-    it('prints the line to paste into LoginAction::execute(), inside a box, matching AUTH-2FA-TODO.md', function (): void {
+    it('prints the constructor injection snippet for LoginAction, matching AUTH-2FA-TODO.md, without falling back to app()', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
 
         $this->artisan('google2fa-installer-fake')
-            ->expectsOutputToContain('app(\Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction::class)->execute($user);')
+            ->expectsOutputToContain('use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;')
+            ->expectsOutputToContain('private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,')
+            ->doesntExpectOutputToContain('app(')
+            ->assertSuccessful();
+
+        $todo = file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md');
+
+        expect($todo)
+            ->toContain('use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;')
+            ->toContain('private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,')
+            ->not->toContain('app(');
+    });
+
+    it('prints the call to the injected challenge action, right before return $user;, matching AUTH-2FA-TODO.md', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain('$this->issueTwoFactorChallengeAction->execute($user);')
             ->assertSuccessful();
 
         expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
-            ->toContain('app(\Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction::class)->execute($user);');
+            ->toContain('$this->issueTwoFactorChallengeAction->execute($user);');
     });
 
     it('prints the fully-qualified rate limiter line to paste into AppServiceProvider::boot(), matching AUTH-2FA-TODO.md', function (): void {
