@@ -51,7 +51,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
  * hardcodes `Lightit\...` namespaces this package never loads directly, and
  * `User::query()->find()` needs a real Eloquent model this package has no
  * database to back. Rendered here into a private test namespace, the same
- * way TwoFactorLoginGateStubTest does, with FakeUser standing in as a plain
+ * way IssueTwoFactorChallengeActionStubTest does, with FakeUser standing in as a plain
  * static registry instead of Eloquent - so `executeForAny()`'s reason
  * enforcement is exercised behaviorally instead of by grepping source text.
  */

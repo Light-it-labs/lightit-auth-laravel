@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 /**
  * Signals that an otherwise-successful login still needs to clear 2FA - see
- * TwoFactorLoginGate::guardAgainstChallenge(). This isn't an error: it
+ * IssueTwoFactorChallengeAction::execute(). This isn't an error: it
  * carries the same {access_token, token_type, expires_in} shape the
  * frontend's isSetupRequired / isVerificationRequired guards already expect
  * from a challenge response. It renders itself, rather than extending this

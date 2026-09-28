@@ -7,7 +7,7 @@ use Lightitlabs\Tests\Fixtures\FakeOtpInstallerCommand;
 
 /**
  * `ConsumeOtpAction.stub` type-hints `LoginByUserAction`, which in turn
- * depends on `TwoFactorLoginGate`. An OTP-only install (no Google2FAInstaller
+ * depends on `IssueTwoFactorChallengeAction`. An OTP-only install (no Google2FAInstaller
  * involved) must still write both shared stubs, or the container can never
  * resolve `LoginByUserAction` when `ConsumeOtpAction` is constructed.
  */
@@ -35,12 +35,12 @@ describe('OtpInstaller writes the shared login primitives', function (): void {
         rmdir($this->tempBase);
     });
 
-    it('writes LoginByUserAction and TwoFactorLoginGate alongside the OTP stubs', function (): void {
+    it('writes LoginByUserAction and IssueTwoFactorChallengeAction alongside the OTP stubs', function (): void {
         Artisan::registerCommand(new FakeOtpInstallerCommand);
 
         $this->artisan('otp-installer-fake')->assertSuccessful();
 
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/LoginByUserAction.php'))->toBeTrue();
-        expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/TwoFactorLoginGate.php'))->toBeTrue();
+        expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/IssueTwoFactorChallengeAction.php'))->toBeTrue();
     });
 });

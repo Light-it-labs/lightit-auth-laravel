@@ -7,18 +7,18 @@ use Illuminate\Contracts\Auth\Guard;
 use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\Request;
 use Illuminate\Session\Store as SessionStore;
-use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\FakeUser;
-use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\TwoFactorChallengeException;
-use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\TwoFactorLoginGate;
+use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser;
+use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChallengeException;
+use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\IssueTwoFactorChallengeAction;
 
 /**
- * TwoFactorLoginGate.stub is a template for the consuming app - it hardcodes
+ * IssueTwoFactorChallengeAction.stub is a template for the consuming app - it hardcodes
  * `Lightit\Users\Domain\Models\User` and lives under `Lightit\` namespaces
  * this package never loads directly. Rendered here into a private test
  * namespace (FakeUser stands in for the real User model) so its branching
  * logic is exercised without a full consumer app.
  */
-function renderTwoFactorGateStub(string $relativePath): string
+function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
 {
     $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
 
@@ -32,36 +32,36 @@ function renderTwoFactorGateStub(string $relativePath): string
             'use Lightit\Users\Domain\Models\User;',
         ],
         [
-            'namespace Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub;',
-            'namespace Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub;',
-            'namespace Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub;',
+            'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
+            'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
+            'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
             '',
             '',
-            'use Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub\FakeUser as User;',
+            'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as User;',
         ],
         $contents,
     );
 }
 
-function requireRenderedGateStub(string $relativePath): void
+function requireRenderedChallengeActionStub(string $relativePath): void
 {
-    $tempFile = sys_get_temp_dir().'/two-factor-login-gate-stub-'.md5($relativePath).'.php';
-    file_put_contents($tempFile, renderTwoFactorGateStub($relativePath));
+    $tempFile = sys_get_temp_dir().'/issue-two-factor-challenge-action-stub-'.md5($relativePath).'.php';
+    file_put_contents($tempFile, renderIssueTwoFactorChallengeActionStub($relativePath));
     require_once $tempFile;
 }
 
-requireRenderedGateStub('Google2FA/Auth/Enums/TwoFactorReason.stub');
-requireRenderedGateStub('Google2FA/Auth/Exceptions/TwoFactorChallengeException.stub');
-requireRenderedGateStub('Shared/Auth/Actions/TwoFactorLoginGate.stub');
+requireRenderedChallengeActionStub('Google2FA/Auth/Enums/TwoFactorReason.stub');
+requireRenderedChallengeActionStub('Google2FA/Auth/Exceptions/TwoFactorChallengeException.stub');
+requireRenderedChallengeActionStub('Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub');
 
 /**
- * Builds a gate backed by a real `SessionGuard` over an array session store,
+ * Builds a challenge action backed by a real `SessionGuard` over an array session store,
  * standing in for the authenticated session the host login already created
- * by the time `guardAgainstChallenge()` runs (see the gate's own docblock).
+ * by the time `execute()` runs (see the challenge action's own docblock).
  *
- * @return array{0: TwoFactorLoginGate, 1: Guard, 2: SessionStore}
+ * @return array{0: IssueTwoFactorChallengeAction, 1: Guard, 2: SessionStore}
  */
-function makeTwoFactorLoginGate(): array
+function makeIssueTwoFactorChallengeAction(): array
 {
     config([
         'auth.guards.web' => ['driver' => 'session', 'provider' => 'users'],
@@ -81,14 +81,14 @@ function makeTwoFactorLoginGate(): array
     $authFactory = app(AuthFactory::class);
     $guard = $authFactory->guard('web');
 
-    return [new TwoFactorLoginGate($authFactory, $request), $guard, $session];
+    return [new IssueTwoFactorChallengeAction($authFactory, $request), $guard, $session];
 }
 
 it('never reports a 2FA challenge to the app\'s exception handler', function (): void {
     expect(is_a(TwoFactorChallengeException::class, ShouldntReport::class, true))->toBeTrue();
 });
 
-describe('TwoFactorLoginGate stub', function (): void {
+describe('IssueTwoFactorChallengeAction stub', function (): void {
     beforeEach(function (): void {
         config(['google2fa.challenge_ttl_minutes' => 15]);
     });
@@ -96,26 +96,26 @@ describe('TwoFactorLoginGate stub', function (): void {
     it('does nothing when 2FA is disabled', function (): void {
         config(['google2fa.enabled' => false]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
-        $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: true, hasConfigured: true));
+        $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
     })->throwsNoExceptions();
 
     it('does nothing when google2fa.enabled is entirely absent, as in an OTP-only or Google-SSO-only install', function (): void {
         config(['google2fa' => null]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
-        $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: true, hasConfigured: true));
+        $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
     })->throwsNoExceptions();
 
     it('throws a setup-required challenge when 2FA is mandatory and the user has no secret', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
         try {
-            $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: false, hasConfigured: false));
+            $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
             test()->fail('Expected a TwoFactorChallengeException to be thrown.');
         } catch (TwoFactorChallengeException $exception) {
             expect($exception->tokenType)->toBe('setup_required');
@@ -126,10 +126,10 @@ describe('TwoFactorLoginGate stub', function (): void {
     it('throws a verification-required challenge when the user already has a secret stored', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
         try {
-            $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: true, hasConfigured: true));
+            $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
             test()->fail('Expected a TwoFactorChallengeException to be thrown.');
         } catch (TwoFactorChallengeException $exception) {
             expect($exception->tokenType)->toBe('verification_required');
@@ -139,18 +139,18 @@ describe('TwoFactorLoginGate stub', function (): void {
     it('does nothing when 2FA is optional and the user has not configured it', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
-        $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: false, hasConfigured: false));
+        $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
     })->throwsNoExceptions();
 
     it('falls back to safe defaults when a vendor-shaped config is missing mandatory and challenge_ttl_minutes', function (): void {
         config(['google2fa' => ['enabled' => true]]);
 
-        [$gate] = makeTwoFactorLoginGate();
+        [$action] = makeIssueTwoFactorChallengeAction();
 
         try {
-            $gate->guardAgainstChallenge(new FakeUser(hasSecretStored: false, hasConfigured: false));
+            $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
             test()->fail('Expected a TwoFactorChallengeException to be thrown.');
         } catch (TwoFactorChallengeException $exception) {
             expect($exception->tokenType)->toBe('setup_required');
@@ -161,7 +161,7 @@ describe('TwoFactorLoginGate stub', function (): void {
     it('tears the host login session down before throwing a challenge', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
 
-        [$gate, $guard, $session] = makeTwoFactorLoginGate();
+        [$action, $guard, $session] = makeIssueTwoFactorChallengeAction();
 
         $user = new FakeUser(hasSecretStored: true, hasConfigured: true);
         $guard->login($user);
@@ -170,7 +170,7 @@ describe('TwoFactorLoginGate stub', function (): void {
         $sessionIdBeforeChallenge = $session->getId();
 
         try {
-            $gate->guardAgainstChallenge($user);
+            $action->execute($user);
             test()->fail('Expected a TwoFactorChallengeException to be thrown.');
         } catch (TwoFactorChallengeException) {
             // The challenge itself is asserted by the other tests above -

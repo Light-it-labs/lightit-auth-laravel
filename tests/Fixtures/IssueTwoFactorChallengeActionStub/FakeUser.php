@@ -2,16 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Lightitlabs\Tests\Fixtures\TwoFactorLoginGateStub;
+namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 
 /**
- * Stands in for `Lightit\Users\Domain\Models\User` when TwoFactorLoginGate.stub
- * is rendered into this test namespace (see TwoFactorLoginGateStubTest) - the
- * three methods the gate's 2FA branching calls, plus `Authenticatable` so the
- * same instance can also be logged into a real `SessionGuard` to exercise the
- * gate's session teardown.
+ * Stands in for `Lightit\Users\Domain\Models\User` when
+ * IssueTwoFactorChallengeAction.stub is rendered into this test namespace
+ * (see IssueTwoFactorChallengeActionStubTest) - the three methods the
+ * challenge action's 2FA branching calls, plus `Authenticatable` so the same
+ * instance can also be logged into a real `SessionGuard` to exercise the
+ * challenge action's session teardown.
  */
 final class FakeUser implements Authenticatable
 {

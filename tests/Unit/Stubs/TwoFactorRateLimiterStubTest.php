@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
+use Lightitlabs\Tests\Fixtures\TwoFactorRateLimiterStub\TwoFactorRateLimiter;
 
 /**
  * TwoFactorRateLimiter.stub is a template for the consuming app - it
  * hardcodes `Lightit\...` namespaces this package never loads directly.
  * Rendered here into a private test namespace, the same way
- * TwoFactorLoginGateStubTest does, so its per-token/per-IP limiter keys are
+ * IssueTwoFactorChallengeActionStubTest does, so its per-token/per-IP limiter keys are
  * exercised without a full consumer app.
  */
 function renderTwoFactorRateLimiterStub(): string
@@ -31,7 +32,7 @@ require_once $tempFile;
 
 describe('TwoFactorRateLimiter stub', function (): void {
     it('keys the token bucket by the hashed bearer token, not by the request IP alone', function (): void {
-        Lightitlabs\Tests\Fixtures\TwoFactorRateLimiterStub\TwoFactorRateLimiter::register();
+        TwoFactorRateLimiter::register();
 
         $limiter = RateLimiterFacade::limiter('2fa');
         expect($limiter)->not->toBeNull();
@@ -55,7 +56,7 @@ describe('TwoFactorRateLimiter stub', function (): void {
     });
 
     it('also applies a per-IP limit shared across different tokens behind the same address', function (): void {
-        Lightitlabs\Tests\Fixtures\TwoFactorRateLimiterStub\TwoFactorRateLimiter::register();
+        TwoFactorRateLimiter::register();
 
         $limiter = RateLimiterFacade::limiter('2fa');
 

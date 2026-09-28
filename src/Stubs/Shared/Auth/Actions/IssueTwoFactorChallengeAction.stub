@@ -15,7 +15,7 @@ use Lightit\Users\Domain\Models\User;
 /**
  * Gates a just-authenticated user for 2FA before a session is established.
  */
-final class TwoFactorLoginGate
+final class IssueTwoFactorChallengeAction
 {
     public function __construct(
         private readonly AuthFactory $auth,
@@ -26,7 +26,7 @@ final class TwoFactorLoginGate
     /**
      * @throws TwoFactorChallengeException
      */
-    public function guardAgainstChallenge(User $user): void
+    public function execute(User $user): void
     {
         if (! Config::boolean('google2fa.enabled', false)) {
             return;

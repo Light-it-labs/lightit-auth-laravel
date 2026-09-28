@@ -7,7 +7,7 @@ use Lightitlabs\Tests\Fixtures\FakeGoogleSSOInstallerFilesCommand;
 
 /**
  * `GoogleLoginAction.stub` routes through `LoginByUserAction`, which depends
- * on `TwoFactorLoginGate`. A Google-SSO-only install (no Google2FAInstaller
+ * on `IssueTwoFactorChallengeAction`. A Google-SSO-only install (no Google2FAInstaller
  * involved) must still write both shared stubs, or the container can never
  * resolve `LoginByUserAction` when `GoogleLoginAction` is constructed.
  *
@@ -39,12 +39,12 @@ describe('GoogleSSOInstaller writes the shared login primitives', function (): v
         rmdir($this->tempBase);
     });
 
-    it('writes LoginByUserAction and TwoFactorLoginGate alongside the Google SSO stubs', function (): void {
+    it('writes LoginByUserAction and IssueTwoFactorChallengeAction alongside the Google SSO stubs', function (): void {
         Artisan::registerCommand(new FakeGoogleSSOInstallerFilesCommand);
 
         $this->artisan('google-sso-installer-files-fake')->assertSuccessful();
 
         expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/LoginByUserAction.php'))->toBeTrue();
-        expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/TwoFactorLoginGate.php'))->toBeTrue();
+        expect(file_exists($this->tempBase.'/src/Authentication/Domain/Actions/IssueTwoFactorChallengeAction.php'))->toBeTrue();
     });
 });

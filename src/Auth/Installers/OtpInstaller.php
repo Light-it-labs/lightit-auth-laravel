@@ -52,8 +52,9 @@ final class OtpInstaller implements AuthInstallerInterface
 
     /**
      * `ConsumeOtpAction` type-hints `LoginByUserAction`, which in turn
-     * depends on `TwoFactorLoginGate`. Both are shared with Google2FAInstaller
-     * so an OTP-only install still resolves the container binding.
+     * depends on `IssueTwoFactorChallengeAction`. Both are shared with
+     * Google2FAInstaller so an OTP-only install still resolves the
+     * container binding.
      */
     private function copySharedFiles(): void
     {
@@ -62,7 +63,7 @@ final class OtpInstaller implements AuthInstallerInterface
         $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
         $sharedFiles = [
             '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
+            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
         ];
 
         foreach ($sharedFiles as $stub => $destination) {

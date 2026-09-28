@@ -72,8 +72,9 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
     /**
      * `GoogleLoginAction` routes through `LoginByUserAction`, which depends
-     * on `TwoFactorLoginGate`. Both are shared with Google2FAInstaller so a
-     * Google-SSO-only install still resolves the container binding.
+     * on `IssueTwoFactorChallengeAction`. Both are shared with
+     * Google2FAInstaller so a Google-SSO-only install still resolves the
+     * container binding.
      */
     private function copySharedLoginFiles(): void
     {
@@ -82,7 +83,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
         $sharedFiles = [
             '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
+            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
         ];
 
         foreach ($sharedFiles as $stub => $destination) {

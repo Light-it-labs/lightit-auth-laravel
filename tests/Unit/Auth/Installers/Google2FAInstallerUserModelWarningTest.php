@@ -14,7 +14,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 
 /**
- * `TwoFactorLoginGate::guardAgainstChallenge()` - wired manually into the
+ * `IssueTwoFactorChallengeAction::execute()` - wired manually into the
  * consumer's own login per AUTH-2FA-TODO.md - calls methods that only exist
  * on `TwoFactorAuthenticatable`. `config/google2fa.php`'s `enabled` and
  * `mandatory` both default to `true`, so a consumer's User model that

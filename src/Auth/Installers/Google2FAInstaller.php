@@ -38,20 +38,20 @@ final class Google2FAInstaller implements AuthInstallerInterface
      * end of install() and mirrored, word for word, into AUTH-2FA-TODO.md
      * via the `gateSnippet` token so the two never drift apart.
      */
-    private const GATE_SNIPPET = 'app(\\Lightit\\Authentication\\Domain\\Actions\\TwoFactorLoginGate::class)->guardAgainstChallenge($user);';
+    private const GATE_SNIPPET = 'app(\\Lightit\\Authentication\\Domain\\Actions\\IssueTwoFactorChallengeAction::class)->execute($user);';
 
     /**
      * The second manual step: this package cannot write to a ServiceProvider
      * it did not generate either, so registering the `2fa` rate limiter the
      * `throttle:2fa` middleware needs (see TwoFactorRateLimiter.stub and
-     * routes/two-factor-auth.stub) is left to the consumer, same as the gate
-     * snippet above.
+     * routes/two-factor-auth.stub) is left to the consumer, same as the
+     * challenge action snippet above.
      */
     private const RATE_LIMITER_SNIPPET = '\\Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
 
     /**
      * The consuming boilerplate's own User model - the same FQCN every
-     * generated 2FA stub already assumes (see TwoFactorLoginGate.stub,
+     * generated 2FA stub already assumes (see IssueTwoFactorChallengeAction.stub,
      * LoginByUserAction.stub). Those stubs call methods that only exist on
      * TwoFactorAuthenticatable - if this class doesn't extend it, every
      * login throws BadMethodCallException the moment 2FA is wired in.
@@ -93,14 +93,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     /**
      * `config/google2fa.php`'s `enabled` and `mandatory` both default to
-     * `true`, so `TwoFactorLoginGate::guardAgainstChallenge()` - which the
+     * `true`, so `IssueTwoFactorChallengeAction::execute()` - which the
      * consumer wires into their own login by hand, per AUTH-2FA-TODO.md -
      * calls `TwoFactorAuthenticatable`-only methods on the very next login,
      * with no config change required to hit it. There is nothing safe to
      * auto-patch here: unlike the stubs this package generates, this is the
      * consumer's already-customized User model, and rewriting its `extends`
-     * clause would be a much heavier, riskier edit than the one-line gate
-     * call it needs.
+     * clause would be a much heavier, riskier edit than the constructor
+     * injection and call it needs.
      *
      * Must run after `createAuthFiles()`: that's what writes
      * `TwoFactorAuthenticatable.php` in the first place, so checking before
@@ -151,7 +151,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
         $sharedFiles = [
             '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/TwoFactorLoginGate.stub' => 'Domain/Actions/TwoFactorLoginGate.php',
+            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
         ];
 
         foreach ($sharedFiles as $stub => $destination) {

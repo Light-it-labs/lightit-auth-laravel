@@ -20,13 +20,13 @@ final class LoginByUserAction
     public function __construct(
         private readonly AuthFactory $auth,
         private readonly Request $request,
-        private readonly TwoFactorLoginGate $twoFactorLoginGate,
+        private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
     ) {
     }
 
     public function execute(User $user): void
     {
-        $this->twoFactorLoginGate->guardAgainstChallenge($user);
+        $this->issueTwoFactorChallengeAction->execute($user);
 
         $this->executeAfterChallenge($user);
     }

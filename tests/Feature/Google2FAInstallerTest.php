@@ -15,7 +15,7 @@ describe('Google2FAInstaller', function (): void {
 
         $this->newFiles = [
             'src/Authentication/Domain/Actions/LoginByUserAction.php',
-            'src/Authentication/Domain/Actions/TwoFactorLoginGate.php',
+            'src/Authentication/Domain/Actions/IssueTwoFactorChallengeAction.php',
             'src/Authentication/Domain/Exceptions/TwoFactorChallengeException.php',
             'src/Authentication/Domain/TwoFactorAuthenticatable.php',
             'src/Authentication/Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
@@ -53,11 +53,11 @@ describe('Google2FAInstaller', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
 
         $this->artisan('google2fa-installer-fake')
-            ->expectsOutputToContain('app(\Lightit\Authentication\Domain\Actions\TwoFactorLoginGate::class)->guardAgainstChallenge($user);')
+            ->expectsOutputToContain('app(\Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction::class)->execute($user);')
             ->assertSuccessful();
 
         expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
-            ->toContain('app(\Lightit\Authentication\Domain\Actions\TwoFactorLoginGate::class)->guardAgainstChallenge($user);');
+            ->toContain('app(\Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction::class)->execute($user);');
     });
 
     it('prints the fully-qualified rate limiter line to paste into AppServiceProvider::boot(), matching AUTH-2FA-TODO.md', function (): void {
