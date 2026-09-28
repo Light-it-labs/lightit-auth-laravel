@@ -79,7 +79,11 @@ to be challenged. If your listeners on that event should only run for a fully
 authenticated session, swap `attempt()` for `validate()` + the gate + `login()`:
 
 ```php
-if (! $guard->validate($credentials)) {
+if (! $request->hasSession()) {
+    throw new UnauthenticatedException;
+}
+
+if (! $guard->validate(['email' => $credentials->email, 'password' => $credentials->password])) {
     throw new UnauthenticatedException;
 }
 
@@ -87,9 +91,13 @@ if (! $guard->validate($credentials)) {
 $user = $guard->getLastAttempted();
 
 app(\Lightit\Authentication\Domain\Actions\TwoFactorLoginGate::class)->guardAgainstChallenge($user);
+
 $guard->login($user);
+$request->session()->regenerate();
 ```
 
 `validate()` checks the credentials without logging the user in, so the gate
 runs first and the session is only ever established once the challenge (if
-any) is cleared - `login()` here does what `attempt()` used to.
+any) is cleared - `login()` here does what `attempt()` used to, and
+`regenerate()` still runs after it, exactly as it does on the path this
+optional snippet replaces.
