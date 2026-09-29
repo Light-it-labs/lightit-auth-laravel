@@ -77,18 +77,19 @@ describe('Google2FAInstaller', function (): void {
             ->toContain('$this->issueTwoFactorChallengeAction->execute($user);');
     });
 
-    it('prints the fully-qualified rate limiter line to paste into AppServiceProvider::boot(), matching AUTH-2FA-TODO.md', function (): void {
+    it('documents that the 2fa rate limiter self-registers from routes/two-factor-auth.php, without a manual AppServiceProvider paste', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
 
         $this->artisan('google2fa-installer-fake')
-            ->expectsOutputToContain('\Lightit\Authentication\Domain\TwoFactorRateLimiter::register();')
+            ->doesntExpectOutputToContain('AppServiceProvider')
             ->assertSuccessful();
 
         expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
-            ->toContain('\Lightit\Authentication\Domain\TwoFactorRateLimiter::register();');
+            ->toContain('TwoFactorRateLimiter::register()')
+            ->not->toContain('paste this line into AppServiceProvider');
     });
 
-    it('prints and documents the third manual step: extending TwoFactorAuthenticatable', function (): void {
+    it('prints and documents the second manual step: extending TwoFactorAuthenticatable', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
 
         $this->artisan('google2fa-installer-fake')

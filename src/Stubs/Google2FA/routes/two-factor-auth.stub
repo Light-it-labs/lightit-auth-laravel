@@ -10,12 +10,15 @@ use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
+use Lightit\Authentication\Domain\TwoFactorRateLimiter;
 
 /*
 |--------------------------------------------------------------------------
 | Two-Factor Authentication Routes
 |--------------------------------------------------------------------------
 */
+
+TwoFactorRateLimiter::register();
 
 Route::prefix('2fa')
     ->group(static function (): void {

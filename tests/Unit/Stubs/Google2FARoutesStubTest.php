@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\RateLimiter;
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 
 describe('Google2FA routes stub', function (): void {
@@ -21,12 +22,15 @@ describe('Google2FA routes stub', function (): void {
             use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
             use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
             use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
+            use Lightit\Authentication\Domain\TwoFactorRateLimiter;
 
             /*
             |--------------------------------------------------------------------------
             | Two-Factor Authentication Routes
             |--------------------------------------------------------------------------
             */
+
+            TwoFactorRateLimiter::register();
 
             Route::prefix('2fa')
                 ->group(static function (): void {
@@ -95,5 +99,39 @@ describe('Google2FA routes stub', function (): void {
                 "/Route::post\\('{$route}', \\w+Controller::class\\)->middleware\\('throttle:2fa'\\);/"
             );
         }
+    });
+
+    it('self-registers the 2fa rate limiter instead of requiring a manual AppServiceProvider paste', function (): void {
+        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+
+        expect($stub)->toContain('use Lightit\Authentication\Domain\TwoFactorRateLimiter;')
+            ->and($stub)->toContain('TwoFactorRateLimiter::register();');
+
+        // Only the file-scope preamble up to (not including) the route definitions is evaluated -
+        // the route definitions reference controllers this test never installs, but proving the
+        // preamble alone registers the limiter is exactly what "no manual paste needed" requires.
+        $preamble = substr($stub, 0, (int) strpos($stub, 'Route::prefix('));
+
+        // TwoFactorRateLimiterStubTest already renders TwoFactorRateLimiter.stub (identical body,
+        // only the namespace differs) into a loadable class - reused here instead of requiring the
+        // stub a second time under its real namespace.
+        $body = str_replace(
+            [
+                "<?php\n\ndeclare(strict_types=1);\n\n",
+                'use Lightit\Authentication\Domain\TwoFactorRateLimiter;',
+            ],
+            [
+                '',
+                'use Lightitlabs\Tests\Fixtures\TwoFactorRateLimiterStub\TwoFactorRateLimiter;',
+            ],
+            $preamble,
+        );
+
+        // The routes stub calls TwoFactorRateLimiter::register() at file scope, so evaluating it
+        // (as Laravel's route loading would) alone registers the limiter - the same effect the
+        // manual AppServiceProvider paste used to be required for.
+        eval($body);
+
+        expect(RateLimiter::limiter('2fa'))->not->toBeNull();
     });
 });

@@ -56,15 +56,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const GATE_CALL_SNIPPET = '$this->issueTwoFactorChallengeAction->execute($user);';
 
     /**
-     * The second manual step: this package cannot write to a ServiceProvider
-     * it did not generate either, so registering the `2fa` rate limiter the
-     * `throttle:2fa` middleware needs (see TwoFactorRateLimiter.stub and
-     * routes/two-factor-auth.stub) is left to the consumer, same as the
-     * challenge action snippets above.
-     */
-    private const RATE_LIMITER_SNIPPET = '\\Lightit\\Authentication\\Domain\\TwoFactorRateLimiter::register();';
-
-    /**
      * The consuming boilerplate's own User model - the same FQCN every
      * generated 2FA stub already assumes (see IssueTwoFactorChallengeAction.stub,
      * LoginByUserAction.stub). Those stubs call methods that only exist on
@@ -332,12 +323,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * The three manual steps left in the whole install: this package cannot
-     * edit a login, a ServiceProvider or a User model it did not generate,
-     * so it prints the exact lines to add to LoginAction's constructor and
-     * execute() body, and to AppServiceProvider::boot(), reminds the
-     * consumer to extend TwoFactorAuthenticatable, and writes the same three
-     * steps into AUTH-2FA-TODO.md for later reference.
+     * The two manual steps left in the whole install: this package cannot
+     * edit a login or a User model it did not generate, so it prints the
+     * exact lines to add to LoginAction's constructor and execute() body,
+     * reminds the consumer to extend TwoFactorAuthenticatable, and writes
+     * the same steps into AUTH-2FA-TODO.md for later reference. The 2FA rate
+     * limiter no longer needs a manual AppServiceProvider paste - the
+     * generated routes/two-factor-auth.php registers it itself.
      */
     private function writeManualIntegrationGuide(): void
     {
@@ -349,7 +341,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             [
                 'gateConstructorSnippet' => self::GATE_CONSTRUCTOR_SNIPPET,
                 'gateCallSnippet' => self::GATE_CALL_SNIPPET,
-                'rateLimiterSnippet' => self::RATE_LIMITER_SNIPPET,
             ],
         );
 
@@ -365,9 +356,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
             'Then call it right after "$request->session()->regenerate();" and before "return $user;":',
         );
         $this->composerInstaller->printBoxedMessage(self::GATE_CALL_SNIPPET);
-
-        $this->command->line('Paste this line into AppServiceProvider::boot(), to register the 2FA rate limiter:');
-        $this->composerInstaller->printBoxedMessage(self::RATE_LIMITER_SNIPPET);
 
         $this->command->line(
             self::USER_MODEL_CLASS.' must extend '.self::TWO_FACTOR_AUTHENTICATABLE_CLASS
