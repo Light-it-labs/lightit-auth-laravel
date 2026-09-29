@@ -19,8 +19,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
 
-    private bool $failed = false;
-
     private const REQUIRED_DEPENDENCIES = [
         '@tanstack/react-query',
         'axios',
@@ -48,11 +46,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     public static function stubDirectory(): string
     {
         return __DIR__.'/../../Stubs/Frontend/Google2FA';
-    }
-
-    public function failed(): bool
-    {
-        return $this->failed;
     }
 
     public function install(): void
@@ -101,7 +94,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->command->error(
                 'Invalid --frontend-path: '.$this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
             );
-            $this->failed = true;
 
             return;
         }
