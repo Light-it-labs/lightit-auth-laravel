@@ -18,22 +18,30 @@ final class TwoFactorAttemptLimiter
 
     private const DECAY_MINUTES = 15;
 
+    /**
+     * Counts this attempt and rejects it in the same step: RateLimiter::hit()
+     * increments the per-user counter and returns the new total atomically,
+     * so a burst of concurrent requests for the same user id can never push
+     * more than MAX_ATTEMPTS past this check - a separate "read the count,
+     * then increment later on failure" pair would leave a window where every
+     * request in the burst reads the same stale count and all pass.
+     *
+     * Every attempt is counted, not just failures - clear() wipes the
+     * counter right back out on the eventual success, so a legitimate user
+     * who succeeds on their first or second try never sees any lasting
+     * effect from this.
+     */
     public static function ensureNotLockedOut(int|string $userId): void
     {
-        if (! RateLimiter::tooManyAttempts(self::key($userId), self::MAX_ATTEMPTS)) {
-            return;
+        $attempts = RateLimiter::hit(self::key($userId), self::DECAY_MINUTES * 60);
+
+        if ($attempts > self::MAX_ATTEMPTS) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.too_many_attempts'),
+                reason: 'too_many_attempts',
+                status: 429,
+            );
         }
-
-        throw new TwoFactorAuthException(
-            message: __('google2fa.too_many_attempts'),
-            reason: 'too_many_attempts',
-            status: 429,
-        );
-    }
-
-    public static function recordFailure(int|string $userId): void
-    {
-        RateLimiter::hit(self::key($userId), self::DECAY_MINUTES * 60);
     }
 
     public static function clear(int|string $userId): void

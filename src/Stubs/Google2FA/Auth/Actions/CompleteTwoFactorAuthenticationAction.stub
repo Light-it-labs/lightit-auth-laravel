@@ -32,13 +32,7 @@ final readonly class CompleteTwoFactorAuthenticationAction
             throw new UnauthenticatedException(__('google2fa.secret_not_configured'));
         }
 
-        try {
-            $this->verifyOtpAction->execute($secret, $oneTimePassword);
-        } catch (TwoFactorAuthException $exception) {
-            TwoFactorAttemptLimiter::recordFailure($user->getKey());
-
-            throw $exception;
-        }
+        $this->verifyOtpAction->execute($secret, $oneTimePassword);
 
         TwoFactorAttemptLimiter::clear($user->getKey());
 

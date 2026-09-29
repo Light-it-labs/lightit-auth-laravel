@@ -30,37 +30,31 @@ final readonly class VerifyRecoveryCodeAction
     {
         TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());
 
-        try {
-            $lockedUser = DB::transaction(function () use ($user, $suppliedCode): User {
-                /** @var User $lockedUser */
-                $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+        $lockedUser = DB::transaction(function () use ($user, $suppliedCode): User {
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
 
-                $hashedCodes = $lockedUser->getRecoveryCodes();
+            $hashedCodes = $lockedUser->getRecoveryCodes();
 
-                $matchIndex = -1;
+            $matchIndex = -1;
 
-                foreach ($hashedCodes as $index => $hash) {
-                    if (Hash::check($suppliedCode, $hash)) {
-                        $matchIndex = $index;
+            foreach ($hashedCodes as $index => $hash) {
+                if (Hash::check($suppliedCode, $hash)) {
+                    $matchIndex = $index;
 
-                        break;
-                    }
+                    break;
                 }
+            }
 
-                if ($matchIndex === -1) {
-                    throw new TwoFactorAuthException(message: __('google2fa.invalid_recovery_code'), reason: 'invalid_recovery_code', status: 422);
-                }
+            if ($matchIndex === -1) {
+                throw new TwoFactorAuthException(message: __('google2fa.invalid_recovery_code'), reason: 'invalid_recovery_code', status: 422);
+            }
 
-                unset($hashedCodes[$matchIndex]);
-                $lockedUser->replaceRecoveryCodes(array_values($hashedCodes));
+            unset($hashedCodes[$matchIndex]);
+            $lockedUser->replaceRecoveryCodes(array_values($hashedCodes));
 
-                return $lockedUser;
-            });
-        } catch (TwoFactorAuthException $exception) {
-            TwoFactorAttemptLimiter::recordFailure($user->getKey());
-
-            throw $exception;
-        }
+            return $lockedUser;
+        });
 
         TwoFactorAttemptLimiter::clear($user->getKey());
 

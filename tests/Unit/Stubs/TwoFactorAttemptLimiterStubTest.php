@@ -48,15 +48,15 @@ describe('TwoFactorAttemptLimiter stub', function (): void {
         $userId = 'user-' . bin2hex(random_bytes(6));
 
         TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
-        TwoFactorAttemptLimiter::recordFailure($userId);
-        TwoFactorAttemptLimiter::recordFailure($userId);
+        TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
+        TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
     })->throwsNoExceptions();
 
-    it('locks the user out after 5 failures, independent of any token or IP', function (): void {
+    it('locks the user out after 5 attempts, independent of any token or IP', function (): void {
         $userId = 'user-' . bin2hex(random_bytes(6));
 
         for ($i = 0; $i < 5; $i++) {
-            TwoFactorAttemptLimiter::recordFailure($userId);
+            TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
         }
 
         try {
@@ -67,30 +67,53 @@ describe('TwoFactorAttemptLimiter stub', function (): void {
         }
     });
 
+    it('rejects the 6th attempt even though the check happens after the count already includes it', function (): void {
+        // ensureNotLockedOut() increments and checks in the same RateLimiter::hit()
+        // call - unlike a separate "read the count, then increment on failure" pair,
+        // there is no window where a 6th caller could read a stale, still-allowed
+        // count. Simulating a burst sequentially still proves the count returned by
+        // the hit itself - not a prior read - is what gates the 6th attempt.
+        $userId = 'user-' . bin2hex(random_bytes(6));
+
+        $rejectedAt = null;
+
+        for ($i = 1; $i <= 6; $i++) {
+            try {
+                TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
+            } catch (TwoFactorAuthException) {
+                $rejectedAt = $i;
+
+                break;
+            }
+        }
+
+        expect($rejectedAt)->toBe(6);
+    });
+
     it('does not lock out a different user sharing no token or IP with the locked-out one', function (): void {
         $lockedOutUserId = 'user-' . bin2hex(random_bytes(6));
         $otherUserId = 'user-' . bin2hex(random_bytes(6));
 
         for ($i = 0; $i < 5; $i++) {
-            TwoFactorAttemptLimiter::recordFailure($lockedOutUserId);
+            TwoFactorAttemptLimiter::ensureNotLockedOut($lockedOutUserId);
         }
 
         TwoFactorAttemptLimiter::ensureNotLockedOut($otherUserId);
     })->throwsNoExceptions();
 
     it(
-        'clears the failure count on success, so the lockout does not persist past a correct attempt',
+        'clears the attempt count on success, so the lockout does not persist past a correct attempt',
         function (): void {
             $userId = 'user-' . bin2hex(random_bytes(6));
-    
+
             for ($i = 0; $i < 4; $i++) {
-                TwoFactorAttemptLimiter::recordFailure($userId);
+                TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
             }
-    
+
             TwoFactorAttemptLimiter::clear($userId);
-    
+
             TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
-            TwoFactorAttemptLimiter::recordFailure($userId);
+            TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
         }
     )->throwsNoExceptions();
 });
