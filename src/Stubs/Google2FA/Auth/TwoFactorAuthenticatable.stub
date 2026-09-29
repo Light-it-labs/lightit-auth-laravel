@@ -83,7 +83,7 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
 
     public function create2faToken(int $ttlInMinutes, TwoFactorReason $factorReason): string
     {
-        $mandatory = Config::boolean('google2fa.mandatory');
+        $mandatory = Config::boolean('google2fa.mandatory', true);
 
         /** @var int|string $rawId */
         $rawId = $this->id;

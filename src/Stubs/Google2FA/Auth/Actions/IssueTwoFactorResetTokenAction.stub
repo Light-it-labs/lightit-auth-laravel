@@ -22,7 +22,7 @@ final readonly class IssueTwoFactorResetTokenAction
     {
         $this->passwordValidatorAction->execute($user, $password);
 
-        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes');
+        $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes', 15);
 
         return [
             'access_token' => $user->create2faToken($ttlMinutes, TwoFactorReason::ResetRequired),

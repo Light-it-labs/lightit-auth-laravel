@@ -18,7 +18,7 @@ final readonly class DisableTwoFactorAuthenticationAction
 
     public function execute(User $user, string $password): void
     {
-        $mandatory = Config::boolean('google2fa.mandatory');
+        $mandatory = Config::boolean('google2fa.mandatory', true);
 
         if ($mandatory) {
             throw new TwoFactorAuthException(
