@@ -6,7 +6,7 @@ use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 
 describe('Google2FA routes stub', function (): void {
     it('declares exactly the route set from docs/google-2fa.md, at the package\'s own paths', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
         expect($stub)->toBe(<<<'PHP'
             <?php
@@ -52,9 +52,9 @@ describe('Google2FA routes stub', function (): void {
     });
 
     it('routes only to controllers Google2FAInstaller already copies into the consuming project', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
         $installer = (string) file_get_contents(
-            __DIR__.'/../../../src/Auth/Installers/Google2FAInstaller.php'
+            __DIR__ . '/../../../src/Auth/Installers/Google2FAInstaller.php'
         );
 
         preg_match_all('/(\w+Controller)::class/', $stub, $matches);
@@ -64,36 +64,39 @@ describe('Google2FA routes stub', function (): void {
         }
     });
 
-    it('matches every twoFactor*Endpoint token the frontend stubs rely on to a Route::post segment in this stub', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
-
-        $tokenSegments = [];
-
-        foreach (FrontendStubTokens::defaults() as $token => $value) {
-            if (! str_starts_with($token, 'twoFactor') || ! str_ends_with($token, 'Endpoint')) {
-                continue;
+    it(
+        'matches every twoFactor*Endpoint token the frontend stubs rely on to a Route::post segment in this stub',
+        function (): void {
+            $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+    
+            $tokenSegments = [];
+    
+            foreach (FrontendStubTokens::defaults() as $token => $value) {
+                if (! str_starts_with($token, 'twoFactor') || ! str_ends_with($token, 'Endpoint')) {
+                    continue;
+                }
+    
+                $tokenSegments[] = str_replace('2fa/', '', $value);
             }
-
-            $tokenSegments[] = str_replace('2fa/', '', $value);
+    
+            preg_match_all("/Route::post\('([^']+)'/", $stub, $matches);
+            $routeSegments = $matches[1];
+    
+            sort($tokenSegments);
+            sort($routeSegments);
+    
+            expect($tokenSegments)->not->toBeEmpty();
+    
+            foreach ($tokenSegments as $segment) {
+                expect($stub)->toContain("Route::post('{$segment}'");
+            }
+    
+            expect($routeSegments)->toBe($tokenSegments);
         }
-
-        preg_match_all("/Route::post\('([^']+)'/", $stub, $matches);
-        $routeSegments = $matches[1];
-
-        sort($tokenSegments);
-        sort($routeSegments);
-
-        expect($tokenSegments)->not->toBeEmpty();
-
-        foreach ($tokenSegments as $segment) {
-            expect($stub)->toContain("Route::post('{$segment}'");
-        }
-
-        expect($routeSegments)->toBe($tokenSegments);
-    });
+    );
 
     it('throttles the code-verification endpoints', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
         foreach (['setup', 'complete', 'verify-recovery-code', 'reset'] as $route) {
             expect($stub)->toMatch(
@@ -103,7 +106,7 @@ describe('Google2FA routes stub', function (): void {
     });
 
     it('does not register the 2fa rate limiter at file scope, since that breaks under route:cache', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
         // Laravel never executes route files under `route:cache`, so a file-scope
         // `RateLimiter::for()` call here would silently stop registering the `2fa`

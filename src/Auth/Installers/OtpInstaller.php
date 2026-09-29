@@ -24,7 +24,8 @@ final class OtpInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-    ) {}
+    ) {
+    }
 
     public function install(): void
     {
@@ -46,7 +47,7 @@ final class OtpInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__.'/../../Stubs/Otp/Auth';
+        $stubsPath = __DIR__ . '/../../Stubs/Otp/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -64,12 +65,14 @@ final class OtpInstaller implements AuthInstallerInterface
 
         foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                SharedLoginFiles::stubsPath().$stub,
+                SharedLoginFiles::stubsPath() . $stub,
                 base_path("src/Authentication/{$destination}")
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
+                    "Created: src/Authentication/{$destination}"
+                ),
                 StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
             };
         }
@@ -93,12 +96,14 @@ final class OtpInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
+                    "Created: src/Authentication/{$destination}"
+                ),
                 StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
             };
         }
@@ -117,7 +122,7 @@ final class OtpInstaller implements AuthInstallerInterface
             return;
         }
 
-        $stub = __DIR__.'/../../Stubs/Otp/database/migrations/create_otps_table.stub';
+        $stub = __DIR__ . '/../../Stubs/Otp/database/migrations/create_otps_table.stub';
         $timestamp = date('Y_m_d_His');
         $destination = "database/migrations/{$timestamp}_{$migrationName}.php";
 
@@ -153,12 +158,14 @@ final class OtpInstaller implements AuthInstallerInterface
         }
 
         $outcome = $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Otp/config/otp.stub',
+            __DIR__ . '/../../Stubs/Otp/config/otp.stub',
             config_path('otp.php')
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/otp.php'),
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished(
+                'Config file published: config/otp.php'
+            ),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/otp.php'),
         };
     }

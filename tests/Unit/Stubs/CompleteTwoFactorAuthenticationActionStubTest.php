@@ -13,7 +13,7 @@ declare(strict_types=1);
 describe('CompleteTwoFactorAuthenticationAction stub', function (): void {
     it('checks the per-user lockout before verifying, and records/clears it around the outcome', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/CompleteTwoFactorAuthenticationAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/CompleteTwoFactorAuthenticationAction.stub'
         );
 
         expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());')

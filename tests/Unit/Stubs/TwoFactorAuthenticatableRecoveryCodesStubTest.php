@@ -14,7 +14,7 @@ use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\TwoFactorReason;
  */
 function renderTwoFactorAuthenticatableStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/' . $relativePath);
 
     return str_replace(
         [
@@ -37,7 +37,7 @@ function renderTwoFactorAuthenticatableStub(string $relativePath): string
 
 function requireRenderedTwoFactorAuthenticatableStub(string $relativePath): void
 {
-    $tempFile = sys_get_temp_dir().'/two-factor-authenticatable-stub-'.md5($relativePath).'.php';
+    $tempFile = sys_get_temp_dir() . '/two-factor-authenticatable-stub-' . md5($relativePath) . '.php';
     file_put_contents($tempFile, renderTwoFactorAuthenticatableStub($relativePath));
     require_once $tempFile;
 }
@@ -49,27 +49,27 @@ requireRenderedTwoFactorAuthenticatableStub('Shared/Auth/TwoFactorAuthenticatabl
 if (! class_exists(ConcreteTwoFactorAuthenticatable::class)) {
     eval(
         'namespace Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub;'
-        .'final class ConcreteTwoFactorAuthenticatable extends TwoFactorAuthenticatable {}'
+        . 'final class ConcreteTwoFactorAuthenticatable extends TwoFactorAuthenticatable {}'
     );
 }
 
 describe('TwoFactorAuthenticatable stub getRecoveryCodes()', function (): void {
     it('returns an empty array when the column is null', function (): void {
-        $user = new ConcreteTwoFactorAuthenticatable;
+        $user = new ConcreteTwoFactorAuthenticatable();
         $user->setRawAttributes(['recovery_codes' => null]);
 
         expect($user->getRecoveryCodes())->toBe([]);
     });
 
     it('returns an empty array when the column decodes to a non-array JSON value', function (): void {
-        $user = new ConcreteTwoFactorAuthenticatable;
+        $user = new ConcreteTwoFactorAuthenticatable();
         $user->setRawAttributes(['recovery_codes' => json_encode('not-an-array')]);
 
         expect($user->getRecoveryCodes())->toBe([]);
     });
 
     it('decodes a JSON-encoded array of recovery codes', function (): void {
-        $user = new ConcreteTwoFactorAuthenticatable;
+        $user = new ConcreteTwoFactorAuthenticatable();
         $user->setRawAttributes(['recovery_codes' => json_encode(['a', 'b'])]);
 
         expect($user->getRecoveryCodes())->toBe(['a', 'b']);
@@ -78,16 +78,19 @@ describe('TwoFactorAuthenticatable stub getRecoveryCodes()', function (): void {
 
 describe('TwoFactorAuthenticatable stub create2faToken()', function (): void {
     beforeEach(function (): void {
-        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+        config(['app.key' => 'base64:' . base64_encode(random_bytes(32))]);
     });
 
-    it('does not throw when google2fa.mandatory and challenge_ttl_minutes are entirely absent, as in a vendor-shaped config', function (): void {
-        config(['google2fa' => null]);
-
-        $user = new ConcreteTwoFactorAuthenticatable;
-        $user->setRawAttributes(['id' => 1]);
-
-        expect(fn () => $user->create2faToken(15, TwoFactorReason::VerificationRequired))
-            ->not->toThrow(InvalidArgumentException::class);
-    });
+    it(
+        'does not throw when google2fa.mandatory and challenge_ttl_minutes are entirely absent, as in a vendor-shaped config',
+        function (): void {
+            config(['google2fa' => null]);
+    
+            $user = new ConcreteTwoFactorAuthenticatable();
+            $user->setRawAttributes(['id' => 1]);
+    
+            expect(fn () => $user->create2faToken(15, TwoFactorReason::VerificationRequired))
+                ->not->toThrow(InvalidArgumentException::class);
+        }
+    );
 });

@@ -12,7 +12,7 @@ declare(strict_types=1);
 describe('Wrong-code vs. invalid-token status codes', function (): void {
     it('answers a wrong one-time password with 422', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyOtpAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyOtpAction.stub'
         );
 
         expect($stub)->toContain(
@@ -22,7 +22,7 @@ describe('Wrong-code vs. invalid-token status codes', function (): void {
 
     it('answers a wrong recovery code with 422', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
         );
 
         expect($stub)->toContain(
@@ -32,13 +32,13 @@ describe('Wrong-code vs. invalid-token status codes', function (): void {
 
     it('leaves an invalid or expired challenge token at the default 401', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyTwoFactorToken.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyTwoFactorToken.stub'
         );
 
         expect($stub)->not->toContain('status: 422');
 
         $exceptionStub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Exceptions/TwoFactorAuthException.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Exceptions/TwoFactorAuthException.stub'
         );
 
         expect($exceptionStub)->toContain('int $status = 401');

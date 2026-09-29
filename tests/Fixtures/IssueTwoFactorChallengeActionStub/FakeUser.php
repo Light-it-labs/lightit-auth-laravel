@@ -20,7 +20,8 @@ final class FakeUser implements Authenticatable
         private readonly bool $hasSecretStored,
         private readonly bool $hasConfigured,
         private readonly int|string $id = 1,
-    ) {}
+    ) {
+    }
 
     public function hasTwoFactorAuthenticationConfigured(): bool
     {
@@ -34,7 +35,7 @@ final class FakeUser implements Authenticatable
 
     public function create2faToken(int $ttlInMinutes, TwoFactorReason $factorReason): string
     {
-        return $factorReason->value.':'.$ttlInMinutes;
+        return $factorReason->value . ':' . $ttlInMinutes;
     }
 
     public function getAuthIdentifierName(): string
@@ -57,7 +58,7 @@ final class FakeUser implements Authenticatable
         return '';
     }
 
-    public function getRememberToken(): ?string
+    public function getRememberToken(): string|null
     {
         return null;
     }

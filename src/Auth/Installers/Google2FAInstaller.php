@@ -64,9 +64,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-        private readonly StubRenderer $stubRenderer = new StubRenderer,
-        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar,
-    ) {}
+        private readonly StubRenderer $stubRenderer = new StubRenderer(),
+        private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
+    ) {
+    }
 
     public function install(): void
     {
@@ -106,8 +107,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! class_exists($userModelClass)) {
             $this->command->warn(
                 "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
-                ."extend {$requiredParentClass} - without it, IssueTwoFactorChallengeAction throws a "
-                .'LogicException on every login instead of ever challenging anyone.'
+                . "extend {$requiredParentClass} - without it, IssueTwoFactorChallengeAction throws a "
+                . 'LogicException on every login instead of ever challenging anyone.'
             );
 
             return;
@@ -121,10 +122,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->command->warn(
             "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
-            .'to true in config/google2fa.php, but IssueTwoFactorChallengeAction only acts on a '
-            ."{$requiredParentClass} instance, so it throws a LogicException on every login instead of ever "
-            .'challenging anyone. Change '.$userModelClass.' to extend '.$requiredParentClass
-            .' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
+            . 'to true in config/google2fa.php, but IssueTwoFactorChallengeAction only acts on a '
+            . "{$requiredParentClass} instance, so it throws a LogicException on every login instead of ever "
+            . 'challenging anyone. Change ' . $userModelClass . ' to extend ' . $requiredParentClass
+            . ' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
         );
     }
 
@@ -139,10 +140,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         foreach (SharedLoginFiles::FILES as $stub => $destination) {
-            $this->copyStub(SharedLoginFiles::stubsPath().$stub, "src/Authentication/{$destination}");
+            $this->copyStub(SharedLoginFiles::stubsPath() . $stub, "src/Authentication/{$destination}");
         }
 
-        $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
+        $this->copyAuthFiles(__DIR__ . '/../../Stubs/Google2FA/Auth');
     }
 
     private function copyAuthFiles(string $stubsPath): void
@@ -182,7 +183,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         ];
 
         foreach ($files as $stub => $destination) {
-            $this->copyStub($stubsPath.$stub, "src/Authentication/{$destination}");
+            $this->copyStub($stubsPath . $stub, "src/Authentication/{$destination}");
         }
     }
 
@@ -200,7 +201,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 6, 'Copying migration files');
 
-        $stub = __DIR__.'/../../../database/migrations/add_two_factor_authentication_columns.stub';
+        $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
         $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
 
         $outcome = $this->stubCopier->copy(
@@ -223,12 +224,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $outcome = $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/config/google2fa.stub',
+            __DIR__ . '/../../Stubs/Google2FA/config/google2fa.stub',
             config_path('google2fa.php')
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/google2fa.php'),
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished(
+                'Config file published: config/google2fa.php'
+            ),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/google2fa.php'),
         };
     }
@@ -241,12 +244,14 @@ final class Google2FAInstaller implements AuthInstallerInterface
             mkdir(lang_path('en'), 0755, true);
         }
         $outcome = $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/lang/en/google2fa.stub',
+            __DIR__ . '/../../Stubs/Google2FA/lang/en/google2fa.stub',
             lang_path('en/google2fa.php')
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Lang file published: lang/en/google2fa.php'),
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished(
+                'Lang file published: lang/en/google2fa.php'
+            ),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('lang/en/google2fa.php'),
         };
     }
@@ -260,13 +265,15 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $routesStubOutcome = $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Google2FA/routes/two-factor-auth.stub',
-            base_path('routes/'.self::ROUTES_FILE_NAME)
+            __DIR__ . '/../../Stubs/Google2FA/routes/two-factor-auth.stub',
+            base_path('routes/' . self::ROUTES_FILE_NAME)
         );
 
         match ($routesStubOutcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated('Created: routes/'.self::ROUTES_FILE_NAME),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('routes/'.self::ROUTES_FILE_NAME),
+            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
+                'Created: routes/' . self::ROUTES_FILE_NAME
+            ),
+            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('routes/' . self::ROUTES_FILE_NAME),
         };
 
         $outcome = $this->routeFileRegistrar->register(
@@ -278,22 +285,22 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         match ($outcome) {
             RouteRegistrationOutcome::Registered => $this->composerInstaller->printFileCreated(
-                'Updated '.self::API_ROUTES_PATH.": {$requireStatement}"
+                'Updated ' . self::API_ROUTES_PATH . ": {$requireStatement}"
             ),
             RouteRegistrationOutcome::AlreadyRegistered => $this->composerInstaller->printFileCreated(
-                'Two-factor authentication routes already required in '.self::API_ROUTES_PATH
+                'Two-factor authentication routes already required in ' . self::API_ROUTES_PATH
             ),
             RouteRegistrationOutcome::ParentMissing => $this->command->warn(
-                'Could not find '.self::API_ROUTES_PATH.'. '
-                ."Please add {$requireStatement} to your API route file manually."
+                'Could not find ' . self::API_ROUTES_PATH . '. '
+                . "Please add {$requireStatement} to your API route file manually."
             ),
             RouteRegistrationOutcome::Failed => $this->command->warn(
-                "Could not append {$requireStatement} to ".self::API_ROUTES_PATH.' automatically. '
-                .'Please add it manually.'
+                "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. '
+                . 'Please add it manually.'
             ),
             RouteRegistrationOutcome::Corrupted => $this->command->error(
-                self::API_ROUTES_PATH." was left in an inconsistent state while adding {$requireStatement}. "
-                .'Please inspect the file.'
+                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
+                . 'Please inspect the file.'
             ),
         };
     }
@@ -307,7 +314,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->composerInstaller->printStep(6, 6, 'Writing manual integration guide');
 
         $outcome = $this->stubRenderer->renderTo(
-            __DIR__.'/../../Stubs/Google2FA/'.self::TODO_FILE.'.stub',
+            __DIR__ . '/../../Stubs/Google2FA/' . self::TODO_FILE . '.stub',
             base_path(self::TODO_FILE),
             [
                 'gateConstructorSnippet' => self::GATE_CONSTRUCTOR_SNIPPET,
@@ -316,7 +323,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated('Created: '.self::TODO_FILE),
+            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated('Created: ' . self::TODO_FILE),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped(self::TODO_FILE),
         };
 
@@ -329,8 +336,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->composerInstaller->printBoxedMessage(self::GATE_CALL_SNIPPET);
 
         $this->command->line(
-            self::USER_MODEL_CLASS.' must extend '.self::TWO_FACTOR_AUTHENTICATABLE_CLASS
-            .' instead of Illuminate\\Foundation\\Auth\\User - see '.self::TODO_FILE.'.',
+            self::USER_MODEL_CLASS . ' must extend ' . self::TWO_FACTOR_AUTHENTICATABLE_CLASS
+            . ' instead of Illuminate\\Foundation\\Auth\\User - see ' . self::TODO_FILE . '.',
         );
     }
 
@@ -347,8 +354,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         if (! is_file($path)) {
             $this->command->warn(
-                'Could not find '.self::LOGIN_ACTION_PATH.'. Password login stays single-factor until '
-                .'LoginAction injects and calls IssueTwoFactorChallengeAction - see '.self::TODO_FILE.'.'
+                'Could not find ' . self::LOGIN_ACTION_PATH . '. Password login stays single-factor until '
+                . 'LoginAction injects and calls IssueTwoFactorChallengeAction - see ' . self::TODO_FILE . '.'
             );
 
             return;
@@ -361,8 +368,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->command->warn(
-            self::LOGIN_ACTION_PATH.' does not reference IssueTwoFactorChallengeAction. Password login stays '
-            .'single-factor until LoginAction injects and calls it - see '.self::TODO_FILE.'.'
+            self::LOGIN_ACTION_PATH . ' does not reference IssueTwoFactorChallengeAction. Password login stays '
+            . 'single-factor until LoginAction injects and calls it - see ' . self::TODO_FILE . '.'
         );
     }
 

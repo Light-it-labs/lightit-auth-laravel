@@ -11,7 +11,7 @@ use Lightitlabs\Tests\Fixtures\VerifyTwoFactorTokenStub\VerifyTwoFactorToken;
 describe('Two-factor challenge token reason enforcement', function (): void {
     it('lets CompleteTwoFactorAuthenticationRequest accept a setup token (enrolment confirmation)', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/CompleteTwoFactorAuthenticationRequest.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Requests/CompleteTwoFactorAuthenticationRequest.stub'
         );
 
         expect($stub)->toContain('$this->verifyTwoFactorToken->executeForAny(')
@@ -21,7 +21,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
 
     it('does not let CompleteTwoFactorAuthenticationRequest accept a reset token', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/CompleteTwoFactorAuthenticationRequest.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Requests/CompleteTwoFactorAuthenticationRequest.stub'
         );
 
         expect($stub)->not->toContain('TwoFactorReason::ResetRequired');
@@ -29,7 +29,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
 
     it('binds VerifyRecoveryCodeRequest to a verification-required token', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/VerifyRecoveryCodeRequest.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Requests/VerifyRecoveryCodeRequest.stub'
         );
 
         expect($stub)->toContain(
@@ -39,7 +39,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
 
     it('binds ResetTwoFactorAuthenticationRequest to a reset-required token, unchanged', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/ResetTwoFactorAuthenticationRequest.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Requests/ResetTwoFactorAuthenticationRequest.stub'
         );
 
         expect($stub)->toContain('TwoFactorReason::ResetRequired');
@@ -47,7 +47,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
 
     it('binds SetupTwoFactorAuthenticationRequest to a setup-required token only', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/SetupTwoFactorAuthenticationRequest.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Requests/SetupTwoFactorAuthenticationRequest.stub'
         );
 
         expect($stub)->toContain(
@@ -69,7 +69,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
  */
 function renderVerifyTwoFactorTokenStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/' . $relativePath);
 
     return str_replace(
         [
@@ -100,7 +100,7 @@ function renderVerifyTwoFactorTokenStub(string $relativePath): string
 
 function requireRenderedVerifyTwoFactorTokenStub(string $relativePath): void
 {
-    $tempFile = sys_get_temp_dir().'/verify-two-factor-token-stub-'.md5($relativePath).'.php';
+    $tempFile = sys_get_temp_dir() . '/verify-two-factor-token-stub-' . md5($relativePath) . '.php';
     file_put_contents($tempFile, renderVerifyTwoFactorTokenStub($relativePath));
     require_once $tempFile;
 }
@@ -126,7 +126,7 @@ function validTwoFactorPayload(string $reason, string $userId = 'user-1'): array
 
 describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): void {
     beforeEach(function (): void {
-        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+        config(['app.key' => 'base64:' . base64_encode(random_bytes(32))]);
 
         FakeUser::$registry['user-1'] = new FakeUser('user-1');
     });
@@ -134,7 +134,7 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
     it('accepts a setup-required token', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('setup_required'));
 
-        $verifyTwoFactorToken = new VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken();
 
         $user = $verifyTwoFactorToken->executeForAny(
             $token,
@@ -148,7 +148,7 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
     it('accepts a verification-required token', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('verification_required'));
 
-        $verifyTwoFactorToken = new VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken();
 
         $user = $verifyTwoFactorToken->executeForAny(
             $token,
@@ -162,7 +162,7 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
     it('rejects a reset-required token when only setup or verification reasons are accepted', function (): void {
         $token = Crypt::encrypt(validTwoFactorPayload('reset_required'));
 
-        $verifyTwoFactorToken = new VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken();
 
         expect(fn () => $verifyTwoFactorToken->executeForAny(
             $token,
@@ -176,7 +176,7 @@ describe('VerifyTwoFactorToken::executeForAny reason enforcement', function (): 
         $payload['exp'] = now()->subMinute()->timestamp;
         $token = Crypt::encrypt($payload);
 
-        $verifyTwoFactorToken = new VerifyTwoFactorToken;
+        $verifyTwoFactorToken = new VerifyTwoFactorToken();
 
         expect(fn () => $verifyTwoFactorToken->executeForAny(
             $token,

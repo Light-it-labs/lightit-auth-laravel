@@ -35,7 +35,7 @@ final class PlainUser implements Authenticatable
         return '';
     }
 
-    public function getRememberToken(): ?string
+    public function getRememberToken(): string|null
     {
         return null;
     }

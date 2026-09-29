@@ -14,26 +14,29 @@ use Lightitlabs\LightitServiceProvider;
  * call behind `class_exists()`.
  */
 describe('LightitServiceProvider 2fa rate limiter registration', function (): void {
-    it('does nothing when boot runs before TwoFactorRateLimiter is installed, then registers the limiter once it exists', function (): void {
-        expect(class_exists('Lightit\Authentication\Domain\TwoFactorRateLimiter', false))->toBeFalse();
-
-        $provider = new LightitServiceProvider($this->app);
-
-        $provider->packageBooted();
-
-        expect(RateLimiter::limiter('2fa'))->toBeNull();
-
-        $tempFile = sys_get_temp_dir().'/lightit-service-provider-two-factor-rate-limiter.php';
-        file_put_contents(
-            $tempFile,
-            (string) file_get_contents(__DIR__.'/../../src/Stubs/Google2FA/Auth/TwoFactorRateLimiter.stub')
-        );
-        require_once $tempFile;
-
-        expect(class_exists('Lightit\Authentication\Domain\TwoFactorRateLimiter', false))->toBeTrue();
-
-        $provider->packageBooted();
-
-        expect(RateLimiter::limiter('2fa'))->not->toBeNull();
-    });
+    it(
+        'does nothing when boot runs before TwoFactorRateLimiter is installed, then registers the limiter once it exists',
+        function (): void {
+            expect(class_exists('Lightit\Authentication\Domain\TwoFactorRateLimiter', false))->toBeFalse();
+    
+            $provider = new LightitServiceProvider($this->app);
+    
+            $provider->packageBooted();
+    
+            expect(RateLimiter::limiter('2fa'))->toBeNull();
+    
+            $tempFile = sys_get_temp_dir() . '/lightit-service-provider-two-factor-rate-limiter.php';
+            file_put_contents(
+                $tempFile,
+                (string) file_get_contents(__DIR__ . '/../../src/Stubs/Google2FA/Auth/TwoFactorRateLimiter.stub')
+            );
+            require_once $tempFile;
+    
+            expect(class_exists('Lightit\Authentication\Domain\TwoFactorRateLimiter', false))->toBeTrue();
+    
+            $provider->packageBooted();
+    
+            expect(RateLimiter::limiter('2fa'))->not->toBeNull();
+        }
+    );
 });

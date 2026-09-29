@@ -23,7 +23,8 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         private readonly Command $command,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-    ) {}
+    ) {
+    }
 
     public function install(): void
     {
@@ -50,7 +51,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__.'/../../Stubs/GoogleSSO/Auth';
+        $stubsPath = __DIR__ . '/../../Stubs/GoogleSSO/Auth';
 
         $this->copyAuthFiles($stubsPath);
     }
@@ -65,7 +66,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
             $this->reportCopy($outcome, "src/Authentication/{$destination}");
@@ -85,7 +86,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
         foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                SharedLoginFiles::stubsPath().$stub,
+                SharedLoginFiles::stubsPath() . $stub,
                 base_path("src/Authentication/{$destination}")
             );
             $this->reportCopy($outcome, "src/Authentication/{$destination}");
@@ -96,7 +97,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(3, 3, 'Creating shared exception file');
 
-        $sharedStubPath = __DIR__.'/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
+        $sharedStubPath = __DIR__ . '/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
         $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
 
         $sharedDir = dirname($sharedDestPath);

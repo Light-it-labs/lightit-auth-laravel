@@ -13,7 +13,7 @@ declare(strict_types=1);
 describe('VerifyRecoveryCodeAction stub', function (): void {
     it('locks and consumes the recovery code inside a single transaction', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
         );
 
         expect($stub)->toContain('DB::transaction(function ()')
@@ -23,7 +23,7 @@ describe('VerifyRecoveryCodeAction stub', function (): void {
 
     it('checks the per-user lockout before verifying, and records/clears it around the outcome', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
         );
 
         expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());')

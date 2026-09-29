@@ -16,7 +16,7 @@ use Lightitlabs\Tests\Fixtures\TwoFactorRateLimiterStub\TwoFactorRateLimiter;
 function renderTwoFactorRateLimiterStub(): string
 {
     $contents = (string) file_get_contents(
-        __DIR__.'/../../../src/Stubs/Google2FA/Auth/TwoFactorRateLimiter.stub'
+        __DIR__ . '/../../../src/Stubs/Google2FA/Auth/TwoFactorRateLimiter.stub'
     );
 
     return str_replace(
@@ -26,7 +26,7 @@ function renderTwoFactorRateLimiterStub(): string
     );
 }
 
-$tempFile = sys_get_temp_dir().'/two-factor-rate-limiter-stub.php';
+$tempFile = sys_get_temp_dir() . '/two-factor-rate-limiter-stub.php';
 file_put_contents($tempFile, renderTwoFactorRateLimiterStub());
 require_once $tempFile;
 

@@ -14,7 +14,7 @@ use Lightitlabs\Tests\Fixtures\TwoFactorAttemptLimiterStub\TwoFactorAuthExceptio
  */
 function renderTwoFactorAttemptLimiterStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/Auth/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/Auth/' . $relativePath);
 
     return str_replace(
         [
@@ -35,7 +35,7 @@ function renderTwoFactorAttemptLimiterStub(string $relativePath): string
 
 function requireRenderedTwoFactorAttemptLimiterStub(string $relativePath): void
 {
-    $tempFile = sys_get_temp_dir().'/two-factor-attempt-limiter-stub-'.md5($relativePath).'.php';
+    $tempFile = sys_get_temp_dir() . '/two-factor-attempt-limiter-stub-' . md5($relativePath) . '.php';
     file_put_contents($tempFile, renderTwoFactorAttemptLimiterStub($relativePath));
     require_once $tempFile;
 }
@@ -45,7 +45,7 @@ requireRenderedTwoFactorAttemptLimiterStub('TwoFactorAttemptLimiter.stub');
 
 describe('TwoFactorAttemptLimiter stub', function (): void {
     it('allows an attempt while under the failure threshold', function (): void {
-        $userId = 'user-'.bin2hex(random_bytes(6));
+        $userId = 'user-' . bin2hex(random_bytes(6));
 
         TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
         TwoFactorAttemptLimiter::recordFailure($userId);
@@ -53,7 +53,7 @@ describe('TwoFactorAttemptLimiter stub', function (): void {
     })->throwsNoExceptions();
 
     it('locks the user out after 5 failures, independent of any token or IP', function (): void {
-        $userId = 'user-'.bin2hex(random_bytes(6));
+        $userId = 'user-' . bin2hex(random_bytes(6));
 
         for ($i = 0; $i < 5; $i++) {
             TwoFactorAttemptLimiter::recordFailure($userId);
@@ -68,8 +68,8 @@ describe('TwoFactorAttemptLimiter stub', function (): void {
     });
 
     it('does not lock out a different user sharing no token or IP with the locked-out one', function (): void {
-        $lockedOutUserId = 'user-'.bin2hex(random_bytes(6));
-        $otherUserId = 'user-'.bin2hex(random_bytes(6));
+        $lockedOutUserId = 'user-' . bin2hex(random_bytes(6));
+        $otherUserId = 'user-' . bin2hex(random_bytes(6));
 
         for ($i = 0; $i < 5; $i++) {
             TwoFactorAttemptLimiter::recordFailure($lockedOutUserId);
@@ -78,16 +78,19 @@ describe('TwoFactorAttemptLimiter stub', function (): void {
         TwoFactorAttemptLimiter::ensureNotLockedOut($otherUserId);
     })->throwsNoExceptions();
 
-    it('clears the failure count on success, so the lockout does not persist past a correct attempt', function (): void {
-        $userId = 'user-'.bin2hex(random_bytes(6));
-
-        for ($i = 0; $i < 4; $i++) {
+    it(
+        'clears the failure count on success, so the lockout does not persist past a correct attempt',
+        function (): void {
+            $userId = 'user-' . bin2hex(random_bytes(6));
+    
+            for ($i = 0; $i < 4; $i++) {
+                TwoFactorAttemptLimiter::recordFailure($userId);
+            }
+    
+            TwoFactorAttemptLimiter::clear($userId);
+    
+            TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
             TwoFactorAttemptLimiter::recordFailure($userId);
         }
-
-        TwoFactorAttemptLimiter::clear($userId);
-
-        TwoFactorAttemptLimiter::ensureNotLockedOut($userId);
-        TwoFactorAttemptLimiter::recordFailure($userId);
-    })->throwsNoExceptions();
+    )->throwsNoExceptions();
 });

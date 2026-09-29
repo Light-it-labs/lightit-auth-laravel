@@ -12,9 +12,6 @@ namespace Lightitlabs\Auth\Installers;
  */
 final class SharedLoginFiles
 {
-    /**
-     * @var array<string, string>
-     */
     public const FILES = [
         '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
         '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
@@ -25,6 +22,6 @@ final class SharedLoginFiles
 
     public static function stubsPath(): string
     {
-        return __DIR__.'/../../Stubs/Shared/Auth';
+        return __DIR__ . '/../../Stubs/Shared/Auth';
     }
 }

@@ -18,7 +18,7 @@ class FakeHttpException extends Exception
 
     protected string $errorCode = '';
 
-    public function __construct(?string $message = null, ?array $headers = null)
+    public function __construct(string|null $message = null, array|null $headers = null)
     {
         parent::__construct($message ?? '');
     }

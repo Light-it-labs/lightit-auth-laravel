@@ -21,6 +21,6 @@ final class FakeUser
 
     public static function query(): FakeUserQuery
     {
-        return new FakeUserQuery;
+        return new FakeUserQuery();
     }
 }

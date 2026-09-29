@@ -23,7 +23,7 @@ use Lightitlabs\Tests\Fixtures\FakeGoogleSSOInstallerFilesCommand;
  */
 describe('GoogleSSOInstaller writes the shared login primitives', function (): void {
     beforeEach(function (): void {
-        $this->tempBase = sys_get_temp_dir().'/google-sso-installer-'.bin2hex(random_bytes(6));
+        $this->tempBase = sys_get_temp_dir() . '/google-sso-installer-' . bin2hex(random_bytes(6));
         mkdir($this->tempBase, 0755, true);
         $this->originalBasePath = $this->app->basePath();
         $this->app->setBasePath($this->tempBase);
@@ -45,12 +45,12 @@ describe('GoogleSSOInstaller writes the shared login primitives', function (): v
     });
 
     it('writes every shared login file alongside the Google SSO stubs', function (): void {
-        Artisan::registerCommand(new FakeGoogleSSOInstallerFilesCommand);
+        Artisan::registerCommand(new FakeGoogleSSOInstallerFilesCommand());
 
         $this->artisan('google-sso-installer-files-fake')->assertSuccessful();
 
         foreach (SharedLoginFiles::FILES as $destination) {
-            expect(file_exists($this->tempBase.'/src/Authentication/'.$destination))->toBeTrue();
+            expect(file_exists($this->tempBase . '/src/Authentication/' . $destination))->toBeTrue();
         }
     });
 });

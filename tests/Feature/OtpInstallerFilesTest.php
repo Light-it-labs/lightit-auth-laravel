@@ -18,9 +18,9 @@ use Lightitlabs\Tests\Fixtures\FakeOtpInstallerCommand;
  */
 describe('OtpInstaller writes the shared login primitives', function (): void {
     beforeEach(function (): void {
-        $this->tempBase = sys_get_temp_dir().'/otp-installer-'.bin2hex(random_bytes(6));
+        $this->tempBase = sys_get_temp_dir() . '/otp-installer-' . bin2hex(random_bytes(6));
         mkdir($this->tempBase, 0755, true);
-        mkdir($this->tempBase.'/database/migrations', 0755, true);
+        mkdir($this->tempBase . '/database/migrations', 0755, true);
         $this->originalBasePath = $this->app->basePath();
         $this->app->setBasePath($this->tempBase);
     });
@@ -41,12 +41,12 @@ describe('OtpInstaller writes the shared login primitives', function (): void {
     });
 
     it('writes every shared login file alongside the OTP stubs', function (): void {
-        Artisan::registerCommand(new FakeOtpInstallerCommand);
+        Artisan::registerCommand(new FakeOtpInstallerCommand());
 
         $this->artisan('otp-installer-fake')->assertSuccessful();
 
         foreach (SharedLoginFiles::FILES as $destination) {
-            expect(file_exists($this->tempBase.'/src/Authentication/'.$destination))->toBeTrue();
+            expect(file_exists($this->tempBase . '/src/Authentication/' . $destination))->toBeTrue();
         }
     });
 });

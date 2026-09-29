@@ -21,7 +21,7 @@ use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChalle
  */
 function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/' . $relativePath);
 
     return str_replace(
         [
@@ -53,7 +53,7 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
 
 function requireRenderedChallengeActionStub(string $relativePath): void
 {
-    $tempFile = sys_get_temp_dir().'/issue-two-factor-challenge-action-stub-'.md5($relativePath).'.php';
+    $tempFile = sys_get_temp_dir() . '/issue-two-factor-challenge-action-stub-' . md5($relativePath) . '.php';
     file_put_contents($tempFile, renderIssueTwoFactorChallengeActionStub($relativePath));
     require_once $tempFile;
 }
@@ -109,29 +109,35 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
         $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
     })->throwsNoExceptions();
 
-    it('does nothing when google2fa.enabled is entirely absent, as in an OTP-only or Google-SSO-only install', function (): void {
-        config(['google2fa' => null]);
-
-        [$action] = makeIssueTwoFactorChallengeAction();
-
-        $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
-    })->throwsNoExceptions();
+    it(
+        'does nothing when google2fa.enabled is entirely absent, as in an OTP-only or Google-SSO-only install',
+        function (): void {
+            config(['google2fa' => null]);
+    
+            [$action] = makeIssueTwoFactorChallengeAction();
+    
+            $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
+        }
+    )->throwsNoExceptions();
 
     it('does nothing for a plain user that cannot be challenged when 2FA is disabled', function (): void {
         config(['google2fa.enabled' => false]);
 
         [$action] = makeIssueTwoFactorChallengeAction();
 
-        $action->execute(new PlainUser);
+        $action->execute(new PlainUser());
     })->throwsNoExceptions();
 
-    it('fails closed with a LogicException when 2FA is enabled but the user is not a TwoFactorAuthenticatable', function (): void {
-        config(['google2fa.enabled' => true]);
-
-        [$action] = makeIssueTwoFactorChallengeAction();
-
-        $action->execute(new PlainUser);
-    })->throws(LogicException::class);
+    it(
+        'fails closed with a LogicException when 2FA is enabled but the user is not a TwoFactorAuthenticatable',
+        function (): void {
+            config(['google2fa.enabled' => true]);
+    
+            [$action] = makeIssueTwoFactorChallengeAction();
+    
+            $action->execute(new PlainUser());
+        }
+    )->throws(LogicException::class);
 
     it('throws a setup-required challenge when 2FA is mandatory and the user has no secret', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
@@ -168,43 +174,52 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
         $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
     })->throwsNoExceptions();
 
-    it('never hands out a verification-required token for a secret-stored-but-unconfigured (abandoned enrolment) user', function (): void {
-        config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
-
-        [$action] = makeIssueTwoFactorChallengeAction();
-
-        // Regression guard: an attacker who only knows the password must not receive
-        // verification_required for a user who stored a secret but never activated it -
-        // that token would let them call /2fa/setup and take over the account's 2FA.
-        $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: false));
-    })->throwsNoExceptions();
-
-    it('still issues a setup-required challenge for a secret-stored-but-unconfigured user when 2FA is mandatory, so enrolment can finish', function (): void {
-        config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
-
-        [$action] = makeIssueTwoFactorChallengeAction();
-
-        try {
+    it(
+        'never hands out a verification-required token for a secret-stored-but-unconfigured (abandoned enrolment) user',
+        function (): void {
+            config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
+    
+            [$action] = makeIssueTwoFactorChallengeAction();
+    
+            // Regression guard: an attacker who only knows the password must not receive
+            // verification_required for a user who stored a secret but never activated it -
+            // that token would let them call /2fa/setup and take over the account's 2FA.
             $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: false));
-            test()->fail('Expected a TwoFactorChallengeException to be thrown.');
-        } catch (TwoFactorChallengeException $exception) {
-            expect($exception->tokenType)->toBe('setup_required');
         }
-    });
+    )->throwsNoExceptions();
 
-    it('falls back to safe defaults when a vendor-shaped config is missing mandatory and challenge_ttl_minutes', function (): void {
-        config(['google2fa' => ['enabled' => true]]);
-
-        [$action] = makeIssueTwoFactorChallengeAction();
-
-        try {
-            $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
-            test()->fail('Expected a TwoFactorChallengeException to be thrown.');
-        } catch (TwoFactorChallengeException $exception) {
-            expect($exception->tokenType)->toBe('setup_required');
-            expect($exception->expiresIn)->toBe(15 * 60);
+    it(
+        'still issues a setup-required challenge for a secret-stored-but-unconfigured user when 2FA is mandatory, so enrolment can finish',
+        function (): void {
+            config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
+    
+            [$action] = makeIssueTwoFactorChallengeAction();
+    
+            try {
+                $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: false));
+                test()->fail('Expected a TwoFactorChallengeException to be thrown.');
+            } catch (TwoFactorChallengeException $exception) {
+                expect($exception->tokenType)->toBe('setup_required');
+            }
         }
-    });
+    );
+
+    it(
+        'falls back to safe defaults when a vendor-shaped config is missing mandatory and challenge_ttl_minutes',
+        function (): void {
+            config(['google2fa' => ['enabled' => true]]);
+    
+            [$action] = makeIssueTwoFactorChallengeAction();
+    
+            try {
+                $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
+                test()->fail('Expected a TwoFactorChallengeException to be thrown.');
+            } catch (TwoFactorChallengeException $exception) {
+                expect($exception->tokenType)->toBe('setup_required');
+                expect($exception->expiresIn)->toBe(15 * 60);
+            }
+        }
+    );
 
     it('tears the host login session down before throwing a challenge', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
@@ -230,11 +245,14 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
     });
 });
 
-it('guards every TwoFactorAuthenticatable-only call with an instanceof check that fails closed, so a plain User only ever stays type-safe when 2FA is disabled', function (): void {
-    $stub = (string) file_get_contents(
-        __DIR__.'/../../../src/Stubs/Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub'
-    );
-
-    expect($stub)->toContain('if (! $user instanceof TwoFactorAuthenticatable) {')
-        ->and($stub)->toContain('throw new LogicException(');
-});
+it(
+    'guards every TwoFactorAuthenticatable-only call with an instanceof check that fails closed, so a plain User only ever stays type-safe when 2FA is disabled',
+    function (): void {
+        $stub = (string) file_get_contents(
+            __DIR__ . '/../../../src/Stubs/Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub'
+        );
+    
+        expect($stub)->toContain('if (! $user instanceof TwoFactorAuthenticatable) {')
+            ->and($stub)->toContain('throw new LogicException(');
+    }
+);
