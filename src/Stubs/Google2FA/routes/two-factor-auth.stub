@@ -10,15 +10,17 @@ use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
-use Lightit\Authentication\Domain\TwoFactorRateLimiter;
 
 /*
 |--------------------------------------------------------------------------
 | Two-Factor Authentication Routes
 |--------------------------------------------------------------------------
+|
+| The `2fa` rate limiter these routes rely on is registered by the
+| lightit-auth-laravel package's own service provider, not here, so it
+| still runs when Laravel loads a cached route file (`route:cache`)
+| instead of executing this one.
 */
-
-TwoFactorRateLimiter::register();
 
 Route::prefix('2fa')
     ->group(static function (): void {

@@ -112,7 +112,11 @@ use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationControlle
 use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
-// Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks
+// Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks.
+// The generated routes/two-factor-auth.php already throttles setup/complete/verify-recovery-code/reset with
+// `throttle:2fa`; that named limiter is registered by lightit-auth-laravel's own service provider on boot,
+// not by the routes file, so it keeps working under `php artisan route:cache`. This is why the package must
+// stay a runtime dependency (`composer require`, never `--dev`) - its provider has to boot in production.
 Route::prefix('2fa')->group(static function (): void {
     Route::post('setup', SetupTwoFactorAuthenticationController::class);
     Route::post('complete', CompleteTwoFactorAuthenticationController::class);

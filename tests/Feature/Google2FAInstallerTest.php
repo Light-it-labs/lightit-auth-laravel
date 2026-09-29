@@ -78,15 +78,15 @@ describe('Google2FAInstaller', function (): void {
             ->toContain('$this->issueTwoFactorChallengeAction->execute($user);');
     });
 
-    it('documents that the 2fa rate limiter self-registers from routes/two-factor-auth.php, without a manual AppServiceProvider paste', function (): void {
+    it('documents that the 2fa rate limiter registers itself from the package provider, without a manual AppServiceProvider paste', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
 
         $this->artisan('google2fa-installer-fake')
-            ->doesntExpectOutputToContain('AppServiceProvider')
             ->assertSuccessful();
 
         expect(file_get_contents($this->tempBase.'/AUTH-2FA-TODO.md'))
-            ->toContain('TwoFactorRateLimiter::register()')
+            ->toContain('own service provider registers that named limiter in `boot()` when')
+            ->toContain('must stay a runtime dependency')
             ->not->toContain('paste this line into AppServiceProvider');
     });
 

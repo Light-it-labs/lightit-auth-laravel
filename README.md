@@ -55,6 +55,11 @@ Then install the package via Composer:
 composer require light-it-labs/lightit-auth-laravel
 ```
 
+Keep it a runtime dependency (never `composer require --dev`): if you select
+Two-Factor Authentication, the package's own service provider registers the
+`2fa` rate limiter on boot, and that provider needs to be loaded in
+production for the limiter to exist.
+
 Once installed, run the setup command:
 
 ```bash

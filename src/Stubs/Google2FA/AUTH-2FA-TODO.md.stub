@@ -53,9 +53,14 @@ self-service enrollment from an already-authenticated session is not wired
 by this package - it belongs with your account/settings screens.
 
 `routes/two-factor-auth.php` throttles `setup`, `complete`,
-`verify-recovery-code` and `reset` with `throttle:2fa`, and registers that
-named limiter itself (`TwoFactorRateLimiter::register()` runs at file scope
-in the routes file) - no `AppServiceProvider` paste needed.
+`verify-recovery-code` and `reset` with `throttle:2fa`. `lightit-auth-laravel`'s
+own service provider registers that named limiter in `boot()` when
+`\Lightit\Authentication\Domain\TwoFactorRateLimiter` exists - no
+`AppServiceProvider` paste needed, and it still runs under `php artisan
+route:cache`, unlike a file-scope call in the routes file would. This is why
+`lightit-auth-laravel` must stay a runtime dependency (`composer require`,
+never `--dev`): its provider needs to boot in production for the limiter to
+be registered at all.
 
 ### 2. Extend `TwoFactorAuthenticatable`
 
