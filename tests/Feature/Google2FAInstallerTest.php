@@ -162,4 +162,49 @@ describe('Google2FAInstaller', function (): void {
 
         expect($config)->toBe(['enabled' => true, 'lifetime' => 0, 'guard' => '']);
     });
+
+    it('warns that password login stays single-factor when LoginAction does not exist at the expected path', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain(
+                'Could not find src/Authentication/Domain/Actions/LoginAction.php. Password login stays '
+                .'single-factor until LoginAction injects and calls IssueTwoFactorChallengeAction'
+            )
+            ->assertSuccessful();
+    });
+
+    it('warns that password login stays single-factor when LoginAction exists but never references IssueTwoFactorChallengeAction', function (): void {
+        mkdir($this->tempBase.'/src/Authentication/Domain/Actions', 0755, true);
+        file_put_contents(
+            $this->tempBase.'/src/Authentication/Domain/Actions/LoginAction.php',
+            "<?php\n\nclass LoginAction\n{\n    public function execute(): void {}\n}\n",
+        );
+
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain(
+                'src/Authentication/Domain/Actions/LoginAction.php does not reference '
+                .'IssueTwoFactorChallengeAction. Password login stays single-factor'
+            )
+            ->assertSuccessful();
+    });
+
+    it('stays silent about LoginAction when it already references IssueTwoFactorChallengeAction', function (): void {
+        mkdir($this->tempBase.'/src/Authentication/Domain/Actions', 0755, true);
+        file_put_contents(
+            $this->tempBase.'/src/Authentication/Domain/Actions/LoginAction.php',
+            "<?php\n\nuse Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;\n\n"
+            ."class LoginAction\n{\n    public function __construct(\n"
+            ."        private readonly IssueTwoFactorChallengeAction \$issueTwoFactorChallengeAction,\n"
+            ."    ) {}\n}\n",
+        );
+
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand);
+
+        $this->artisan('google2fa-installer-fake')
+            ->doesntExpectOutputToContain('Password login stays single-factor')
+            ->assertSuccessful();
+    });
 });

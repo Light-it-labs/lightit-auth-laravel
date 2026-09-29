@@ -32,6 +32,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private const TODO_FILE = 'AUTH-2FA-TODO.md';
 
+    private const LOGIN_ACTION_PATH = 'src/Authentication/Domain/Actions/LoginAction.php';
+
     /**
      * The import + constructor injection a consumer must add to their own login.
      */
@@ -85,6 +87,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->copyLangFiles();
         $this->registerRoutes();
         $this->writeManualIntegrationGuide();
+        $this->warnIfLoginActionNotWired();
 
         $this->composerInstaller->printSuccess('Libraries for 2FA installed successfully!');
     }
@@ -328,6 +331,38 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->command->line(
             self::USER_MODEL_CLASS.' must extend '.self::TWO_FACTOR_AUTHENTICATABLE_CLASS
             .' instead of Illuminate\\Foundation\\Auth\\User - see '.self::TODO_FILE.'.',
+        );
+    }
+
+    /**
+     * The last-mile check that the manual LoginAction paste actually
+     * happened. This package cannot edit a login file it did not generate,
+     * so it only reads it (never patches it) and warns when the challenge
+     * action still isn't wired in - password login otherwise stays
+     * single-factor with no signal that anything is missing.
+     */
+    private function warnIfLoginActionNotWired(): void
+    {
+        $path = base_path(self::LOGIN_ACTION_PATH);
+
+        if (! is_file($path)) {
+            $this->command->warn(
+                'Could not find '.self::LOGIN_ACTION_PATH.'. Password login stays single-factor until '
+                .'LoginAction injects and calls IssueTwoFactorChallengeAction - see '.self::TODO_FILE.'.'
+            );
+
+            return;
+        }
+
+        $contents = (string) file_get_contents($path);
+
+        if (str_contains($contents, 'IssueTwoFactorChallengeAction')) {
+            return;
+        }
+
+        $this->command->warn(
+            self::LOGIN_ACTION_PATH.' does not reference IssueTwoFactorChallengeAction. Password login stays '
+            .'single-factor until LoginAction injects and calls it - see '.self::TODO_FILE.'.'
         );
     }
 

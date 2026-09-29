@@ -30,6 +30,7 @@ final class FakeGoogle2FAInstallerCommand extends Command
         'copyLangFiles',
         'registerRoutes',
         'writeManualIntegrationGuide',
+        'warnIfLoginActionNotWired',
     ];
 
     public function handle(): int
