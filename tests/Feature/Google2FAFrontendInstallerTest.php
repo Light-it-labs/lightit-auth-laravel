@@ -142,4 +142,17 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->expectsOutputToContain('No React project found next to the application.')
             ->assertSuccessful();
     });
+
+    it('reports a clear error instead of warn-and-skip when --frontend-path points at a directory without React', function (): void {
+        $invalidRoot = sys_get_temp_dir().'/lightit-2fa-frontend-invalid-'.bin2hex(random_bytes(6));
+        mkdir($invalidRoot, 0755, true);
+
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($invalidRoot));
+
+        $this->artisan('google2fa-frontend-fake')
+            ->expectsOutputToContain('Invalid --frontend-path')
+            ->assertSuccessful();
+
+        File::deleteDirectory($invalidRoot);
+    });
 });

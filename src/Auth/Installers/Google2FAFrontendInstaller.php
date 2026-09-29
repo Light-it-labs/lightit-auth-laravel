@@ -12,7 +12,6 @@ use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
-use RuntimeException;
 
 final class Google2FAFrontendInstaller implements AuthInstallerInterface
 {
@@ -92,14 +91,16 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     private function reportUnresolvedRoot(): void
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
-            throw new RuntimeException(
-                'Rejected --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
+            $this->command->error(
+                'Invalid --frontend-path: '.$this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
             );
+
+            return;
         }
 
         $this->command->warn(
             'No React project found next to the application. Skipping the 2FA frontend step. '
-            .'Pass an explicit frontend path to generate it manually.'
+            .'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
         );
     }
 
