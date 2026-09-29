@@ -44,6 +44,18 @@ describe('Two-factor challenge token reason enforcement', function (): void {
 
         expect($stub)->toContain('TwoFactorReason::ResetRequired');
     });
+
+    it('binds SetupTwoFactorAuthenticationRequest to a setup-required token only', function (): void {
+        $stub = (string) file_get_contents(
+            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Requests/SetupTwoFactorAuthenticationRequest.stub'
+        );
+
+        expect($stub)->toContain(
+            'return $this->verifyTwoFactorToken->execute($token, TwoFactorReason::SetupRequired);'
+        )
+            ->and($stub)->not->toContain('TwoFactorReason::VerificationRequired')
+            ->and($stub)->not->toContain('TwoFactorReason::ResetRequired');
+    });
 });
 
 /**

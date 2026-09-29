@@ -8,8 +8,8 @@ use Illuminate\Contracts\Debug\ShouldntReport;
 use Illuminate\Http\Request;
 use Illuminate\Session\Store as SessionStore;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser;
-use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChallengeException;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\IssueTwoFactorChallengeAction;
+use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChallengeException;
 
 /**
  * IssueTwoFactorChallengeAction.stub is a template for the consuming app - it hardcodes
@@ -143,6 +143,30 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
 
         $action->execute(new FakeUser(hasSecretStored: false, hasConfigured: false));
     })->throwsNoExceptions();
+
+    it('never hands out a verification-required token for a secret-stored-but-unconfigured (abandoned enrolment) user', function (): void {
+        config(['google2fa.enabled' => true, 'google2fa.mandatory' => false]);
+
+        [$action] = makeIssueTwoFactorChallengeAction();
+
+        // Regression guard: an attacker who only knows the password must not receive
+        // verification_required for a user who stored a secret but never activated it -
+        // that token would let them call /2fa/setup and take over the account's 2FA.
+        $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: false));
+    })->throwsNoExceptions();
+
+    it('still issues a setup-required challenge for a secret-stored-but-unconfigured user when 2FA is mandatory, so enrolment can finish', function (): void {
+        config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
+
+        [$action] = makeIssueTwoFactorChallengeAction();
+
+        try {
+            $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: false));
+            test()->fail('Expected a TwoFactorChallengeException to be thrown.');
+        } catch (TwoFactorChallengeException $exception) {
+            expect($exception->tokenType)->toBe('setup_required');
+        }
+    });
 
     it('falls back to safe defaults when a vendor-shaped config is missing mandatory and challenge_ttl_minutes', function (): void {
         config(['google2fa' => ['enabled' => true]]);
