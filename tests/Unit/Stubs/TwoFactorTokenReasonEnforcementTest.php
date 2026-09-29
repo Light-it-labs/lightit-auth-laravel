@@ -106,7 +106,7 @@ function requireRenderedVerifyTwoFactorTokenStub(string $relativePath): void
 }
 
 requireRenderedVerifyTwoFactorTokenStub('Shared/Auth/Enums/TwoFactorReason.stub');
-requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/DataTransferObjects/TwoFactorTokenPayloadDto.stub');
+requireRenderedVerifyTwoFactorTokenStub('Shared/Auth/DataTransferObjects/TwoFactorTokenPayloadDto.stub');
 requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/Exceptions/TwoFactorAuthException.stub');
 requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/Actions/VerifyTwoFactorToken.stub');
 

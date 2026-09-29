@@ -15,6 +15,7 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
+        'Authentication/Domain/DataTransferObjects',
         'Authentication/Domain/Enums',
         'Authentication/Domain/Exceptions',
     ];

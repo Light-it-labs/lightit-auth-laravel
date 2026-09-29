@@ -18,6 +18,7 @@ final class SharedLoginFiles
         '/Enums/TwoFactorReason.stub' => 'Domain/Enums/TwoFactorReason.php',
         '/Exceptions/TwoFactorChallengeException.stub' => 'Domain/Exceptions/TwoFactorChallengeException.php',
         '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
+        '/DataTransferObjects/TwoFactorTokenPayloadDto.stub' => 'Domain/DataTransferObjects/TwoFactorTokenPayloadDto.php',
     ];
 
     public static function stubsPath(): string
