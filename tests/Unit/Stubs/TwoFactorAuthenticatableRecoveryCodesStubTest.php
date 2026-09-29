@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use Illuminate\Support\Facades\Crypt;
 use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\ConcreteTwoFactorAuthenticatable;
 use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\TwoFactorReason;
 
@@ -85,12 +86,29 @@ describe('TwoFactorAuthenticatable stub create2faToken()', function (): void {
         'does not throw when google2fa.mandatory and challenge_ttl_minutes are entirely absent, as in a vendor-shaped config',
         function (): void {
             config(['google2fa' => null]);
-    
+
             $user = new ConcreteTwoFactorAuthenticatable();
             $user->setRawAttributes(['id' => 1]);
-    
+
             expect(fn () => $user->create2faToken(15, TwoFactorReason::VerificationRequired))
                 ->not->toThrow(InvalidArgumentException::class);
+        }
+    );
+
+    it(
+        'defaults the encrypted payload\'s mandatory flag to true when google2fa.mandatory is absent',
+        function (): void {
+            config(['google2fa' => null]);
+
+            $user = new ConcreteTwoFactorAuthenticatable();
+            $user->setRawAttributes(['id' => 1]);
+
+            $token = $user->create2faToken(15, TwoFactorReason::VerificationRequired);
+
+            /** @var array{mandatory: bool} $payload */
+            $payload = Crypt::decrypt($token);
+
+            expect($payload['mandatory'])->toBeTrue();
         }
     );
 });
