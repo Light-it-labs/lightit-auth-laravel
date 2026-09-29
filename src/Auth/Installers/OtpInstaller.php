@@ -17,6 +17,7 @@ final class OtpInstaller implements AuthInstallerInterface
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
         'Authentication/Domain/Models',
+        'Authentication/Domain/Enums',
         'Authentication/Domain/Exceptions',
     ];
 
@@ -52,7 +53,8 @@ final class OtpInstaller implements AuthInstallerInterface
 
     /**
      * `ConsumeOtpAction` type-hints `LoginByUserAction`, which in turn
-     * depends on `IssueTwoFactorChallengeAction`. Both are shared with
+     * depends on `IssueTwoFactorChallengeAction` and the challenge action's
+     * own dependencies. All of `SharedLoginFiles::FILES` are shared with
      * Google2FAInstaller so an OTP-only install still resolves the
      * container binding.
      */
@@ -60,15 +62,9 @@ final class OtpInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 4, 'Creating shared login primitives');
 
-        $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
-        $sharedFiles = [
-            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
-        ];
-
-        foreach ($sharedFiles as $stub => $destination) {
+        foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                $sharedStubsPath.$stub,
+                SharedLoginFiles::stubsPath().$stub,
                 base_path("src/Authentication/{$destination}")
             );
 

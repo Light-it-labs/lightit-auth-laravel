@@ -63,8 +63,9 @@ in the routes file) - no `AppServiceProvider` paste needed.
 `\Lightit\Authentication\Domain\TwoFactorAuthenticatable` instead of
 `Illuminate\Foundation\Auth\User`. Every stub above calls methods
 (`hasTwoFactorAuthenticationConfigured()`, `getRecoveryCodes()`, ...) that
-only exist on that base class - without this change, every login that
-reaches the challenge action throws `BadMethodCallException`.
+only exist on that base class - without this change, `IssueTwoFactorChallengeAction`
+never recognizes your User as one it can challenge, so 2FA is silently
+skipped on every login instead of ever challenging anyone.
 
 Delete this file once you've made both changes.
 

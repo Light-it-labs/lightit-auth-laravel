@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Users\Domain\Models\User;
 
 /**
@@ -29,6 +30,13 @@ final class IssueTwoFactorChallengeAction
     public function execute(User $user): void
     {
         if (! Config::boolean('google2fa.enabled', false)) {
+            return;
+        }
+
+        // OTP-only and Google-SSO-only installs share this action but never require
+        // extending TwoFactorAuthenticatable, so this guard keeps `$user` type-safe below
+        // instead of calling 2FA-only methods a plain User does not have.
+        if (! $user instanceof TwoFactorAuthenticatable) {
             return;
         }
 

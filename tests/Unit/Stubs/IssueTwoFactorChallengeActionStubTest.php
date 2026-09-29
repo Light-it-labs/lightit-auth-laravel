@@ -29,6 +29,7 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
             'namespace Lightit\Authentication\Domain\Exceptions;',
             "use Lightit\Authentication\Domain\Enums\TwoFactorReason;\n",
             "use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;\n",
+            'use Lightit\Authentication\Domain\TwoFactorAuthenticatable;',
             'use Lightit\Users\Domain\Models\User;',
         ],
         [
@@ -37,6 +38,11 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
             'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
             '',
             '',
+            // FakeUser stands in for both User and TwoFactorAuthenticatable here, so it always
+            // passes the instanceof guard below - the guard's existence (for OTP/SSO-only
+            // installs, where a plain User never satisfies it) is pinned by the stub-text
+            // assertion at the bottom of this file instead.
+            'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as TwoFactorAuthenticatable;',
             'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as User;',
         ],
         $contents,
@@ -50,8 +56,8 @@ function requireRenderedChallengeActionStub(string $relativePath): void
     require_once $tempFile;
 }
 
-requireRenderedChallengeActionStub('Google2FA/Auth/Enums/TwoFactorReason.stub');
-requireRenderedChallengeActionStub('Google2FA/Auth/Exceptions/TwoFactorChallengeException.stub');
+requireRenderedChallengeActionStub('Shared/Auth/Enums/TwoFactorReason.stub');
+requireRenderedChallengeActionStub('Shared/Auth/Exceptions/TwoFactorChallengeException.stub');
 requireRenderedChallengeActionStub('Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub');
 
 /**
@@ -204,4 +210,12 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
         expect($guard->check())->toBeFalse();
         expect($session->getId())->not->toBe($sessionIdBeforeChallenge);
     });
+});
+
+it('guards every TwoFactorAuthenticatable-only call with an instanceof check, so a plain User in an OTP/SSO-only install stays type-safe', function (): void {
+    $stub = (string) file_get_contents(
+        __DIR__.'/../../../src/Stubs/Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub'
+    );
+
+    expect($stub)->toContain('if (! $user instanceof TwoFactorAuthenticatable) {');
 });

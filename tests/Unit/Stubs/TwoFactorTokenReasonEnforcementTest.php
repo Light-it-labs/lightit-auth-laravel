@@ -69,7 +69,7 @@ describe('Two-factor challenge token reason enforcement', function (): void {
  */
 function renderVerifyTwoFactorTokenStub(string $relativePath): string
 {
-    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/Auth/'.$relativePath);
+    $contents = (string) file_get_contents(__DIR__.'/../../../src/Stubs/'.$relativePath);
 
     return str_replace(
         [
@@ -105,10 +105,10 @@ function requireRenderedVerifyTwoFactorTokenStub(string $relativePath): void
     require_once $tempFile;
 }
 
-requireRenderedVerifyTwoFactorTokenStub('Enums/TwoFactorReason.stub');
-requireRenderedVerifyTwoFactorTokenStub('DataTransferObjects/TwoFactorTokenPayloadDto.stub');
-requireRenderedVerifyTwoFactorTokenStub('Exceptions/TwoFactorAuthException.stub');
-requireRenderedVerifyTwoFactorTokenStub('Actions/VerifyTwoFactorToken.stub');
+requireRenderedVerifyTwoFactorTokenStub('Shared/Auth/Enums/TwoFactorReason.stub');
+requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/DataTransferObjects/TwoFactorTokenPayloadDto.stub');
+requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/Exceptions/TwoFactorAuthException.stub');
+requireRenderedVerifyTwoFactorTokenStub('Google2FA/Auth/Actions/VerifyTwoFactorToken.stub');
 
 /**
  * @return array{sub:string, exp:int, typ:string, reason:string, mandatory:bool}

@@ -42,9 +42,9 @@ function requireRenderedTwoFactorAuthenticatableStub(string $relativePath): void
     require_once $tempFile;
 }
 
-requireRenderedTwoFactorAuthenticatableStub('Google2FA/Auth/Enums/TwoFactorReason.stub');
+requireRenderedTwoFactorAuthenticatableStub('Shared/Auth/Enums/TwoFactorReason.stub');
 requireRenderedTwoFactorAuthenticatableStub('Google2FA/Auth/DataTransferObjects/TwoFactorTokenPayloadDto.stub');
-requireRenderedTwoFactorAuthenticatableStub('Google2FA/Auth/TwoFactorAuthenticatable.stub');
+requireRenderedTwoFactorAuthenticatableStub('Shared/Auth/TwoFactorAuthenticatable.stub');
 
 if (! class_exists(ConcreteTwoFactorAuthenticatable::class)) {
     eval(

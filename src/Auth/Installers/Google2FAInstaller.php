@@ -58,9 +58,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     /**
      * The consuming boilerplate's own User model - the same FQCN every
      * generated 2FA stub already assumes (see IssueTwoFactorChallengeAction.stub,
-     * LoginByUserAction.stub). Those stubs call methods that only exist on
-     * TwoFactorAuthenticatable - if this class doesn't extend it, every
-     * login throws BadMethodCallException the moment 2FA is wired in.
+     * LoginByUserAction.stub). IssueTwoFactorChallengeAction only calls
+     * TwoFactorAuthenticatable-only methods behind an instanceof guard, so if
+     * this class doesn't extend it, 2FA is silently skipped on every login
+     * instead of ever challenging anyone.
      */
     private const USER_MODEL_CLASS = 'Lightit\\Users\\Domain\\Models\\User';
 
@@ -98,23 +99,11 @@ final class Google2FAInstaller implements AuthInstallerInterface
     }
 
     /**
-     * `config/google2fa.php`'s `enabled` and `mandatory` both default to
-     * `true`, so `IssueTwoFactorChallengeAction::execute()` - which the
-     * consumer wires into their own login by hand, per AUTH-2FA-TODO.md -
-     * calls `TwoFactorAuthenticatable`-only methods on the very next login,
-     * with no config change required to hit it. There is nothing safe to
-     * auto-patch here: unlike the stubs this package generates, this is the
-     * consumer's already-customized User model, and rewriting its `extends`
-     * clause would be a much heavier, riskier edit than the constructor
-     * injection and call it needs.
-     *
-     * Must run after `createAuthFiles()`: that's what writes
-     * `TwoFactorAuthenticatable.php` in the first place, so checking before
-     * it exists can never pass. A warning, not a thrown exception, for the
-     * same reason AUTH-2FA-TODO.md treats this as a normal follow-up step:
-     * the rest of the install - config, migration, lang files, routes -
-     * should still complete instead of being left half-written over
-     * something the consumer fixes after.
+     * A warning, not a thrown exception: the rest of the install - config,
+     * migration, lang files, routes - should still complete instead of being
+     * left half-written over something the consumer fixes after. Must run
+     * after `createAuthFiles()`, which is what writes
+     * `TwoFactorAuthenticatable.php` in the first place.
      */
     private function warnIfUserModelCannotSupportTwoFactor(
         string $userModelClass = self::USER_MODEL_CLASS,
@@ -123,8 +112,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! class_exists($userModelClass)) {
             $this->command->warn(
                 "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
-                ."extend {$requiredParentClass} - without it, every login throws BadMethodCallException as "
-                .'soon as 2FA is wired in.'
+                ."extend {$requiredParentClass} - without it, 2FA is silently skipped on every login instead "
+                .'of ever challenging anyone.'
             );
 
             return;
@@ -138,9 +127,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         $this->command->warn(
             "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
-            ."to true in config/google2fa.php, so every login calls {$requiredParentClass}-only methods on "
-            .'this class and throws BadMethodCallException. Change '.$userModelClass.' to extend '
-            .$requiredParentClass.' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
+            .'to true in config/google2fa.php, but IssueTwoFactorChallengeAction only acts on a '
+            ."{$requiredParentClass} instance, so 2FA is silently skipped on every login instead of ever "
+            .'challenging anyone. Change '.$userModelClass.' to extend '.$requiredParentClass
+            .' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
         );
     }
 
@@ -154,14 +144,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             }
         }
 
-        $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
-        $sharedFiles = [
-            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
-        ];
-
-        foreach ($sharedFiles as $stub => $destination) {
-            $this->copyStub($sharedStubsPath.$stub, "src/Authentication/{$destination}");
+        foreach (SharedLoginFiles::FILES as $stub => $destination) {
+            $this->copyStub(SharedLoginFiles::stubsPath().$stub, "src/Authentication/{$destination}");
         }
 
         $this->copyAuthFiles(__DIR__.'/../../Stubs/Google2FA/Auth');
@@ -170,7 +154,6 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private function copyAuthFiles(string $stubsPath): void
     {
         $files = [
-            '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
             '/TwoFactorRateLimiter.stub' => 'Domain/TwoFactorRateLimiter.php',
             '/TwoFactorAttemptLimiter.stub' => 'Domain/TwoFactorAttemptLimiter.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
@@ -184,9 +167,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/DataTransferObjects/TwoFactorTokenPayloadDto.stub' => 'Domain/DataTransferObjects/TwoFactorTokenPayloadDto.php',
-            '/Enums/TwoFactorReason.stub' => 'Domain/Enums/TwoFactorReason.php',
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
-            '/Exceptions/TwoFactorChallengeException.stub' => 'Domain/Exceptions/TwoFactorChallengeException.php',
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
             '/Controllers/DisableTwoFactorAuthenticationController.stub' => 'App/Controllers/DisableTwoFactorAuthenticationController.php',
             '/Controllers/SetupTwoFactorAuthenticationController.stub' => 'App/Controllers/SetupTwoFactorAuthenticationController.php',

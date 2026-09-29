@@ -15,6 +15,8 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
         'Authentication/App/Controllers',
         'Authentication/App/Requests',
         'Authentication/Domain/Actions',
+        'Authentication/Domain/Enums',
+        'Authentication/Domain/Exceptions',
     ];
 
     public function __construct(
@@ -72,7 +74,8 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
     /**
      * `GoogleLoginAction` routes through `LoginByUserAction`, which depends
-     * on `IssueTwoFactorChallengeAction`. Both are shared with
+     * on `IssueTwoFactorChallengeAction` and the challenge action's own
+     * dependencies. All of `SharedLoginFiles::FILES` are shared with
      * Google2FAInstaller so a Google-SSO-only install still resolves the
      * container binding.
      */
@@ -80,15 +83,9 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 3, 'Creating shared login primitives');
 
-        $sharedStubsPath = __DIR__.'/../../Stubs/Shared/Auth';
-        $sharedFiles = [
-            '/Actions/LoginByUserAction.stub' => 'Domain/Actions/LoginByUserAction.php',
-            '/Actions/IssueTwoFactorChallengeAction.stub' => 'Domain/Actions/IssueTwoFactorChallengeAction.php',
-        ];
-
-        foreach ($sharedFiles as $stub => $destination) {
+        foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                $sharedStubsPath.$stub,
+                SharedLoginFiles::stubsPath().$stub,
                 base_path("src/Authentication/{$destination}")
             );
             $this->reportCopy($outcome, "src/Authentication/{$destination}");
