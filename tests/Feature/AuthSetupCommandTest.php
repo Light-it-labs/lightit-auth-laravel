@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Lightitlabs\Tests\Fixtures\FakeAuthSetupTwoFactorCommand;
 
 describe('AuthSetupCommand --frontend-path', function (): void {
     it('fails with a clear error before installing anything when --frontend-path is invalid', function (): void {
@@ -22,5 +24,20 @@ describe('AuthSetupCommand --frontend-path', function (): void {
         $this->artisan('auth:setup', ['--frontend-path' => $missingPath])
             ->expectsOutputToContain('Invalid --frontend-path')
             ->assertFailed();
+    });
+
+    it('reaches the frontend installer with the parsed --frontend-path option', function (): void {
+        $root = sys_get_temp_dir().'/lightit-auth-setup-2fa-'.bin2hex(random_bytes(6));
+        File::copyDirectory(__DIR__.'/../Fixtures/frontend/react-project', $root);
+
+        Artisan::registerCommand(new FakeAuthSetupTwoFactorCommand);
+
+        $this->artisan('auth-setup-two-factor-fake', ['--frontend-path' => $root])
+            ->expectsOutputToContain('Frontend project resolved:')
+            ->assertSuccessful();
+
+        expect(file_exists($root.'/src/services/auth/two-factor/types.ts'))->toBeTrue();
+
+        File::deleteDirectory($root);
     });
 });
