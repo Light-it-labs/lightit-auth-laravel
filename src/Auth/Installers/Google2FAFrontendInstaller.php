@@ -99,7 +99,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
             $this->command->error(
-                'Invalid --frontend-path: '.$this->locator->rejectionReason($this->frontendPath)
+                'Invalid --frontend-path: '.$this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
             );
             $this->failed = true;
 

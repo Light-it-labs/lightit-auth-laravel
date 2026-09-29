@@ -40,4 +40,19 @@ describe('AuthSetupCommand --frontend-path', function (): void {
 
         File::deleteDirectory($root);
     });
+
+    it('resolves a relative --frontend-path against the Laravel application root, not the process cwd', function (): void {
+        $relative = 'lightit-auth-setup-2fa-relative-'.bin2hex(random_bytes(6));
+        $root = base_path($relative);
+        File::copyDirectory(__DIR__.'/../Fixtures/frontend/react-project', $root);
+
+        Artisan::registerCommand(new FakeAuthSetupTwoFactorCommand);
+
+        $this->artisan('auth-setup-two-factor-fake', ['--frontend-path' => $relative])
+            ->assertSuccessful();
+
+        expect(file_exists($root.'/src/services/auth/two-factor/types.ts'))->toBeTrue();
+
+        File::deleteDirectory($root);
+    });
 });

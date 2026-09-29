@@ -163,7 +163,7 @@ class AuthSetupCommand extends Command
             return true;
         }
 
-        $this->error('Invalid --frontend-path: '.$locator->rejectionReason($path));
+        $this->error('Invalid --frontend-path: '.$locator->rejectionReason(base_path(), $path));
 
         return false;
     }

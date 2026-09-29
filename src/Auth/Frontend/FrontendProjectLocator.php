@@ -31,12 +31,13 @@ final class FrontendProjectLocator
         return null;
     }
 
-    public function rejectionReason(string $path): string
+    public function rejectionReason(string $laravelRoot, string $path): string
     {
-        $resolved = realpath($path);
+        $absolutePath = $this->resolveExplicitPath($laravelRoot, $path);
+        $resolved = realpath($absolutePath);
 
         if ($resolved === false || ! is_dir($resolved)) {
-            return "not a directory: {$path}";
+            return "not a directory: {$absolutePath}";
         }
 
         if ($this->manifest->read($resolved) === null) {
@@ -71,7 +72,7 @@ final class FrontendProjectLocator
     private function candidates(string $laravelRoot, ?string $explicitPath): array
     {
         if ($explicitPath !== null && $explicitPath !== '') {
-            return [$explicitPath];
+            return [$this->resolveExplicitPath($laravelRoot, $explicitPath)];
         }
 
         $parent = \dirname($laravelRoot);
@@ -84,6 +85,28 @@ final class FrontendProjectLocator
         $candidates[] = $parent.\DIRECTORY_SEPARATOR.basename($laravelRoot).'-frontend';
 
         return $candidates;
+    }
+
+    private function resolveExplicitPath(string $laravelRoot, string $path): string
+    {
+        if ($this->isAbsolute($path)) {
+            return $path;
+        }
+
+        return rtrim($laravelRoot, '/\\').\DIRECTORY_SEPARATOR.$path;
+    }
+
+    private function isAbsolute(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        if ($path[0] === '/' || $path[0] === '\\') {
+            return true;
+        }
+
+        return (bool) preg_match('#^[A-Za-z]:[\\\\/]#', $path);
     }
 
     private function deepestExistingAncestor(string $directory): string|false
