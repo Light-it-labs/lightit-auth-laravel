@@ -15,14 +15,19 @@ use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 |--------------------------------------------------------------------------
 | Two-Factor Authentication Routes
 |--------------------------------------------------------------------------
+|
+| The `2fa` rate limiter these routes rely on is registered by the
+| lightit-auth-laravel package's own service provider, not here, so it
+| still runs when Laravel loads a cached route file (`route:cache`)
+| instead of executing this one.
 */
 
 Route::prefix('2fa')
     ->group(static function (): void {
-        Route::post('setup', SetupTwoFactorAuthenticationController::class);
-        Route::post('complete', CompleteTwoFactorAuthenticationController::class);
-        Route::post('verify-recovery-code', VerifyRecoveryCodeController::class);
-        Route::post('reset', ResetTwoFactorAuthenticationController::class);
+        Route::post('setup', SetupTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+        Route::post('complete', CompleteTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+        Route::post('verify-recovery-code', VerifyRecoveryCodeController::class)->middleware('throttle:2fa');
+        Route::post('reset', ResetTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
 
         Route::middleware('auth:sanctum')
             ->group(static function (): void {

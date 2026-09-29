@@ -6,7 +6,7 @@ use Lightitlabs\Auth\Frontend\FrontendStubTokens;
 
 describe('Google2FA routes stub', function (): void {
     it('declares exactly the route set from docs/google-2fa.md, at the package\'s own paths', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
         expect($stub)->toBe(<<<'PHP'
             <?php
@@ -26,14 +26,19 @@ describe('Google2FA routes stub', function (): void {
             |--------------------------------------------------------------------------
             | Two-Factor Authentication Routes
             |--------------------------------------------------------------------------
+            |
+            | The `2fa` rate limiter these routes rely on is registered by the
+            | lightit-auth-laravel package's own service provider, not here, so it
+            | still runs when Laravel loads a cached route file (`route:cache`)
+            | instead of executing this one.
             */
 
             Route::prefix('2fa')
                 ->group(static function (): void {
-                    Route::post('setup', SetupTwoFactorAuthenticationController::class);
-                    Route::post('complete', CompleteTwoFactorAuthenticationController::class);
-                    Route::post('verify-recovery-code', VerifyRecoveryCodeController::class);
-                    Route::post('reset', ResetTwoFactorAuthenticationController::class);
+                    Route::post('setup', SetupTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                    Route::post('complete', CompleteTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                    Route::post('verify-recovery-code', VerifyRecoveryCodeController::class)->middleware('throttle:2fa');
+                    Route::post('reset', ResetTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
 
                     Route::middleware('auth:sanctum')
                         ->group(static function (): void {
@@ -47,9 +52,9 @@ describe('Google2FA routes stub', function (): void {
     });
 
     it('routes only to controllers Google2FAInstaller already copies into the consuming project', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
         $installer = (string) file_get_contents(
-            __DIR__.'/../../../src/Auth/Installers/Google2FAInstaller.php'
+            __DIR__ . '/../../../src/Auth/Installers/Google2FAInstaller.php'
         );
 
         preg_match_all('/(\w+Controller)::class/', $stub, $matches);
@@ -59,31 +64,56 @@ describe('Google2FA routes stub', function (): void {
         }
     });
 
-    it('matches every twoFactor*Endpoint token the frontend stubs rely on to a Route::post segment in this stub', function (): void {
-        $stub = (string) file_get_contents(__DIR__.'/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
-
-        $tokenSegments = [];
-
-        foreach (FrontendStubTokens::defaults() as $token => $value) {
-            if (! str_starts_with($token, 'twoFactor') || ! str_ends_with($token, 'Endpoint')) {
-                continue;
+    it(
+        'matches every twoFactor*Endpoint token the frontend stubs rely on to a Route::post segment in this stub',
+        function (): void {
+            $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+    
+            $tokenSegments = [];
+    
+            foreach (FrontendStubTokens::defaults() as $token => $value) {
+                if (! str_starts_with($token, 'twoFactor') || ! str_ends_with($token, 'Endpoint')) {
+                    continue;
+                }
+    
+                $tokenSegments[] = str_replace('2fa/', '', $value);
             }
-
-            $tokenSegments[] = str_replace('2fa/', '', $value);
+    
+            preg_match_all("/Route::post\('([^']+)'/", $stub, $matches);
+            $routeSegments = $matches[1];
+    
+            sort($tokenSegments);
+            sort($routeSegments);
+    
+            expect($tokenSegments)->not->toBeEmpty();
+    
+            foreach ($tokenSegments as $segment) {
+                expect($stub)->toContain("Route::post('{$segment}'");
+            }
+    
+            expect($routeSegments)->toBe($tokenSegments);
         }
+    );
 
-        preg_match_all("/Route::post\('([^']+)'/", $stub, $matches);
-        $routeSegments = $matches[1];
+    it('throttles the code-verification endpoints', function (): void {
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
-        sort($tokenSegments);
-        sort($routeSegments);
-
-        expect($tokenSegments)->not->toBeEmpty();
-
-        foreach ($tokenSegments as $segment) {
-            expect($stub)->toContain("Route::post('{$segment}'");
+        foreach (['setup', 'complete', 'verify-recovery-code', 'reset'] as $route) {
+            expect($stub)->toMatch(
+                "/Route::post\\('{$route}', \\w+Controller::class\\)->middleware\\('throttle:2fa'\\);/"
+            );
         }
+    });
 
-        expect($routeSegments)->toBe($tokenSegments);
+    it('does not register the 2fa rate limiter at file scope, since that breaks under route:cache', function (): void {
+        $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
+
+        // Laravel never executes route files under `route:cache`, so a file-scope
+        // `RateLimiter::for()` call here would silently stop registering the `2fa`
+        // limiter in production. Registration belongs to the package's own service
+        // provider `boot()` instead - see LightitServiceProviderTest.
+        expect($stub)
+            ->not->toContain('TwoFactorRateLimiter::register()')
+            ->not->toContain('use Lightit\Authentication\Domain\TwoFactorRateLimiter;');
     });
 });

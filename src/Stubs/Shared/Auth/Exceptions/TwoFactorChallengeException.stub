@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Exception;
+use Illuminate\Contracts\Debug\ShouldntReport;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Not an error: signals that an otherwise-successful login still needs to
+ * clear 2FA. Renders itself instead of extending the boilerplate's
+ * HttpException, whose {error_code, message} shape doesn't fit this
+ * challenge's {access_token, token_type, expires_in} continuation response.
+ */
+final class TwoFactorChallengeException extends Exception implements ShouldntReport
+{
+    public function __construct(
+        public readonly string $token,
+        public readonly string $tokenType,
+        public readonly int $expiresIn,
+    ) {
+        parent::__construct("Two-factor authentication required: {$tokenType}.");
+    }
+
+    public function render(Request $request): JsonResponse
+    {
+        return response()->json([
+            'data' => [
+                'access_token' => $this->token,
+                'token_type' => $this->tokenType,
+                'expires_in' => $this->expiresIn,
+            ],
+        ]);
+    }
+}

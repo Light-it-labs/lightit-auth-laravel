@@ -17,17 +17,20 @@ final class OtpInstaller implements AuthInstallerInterface
         'Authentication/Domain/Actions',
         'Authentication/Domain/DataTransferObjects',
         'Authentication/Domain/Models',
+        'Authentication/Domain/Enums',
         'Authentication/Domain/Exceptions',
     ];
 
     public function __construct(
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-    ) {}
+    ) {
+    }
 
     public function install(): void
     {
         $this->createAuthFiles();
+        $this->copySharedFiles();
         $this->copyMigration();
         $this->copyConfigFile();
 
@@ -36,7 +39,7 @@ final class OtpInstaller implements AuthInstallerInterface
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 3, 'Creating OTP files');
+        $this->composerInstaller->printStep(1, 4, 'Creating OTP files');
 
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
@@ -44,9 +47,35 @@ final class OtpInstaller implements AuthInstallerInterface
             }
         }
 
-        $stubsPath = __DIR__.'/../../Stubs/Otp/Auth';
+        $stubsPath = __DIR__ . '/../../Stubs/Otp/Auth';
 
         $this->copyAuthFiles($stubsPath);
+    }
+
+    /**
+     * `ConsumeOtpAction` type-hints `LoginByUserAction`, which in turn
+     * depends on `IssueTwoFactorChallengeAction` and the challenge action's
+     * own dependencies. All of `SharedLoginFiles::FILES` are shared with
+     * Google2FAInstaller so an OTP-only install still resolves the
+     * container binding.
+     */
+    private function copySharedFiles(): void
+    {
+        $this->composerInstaller->printStep(2, 4, 'Creating shared login primitives');
+
+        foreach (SharedLoginFiles::FILES as $stub => $destination) {
+            $outcome = $this->stubCopier->copy(
+                SharedLoginFiles::stubsPath() . $stub,
+                base_path("src/Authentication/{$destination}")
+            );
+
+            match ($outcome) {
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
+                    "Created: src/Authentication/{$destination}"
+                ),
+                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
+            };
+        }
     }
 
     private function copyAuthFiles(string $stubsPath): void
@@ -67,12 +96,14 @@ final class OtpInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 base_path("src/Authentication/{$destination}")
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
+                    "Created: src/Authentication/{$destination}"
+                ),
                 StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
             };
         }
@@ -80,7 +111,7 @@ final class OtpInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(2, 3, 'Copying migration files');
+        $this->composerInstaller->printStep(3, 4, 'Copying migration files');
 
         $migrationName = 'create_otps_table';
         $migrationsDirectory = base_path('database/migrations');
@@ -91,7 +122,7 @@ final class OtpInstaller implements AuthInstallerInterface
             return;
         }
 
-        $stub = __DIR__.'/../../Stubs/Otp/database/migrations/create_otps_table.stub';
+        $stub = __DIR__ . '/../../Stubs/Otp/database/migrations/create_otps_table.stub';
         $timestamp = date('Y_m_d_His');
         $destination = "database/migrations/{$timestamp}_{$migrationName}.php";
 
@@ -120,19 +151,21 @@ final class OtpInstaller implements AuthInstallerInterface
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(3, 3, 'Copying config file');
+        $this->composerInstaller->printStep(4, 4, 'Copying config file');
 
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
         }
 
         $outcome = $this->stubCopier->copy(
-            __DIR__.'/../../Stubs/Otp/config/otp.stub',
+            __DIR__ . '/../../Stubs/Otp/config/otp.stub',
             config_path('otp.php')
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/otp.php'),
+            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished(
+                'Config file published: config/otp.php'
+            ),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/otp.php'),
         };
     }

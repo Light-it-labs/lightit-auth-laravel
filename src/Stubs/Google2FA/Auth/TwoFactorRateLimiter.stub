@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+/**
+ * Registers the `2fa` limiter the `throttle:2fa` middleware needs.
+ */
+final class TwoFactorRateLimiter
+{
+    public static function register(): void
+    {
+        RateLimiter::for('2fa', function (Request $request): array {
+            $hashedToken = hash('sha256', (string) $request->bearerToken());
+
+            return [
+                Limit::perMinute(5)->by('2fa-token|'.$hashedToken),
+                Limit::perMinute(30)->by('2fa-ip|'.$request->ip()),
+            ];
+        });
+    }
+}

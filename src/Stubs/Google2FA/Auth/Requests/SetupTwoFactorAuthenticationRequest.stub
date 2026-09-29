@@ -6,6 +6,7 @@ namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Lightit\Authentication\Domain\Actions\VerifyTwoFactorToken;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Users\Domain\Models\User;
 
@@ -41,6 +42,6 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
         /** @var string $token */
         $token = $this->bearerToken();
 
-        return $this->verifyTwoFactorToken->execute($token);
+        return $this->verifyTwoFactorToken->execute($token, TwoFactorReason::SetupRequired);
     }
 }

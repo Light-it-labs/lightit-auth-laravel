@@ -1,0 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\StatefulGuard;
+use Illuminate\Http\Request;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * `execute()` gates $user for 2FA before establishing a session.
+ * `executeAfterChallenge()` skips that gate and may only be called by an
+ * action that just cleared the 2FA challenge itself - calling it any earlier
+ * would let the challenge be bypassed.
+ */
+final class LoginByUserAction
+{
+    public function __construct(
+        private readonly AuthFactory $auth,
+        private readonly Request $request,
+        private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
+    ) {
+    }
+
+    public function execute(User $user): void
+    {
+        $this->issueTwoFactorChallengeAction->execute($user);
+
+        $this->executeAfterChallenge($user);
+    }
+
+    public function executeAfterChallenge(User $user): void
+    {
+        /** @var StatefulGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $guard->login($user);
+
+        $this->request->session()->regenerate();
+    }
+}

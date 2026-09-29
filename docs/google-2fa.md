@@ -75,7 +75,33 @@ class UnauthorizedException extends HttpException
 
 Use the guard the boilerplate already configures for its own login flow; this package does not add one.
 
-#### 6. Define 2FA-related routes
+#### 6. Wire the challenge action into `LoginAction`
+
+This package cannot edit a login it does not generate, so `LoginAction` needs the
+challenge action injected through its constructor:
+
+```php
+use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
+
+public function __construct(
+    private readonly AuthFactory $authFactory,
+    private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
+) {}
+```
+
+Then, right after `$request->session()->regenerate();` and before `return $user;`
+in `execute()`, call it:
+
+```php
+$this->issueTwoFactorChallengeAction->execute($user);
+```
+
+The challenge action tears the just-created session back down itself before
+throwing a challenge, so a user with 2FA configured gets a `200` with
+`token_type: "verification_required"` (or `"setup_required"`) instead of a
+session on login. See the generated `AUTH-2FA-TODO.md` for the full detail.
+
+#### 7. Define 2FA-related routes
 
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
@@ -86,7 +112,11 @@ use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationControlle
 use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
-// Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks
+// Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks.
+// The generated routes/two-factor-auth.php already throttles setup/complete/verify-recovery-code/reset with
+// `throttle:2fa`; that named limiter is registered by lightit-auth-laravel's own service provider on boot,
+// not by the routes file, so it keeps working under `php artisan route:cache`. This is why the package must
+// stay a runtime dependency (`composer require`, never `--dev`) - its provider has to boot in production.
 Route::prefix('2fa')->group(static function (): void {
     Route::post('setup', SetupTwoFactorAuthenticationController::class);
     Route::post('complete', CompleteTwoFactorAuthenticationController::class);

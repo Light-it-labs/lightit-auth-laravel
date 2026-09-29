@@ -12,4 +12,5 @@ return [
     'disable_forbidden' => 'Cannot disable 2FA because it is mandatory.',
     'cannot_disable_2fa_unconfigured' => 'Cannot disable 2FA because it is not configured.',
     '2fa_reset' => 'Two-factor authentication has been reset.',
+    'too_many_attempts' => 'Too many failed attempts. Please try again later.',
 ];

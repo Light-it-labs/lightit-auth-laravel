@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Auth\SessionGuard;
+use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Enums\TwoFactorReason;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Users\Domain\Models\User;
+use LogicException;
+
+/**
+ * Gates a just-authenticated user for 2FA before a session is established.
+ */
+final class IssueTwoFactorChallengeAction
+{
+    public function __construct(
+        private readonly AuthFactory $auth,
+        private readonly Request $request,
+    ) {
+    }
+
+    /**
+     * @throws TwoFactorChallengeException
+     * @throws LogicException
+     */
+    public function execute(User $user): void
+    {
+        if (! Config::boolean('google2fa.enabled', false)) {
+            return;
+        }
+
+        // OTP-only and Google-SSO-only installs share this action but never require
+        // extending TwoFactorAuthenticatable, so this guard only runs once 2FA is
+        // actually enabled - a plain User is then a misconfiguration, not a no-op,
+        // so this fails closed instead of silently never challenging anyone.
+        if (! $user instanceof TwoFactorAuthenticatable) {
+            throw new LogicException(
+                'google2fa.enabled is true but '.$user::class.' does not extend '
+                .TwoFactorAuthenticatable::class.'. Extend it on your User model before enabling 2FA.'
+            );
+        }
+
+        if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory', true)) {
+            $this->tearDownSession();
+
+            $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes', 15);
+
+            throw new TwoFactorChallengeException(
+                token: $user->create2faToken($ttlMinutes, TwoFactorReason::SetupRequired),
+                tokenType: TwoFactorReason::SetupRequired->value,
+                expiresIn: $ttlMinutes * 60,
+            );
+        }
+
+        if ($user->hasTwoFactorAuthenticationConfigured()) {
+            $this->tearDownSession();
+
+            $ttlMinutes = Config::integer('google2fa.challenge_ttl_minutes', 15);
+
+            throw new TwoFactorChallengeException(
+                token: $user->create2faToken($ttlMinutes, TwoFactorReason::VerificationRequired),
+                tokenType: TwoFactorReason::VerificationRequired->value,
+                expiresIn: $ttlMinutes * 60,
+            );
+        }
+    }
+
+    /**
+     * A challenge must never double as a login bypass, so any session
+     * already established before the challenge is torn down here.
+     *
+     * logoutCurrentDevice() (SessionGuard-only, not on the broader StatefulGuard
+     * contract) is used instead of logout() so a challenge only clears this
+     * device's session instead of also rotating the user's remember token and
+     * logging every other device out.
+     */
+    private function tearDownSession(): void
+    {
+        /** @var SessionGuard $guard */
+        $guard = $this->auth->guard('web');
+
+        $guard->logoutCurrentDevice();
+
+        $this->request->session()->invalidate();
+        $this->request->session()->regenerateToken();
+    }
+}
