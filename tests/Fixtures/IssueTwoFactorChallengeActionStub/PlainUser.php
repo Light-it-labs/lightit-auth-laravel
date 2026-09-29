@@ -20,7 +20,7 @@ final class PlainUser implements Authenticatable
         return 'id';
     }
 
-    public function getAuthIdentifier(): int|string
+    public function getAuthIdentifier(): int
     {
         return 1;
     }
