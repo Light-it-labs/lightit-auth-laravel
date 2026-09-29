@@ -108,7 +108,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->command->warn(
             'No React project found next to the application. Skipping the 2FA frontend step. '
-            .'Pass an explicit frontend path to generate it manually.'
+            .'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
         );
     }
 
