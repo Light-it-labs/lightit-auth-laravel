@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Illuminate\Auth\SessionGuard;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
-use Illuminate\Contracts\Auth\StatefulGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Enums\TwoFactorReason;
@@ -60,13 +60,18 @@ final class IssueTwoFactorChallengeAction
     /**
      * A challenge must never double as a login bypass, so any session
      * already established before the challenge is torn down here.
+     *
+     * logoutCurrentDevice() (SessionGuard-only, not on the broader StatefulGuard
+     * contract) is used instead of logout() so a challenge only clears this
+     * device's session instead of also rotating the user's remember token and
+     * logging every other device out.
      */
     private function tearDownSession(): void
     {
-        /** @var StatefulGuard $guard */
+        /** @var SessionGuard $guard */
         $guard = $this->auth->guard('web');
 
-        $guard->logout();
+        $guard->logoutCurrentDevice();
 
         $this->request->session()->invalidate();
         $this->request->session()->regenerateToken();
