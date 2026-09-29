@@ -33,11 +33,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const TODO_FILE = 'AUTH-2FA-TODO.md';
 
     /**
-     * The import + constructor injection a consumer must add to their own
-     * login - this package cannot write to a login it does not generate.
-     * Printed at the end of install() and mirrored, word for word, into
-     * AUTH-2FA-TODO.md via the `gateConstructorSnippet` token so the two
-     * never drift apart.
+     * The import + constructor injection a consumer must add to their own login.
      */
     private const GATE_CONSTRUCTOR_SNIPPET = <<<'PHP'
         use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
@@ -49,19 +45,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
         PHP;
 
     /**
-     * The call to the injected challenge action, pasted right before
-     * `return $user;`. Mirrored, word for word, into AUTH-2FA-TODO.md via
-     * the `gateCallSnippet` token so the two never drift apart.
+     * The call to the injected challenge action, pasted right before `return $user;`.
      */
     private const GATE_CALL_SNIPPET = '$this->issueTwoFactorChallengeAction->execute($user);';
 
     /**
-     * The consuming boilerplate's own User model - the same FQCN every
-     * generated 2FA stub already assumes (see IssueTwoFactorChallengeAction.stub,
-     * LoginByUserAction.stub). IssueTwoFactorChallengeAction only calls
-     * TwoFactorAuthenticatable-only methods behind an instanceof guard, so if
-     * this class doesn't extend it, 2FA is silently skipped on every login
-     * instead of ever challenging anyone.
+     * The consuming boilerplate's own User model - must extend
+     * TWO_FACTOR_AUTHENTICATABLE_CLASS or 2FA is silently skipped on every login.
      */
     private const USER_MODEL_CLASS = 'Lightit\\Users\\Domain\\Models\\User';
 
@@ -306,12 +296,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     /**
      * The two manual steps left in the whole install: this package cannot
-     * edit a login or a User model it did not generate, so it prints the
-     * exact lines to add to LoginAction's constructor and execute() body,
-     * reminds the consumer to extend TwoFactorAuthenticatable, and writes
-     * the same steps into AUTH-2FA-TODO.md for later reference. The 2FA rate
-     * limiter no longer needs a manual AppServiceProvider paste - the
-     * generated routes/two-factor-auth.php registers it itself.
+     * edit a login or a User model it did not generate.
      */
     private function writeManualIntegrationGuide(): void
     {

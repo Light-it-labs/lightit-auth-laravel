@@ -10,13 +10,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * Signals that an otherwise-successful login still needs to clear 2FA - see
- * IssueTwoFactorChallengeAction::execute(). This isn't an error: it
- * carries the same {access_token, token_type, expires_in} shape the
- * frontend's isSetupRequired / isVerificationRequired guards already expect
- * from a challenge response. It renders itself, rather than extending this
- * package's usual HttpException base, because that base's
- * {error_code, message} shape doesn't fit a continuation response.
+ * Not an error: signals that an otherwise-successful login still needs to
+ * clear 2FA. Renders itself instead of extending the boilerplate's
+ * HttpException, whose {error_code, message} shape doesn't fit this
+ * challenge's {access_token, token_type, expires_in} continuation response.
  */
 final class TwoFactorChallengeException extends Exception implements ShouldntReport
 {
