@@ -36,8 +36,6 @@ class AuthSetupCommand extends Command
 
     protected $description = 'Setup the authentication structure';
 
-    private bool $frontendPathInvalid = false;
-
     public function handle(): int
     {
         if (! $this->frontendPathIsValid()) {
@@ -78,10 +76,6 @@ class AuthSetupCommand extends Command
         }
 
         $this->setupFeatures($selected);
-
-        if ($this->frontendPathInvalid) {
-            return self::FAILURE;
-        }
 
         $this->printSuccess('Authentication setup completed!');
 
@@ -144,12 +138,6 @@ class AuthSetupCommand extends Command
         );
 
         $frontendInstaller->install();
-
-        if ($frontendInstaller->failed()) {
-            $this->frontendPathInvalid = true;
-
-            return;
-        }
 
         $this->printSectionSeparator();
     }
