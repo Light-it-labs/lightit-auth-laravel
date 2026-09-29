@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Session\Store as SessionStore;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\IssueTwoFactorChallengeAction;
+use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\PlainUser;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChallengeException;
 
 /**
@@ -38,12 +39,13 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
             'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
             '',
             '',
-            // FakeUser stands in for both User and TwoFactorAuthenticatable here, so it always
-            // passes the instanceof guard below - the guard's existence (for OTP/SSO-only
-            // installs, where a plain User never satisfies it) is pinned by the stub-text
-            // assertion at the bottom of this file instead.
+            // FakeUser stands in for TwoFactorAuthenticatable, so a FakeUser passes the
+            // instanceof guard below and exercises the 2FA branching.
             'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as TwoFactorAuthenticatable;',
-            'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as User;',
+            // User is aliased to the plain Authenticatable contract instead of FakeUser, so
+            // PlainUser (Authenticatable but not TwoFactorAuthenticatable) can also satisfy
+            // execute()'s type-hint and exercise the fail-closed LogicException below.
+            'use Illuminate\Contracts\Auth\Authenticatable as User;',
         ],
         $contents,
     );
@@ -114,6 +116,22 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
 
         $action->execute(new FakeUser(hasSecretStored: true, hasConfigured: true));
     })->throwsNoExceptions();
+
+    it('does nothing for a plain user that cannot be challenged when 2FA is disabled', function (): void {
+        config(['google2fa.enabled' => false]);
+
+        [$action] = makeIssueTwoFactorChallengeAction();
+
+        $action->execute(new PlainUser);
+    })->throwsNoExceptions();
+
+    it('fails closed with a LogicException when 2FA is enabled but the user is not a TwoFactorAuthenticatable', function (): void {
+        config(['google2fa.enabled' => true]);
+
+        [$action] = makeIssueTwoFactorChallengeAction();
+
+        $action->execute(new PlainUser);
+    })->throws(LogicException::class);
 
     it('throws a setup-required challenge when 2FA is mandatory and the user has no secret', function (): void {
         config(['google2fa.enabled' => true, 'google2fa.mandatory' => true]);
@@ -212,10 +230,11 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
     });
 });
 
-it('guards every TwoFactorAuthenticatable-only call with an instanceof check, so a plain User in an OTP/SSO-only install stays type-safe', function (): void {
+it('guards every TwoFactorAuthenticatable-only call with an instanceof check that fails closed, so a plain User only ever stays type-safe when 2FA is disabled', function (): void {
     $stub = (string) file_get_contents(
         __DIR__.'/../../../src/Stubs/Shared/Auth/Actions/IssueTwoFactorChallengeAction.stub'
     );
 
-    expect($stub)->toContain('if (! $user instanceof TwoFactorAuthenticatable) {');
+    expect($stub)->toContain('if (! $user instanceof TwoFactorAuthenticatable) {')
+        ->and($stub)->toContain('throw new LogicException(');
 });

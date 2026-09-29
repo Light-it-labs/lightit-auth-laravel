@@ -18,7 +18,7 @@ use Symfony\Component\Console\Output\NullOutput;
  * consumer's own login - only acts on a `User` that is also a
  * `TwoFactorAuthenticatable`. `config/google2fa.php`'s `enabled` and
  * `mandatory` both default to `true`, so a consumer's User model that
- * doesn't extend it silently skips 2FA on every login with no config change
+ * doesn't extend it throws a `LogicException` on every login with no config change
  * required. This exercises the guard directly, since
  * `Google2FAInstaller::install()` itself shells out to `composer require`
  * and is not something a unit test should run.

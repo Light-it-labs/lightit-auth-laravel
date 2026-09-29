@@ -12,6 +12,7 @@ use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Users\Domain\Models\User;
+use LogicException;
 
 /**
  * Gates a just-authenticated user for 2FA before a session is established.
@@ -26,6 +27,7 @@ final class IssueTwoFactorChallengeAction
 
     /**
      * @throws TwoFactorChallengeException
+     * @throws LogicException
      */
     public function execute(User $user): void
     {
@@ -34,10 +36,14 @@ final class IssueTwoFactorChallengeAction
         }
 
         // OTP-only and Google-SSO-only installs share this action but never require
-        // extending TwoFactorAuthenticatable, so this guard keeps `$user` type-safe below
-        // instead of calling 2FA-only methods a plain User does not have.
+        // extending TwoFactorAuthenticatable, so this guard only runs once 2FA is
+        // actually enabled - a plain User is then a misconfiguration, not a no-op,
+        // so this fails closed instead of silently never challenging anyone.
         if (! $user instanceof TwoFactorAuthenticatable) {
-            return;
+            throw new LogicException(
+                'google2fa.enabled is true but '.$user::class.' does not extend '
+                .TwoFactorAuthenticatable::class.'. Extend it on your User model before enabling 2FA.'
+            );
         }
 
         if (! $user->hasTwoFactorAuthenticationConfigured() && Config::boolean('google2fa.mandatory', true)) {

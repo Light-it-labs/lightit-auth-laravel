@@ -51,7 +51,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     /**
      * The consuming boilerplate's own User model - must extend
-     * TWO_FACTOR_AUTHENTICATABLE_CLASS or 2FA is silently skipped on every login.
+     * TWO_FACTOR_AUTHENTICATABLE_CLASS or IssueTwoFactorChallengeAction throws a
+     * LogicException on every login instead of ever challenging anyone.
      */
     private const USER_MODEL_CLASS = 'Lightit\\Users\\Domain\\Models\\User';
 
@@ -102,8 +103,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         if (! class_exists($userModelClass)) {
             $this->command->warn(
                 "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
-                ."extend {$requiredParentClass} - without it, 2FA is silently skipped on every login instead "
-                .'of ever challenging anyone.'
+                ."extend {$requiredParentClass} - without it, IssueTwoFactorChallengeAction throws a "
+                .'LogicException on every login instead of ever challenging anyone.'
             );
 
             return;
@@ -118,7 +119,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->command->warn(
             "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
             .'to true in config/google2fa.php, but IssueTwoFactorChallengeAction only acts on a '
-            ."{$requiredParentClass} instance, so 2FA is silently skipped on every login instead of ever "
+            ."{$requiredParentClass} instance, so it throws a LogicException on every login instead of ever "
             .'challenging anyone. Change '.$userModelClass.' to extend '.$requiredParentClass
             .' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
         );
