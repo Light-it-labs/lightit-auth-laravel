@@ -20,4 +20,14 @@ describe('VerifyRecoveryCodeAction stub', function (): void {
             ->and($stub)->toContain('->lockForUpdate()')
             ->and($stub)->toContain('replaceRecoveryCodes(array_values($hashedCodes))');
     });
+
+    it('checks the per-user lockout before verifying, and records/clears it around the outcome', function (): void {
+        $stub = (string) file_get_contents(
+            __DIR__.'/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
+        );
+
+        expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());')
+            ->and($stub)->toContain('TwoFactorAttemptLimiter::recordFailure($user->getKey());')
+            ->and($stub)->toContain('TwoFactorAttemptLimiter::clear($user->getKey());');
+    });
 });

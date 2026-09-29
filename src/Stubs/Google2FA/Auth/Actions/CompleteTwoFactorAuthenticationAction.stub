@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Authentication\Domain\TwoFactorAttemptLimiter;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
 use Lightit\Users\Domain\Models\User;
@@ -18,16 +20,27 @@ final readonly class CompleteTwoFactorAuthenticationAction
 
     /**
      * @throws UnauthenticatedException
+     * @throws TwoFactorAuthException
      */
     public function execute(User $user, string $oneTimePassword): User
     {
+        TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());
+
         $secret = $user->getTwoFactorAuthSecret();
 
         if (is_null($secret)) {
             throw new UnauthenticatedException(__('google2fa.secret_not_configured'));
         }
 
-        $this->verifyOtpAction->execute($secret, $oneTimePassword);
+        try {
+            $this->verifyOtpAction->execute($secret, $oneTimePassword);
+        } catch (TwoFactorAuthException $exception) {
+            TwoFactorAttemptLimiter::recordFailure($user->getKey());
+
+            throw $exception;
+        }
+
+        TwoFactorAttemptLimiter::clear($user->getKey());
 
         if (! $user->hasTwoFactorAuthenticationEnabled()) {
             $user->{TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME} = now();

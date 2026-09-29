@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Support\Facades\RateLimiter;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+
+/**
+ * Per-user lockout on failed OTP / recovery-code attempts, independent of the
+ * challenge token or the request IP - both are trivial for an attacker to
+ * rotate, but the targeted user id is not.
+ */
+final class TwoFactorAttemptLimiter
+{
+    private const MAX_ATTEMPTS = 5;
+
+    private const DECAY_MINUTES = 15;
+
+    public static function ensureNotLockedOut(int|string $userId): void
+    {
+        if (! RateLimiter::tooManyAttempts(self::key($userId), self::MAX_ATTEMPTS)) {
+            return;
+        }
+
+        throw new TwoFactorAuthException(
+            message: __('google2fa.too_many_attempts'),
+            reason: 'too_many_attempts',
+            status: 429,
+        );
+    }
+
+    public static function recordFailure(int|string $userId): void
+    {
+        RateLimiter::hit(self::key($userId), self::DECAY_MINUTES * 60);
+    }
+
+    public static function clear(int|string $userId): void
+    {
+        RateLimiter::clear(self::key($userId));
+    }
+
+    private static function key(int|string $userId): string
+    {
+        return '2fa-user-attempts|'.$userId;
+    }
+}

@@ -172,6 +172,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $files = [
             '/TwoFactorAuthenticatable.stub' => 'Domain/TwoFactorAuthenticatable.php',
             '/TwoFactorRateLimiter.stub' => 'Domain/TwoFactorRateLimiter.php',
+            '/TwoFactorAttemptLimiter.stub' => 'Domain/TwoFactorAttemptLimiter.php',
             '/Actions/DisableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/DisableTwoFactorAuthenticationAction.php',
             '/Actions/SetupTwoFactorAuthenticationAction.stub' => 'Domain/Actions/SetupTwoFactorAuthenticationAction.php',
             '/Actions/GenerateQRCodeAction.stub' => 'Domain/Actions/GenerateQRCodeAction.php',

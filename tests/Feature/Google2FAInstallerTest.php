@@ -18,6 +18,7 @@ describe('Google2FAInstaller', function (): void {
             'src/Authentication/Domain/Actions/IssueTwoFactorChallengeAction.php',
             'src/Authentication/Domain/Exceptions/TwoFactorChallengeException.php',
             'src/Authentication/Domain/TwoFactorAuthenticatable.php',
+            'src/Authentication/Domain/TwoFactorAttemptLimiter.php',
             'src/Authentication/Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             'src/Authentication/Domain/Actions/VerifyRecoveryCodeAction.php',
             'AUTH-2FA-TODO.md',
