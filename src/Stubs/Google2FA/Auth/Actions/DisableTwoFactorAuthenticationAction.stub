@@ -13,8 +13,7 @@ final readonly class DisableTwoFactorAuthenticationAction
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
         private ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user, string $password): void
     {

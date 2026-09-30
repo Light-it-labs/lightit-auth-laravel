@@ -12,13 +12,12 @@ final readonly class RegenerateRecoveryCodesAction
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
         private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
-    ) {
-    }
+    ) {}
 
     /**
-     * @throws TwoFactorAuthException
-     *
      * @return array<string>
+     *
+     * @throws TwoFactorAuthException
      */
     public function execute(User $user, string $password): array
     {

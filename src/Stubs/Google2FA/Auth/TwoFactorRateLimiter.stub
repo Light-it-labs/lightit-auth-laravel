@@ -18,7 +18,7 @@ final class TwoFactorRateLimiter
         RateLimiter::for('2fa', function (Request $request): array {
             return [
                 Limit::perMinute(5)->by(self::subjectKey($request)),
-                Limit::perMinute(30)->by('2fa-ip|'.$request->ip()),
+                Limit::perMinute(30)->by('2fa-ip|' . $request->ip()),
             ];
         });
     }
@@ -35,11 +35,11 @@ final class TwoFactorRateLimiter
         $userId = $request->user()?->getAuthIdentifier();
 
         if (is_scalar($userId)) {
-            return '2fa-user|'.$userId;
+            return '2fa-user|' . $userId;
         }
 
         $token = $request->bearerToken();
 
-        return $token !== null ? '2fa-token|'.hash('sha256', $token) : '2fa-guest|'.$request->ip();
+        return $token !== null ? '2fa-token|' . hash('sha256', $token) : '2fa-guest|' . $request->ip();
     }
 }
