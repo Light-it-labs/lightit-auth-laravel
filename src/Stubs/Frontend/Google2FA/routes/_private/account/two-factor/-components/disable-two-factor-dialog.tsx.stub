@@ -1,0 +1,57 @@
+import { HttpStatusCode, isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { Dialog } from "@/components/ui/dialog";
+import { useTranslation } from "@/i18n";
+import { refreshTwoFactorState, useDisableTwoFactor } from "@/services/auth/two-factor/actions";
+import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
+import { PasswordConfirmationForm } from "./password-confirmation-form";
+
+type DisableTwoFactorDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFactorDialogProps) => {
+  const { t } = useTranslation();
+
+  const disableTwoFactorMutation = useDisableTwoFactor();
+  const { onPasswordError } = useTwoFactorAccountErrors();
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
+      <Dialog.Content isDismissible={!disableTwoFactorMutation.isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("twoFactor.account.disable.title")}</Dialog.Title>
+
+          <Dialog.Description>{t("twoFactor.account.disable.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        <PasswordConfirmationForm
+          isPending={disableTwoFactorMutation.isPending}
+          submitLabel={t("twoFactor.account.disable.submit")}
+          onConfirm={(payload, setError) => {
+            disableTwoFactorMutation.mutate(payload, {
+              onSuccess: async () => {
+                toast.success(t("twoFactor.account.disable.success"));
+                onOpenChange(false);
+                await refreshTwoFactorState();
+              },
+              onError: async (error) => {
+                if (isAxiosError(error) && error.response?.status === HttpStatusCode.Forbidden) {
+                  toast.error(t("twoFactor.account.disable.mandatory"));
+                  onOpenChange(false);
+                  await refreshTwoFactorState();
+
+                  return;
+                }
+
+                await onPasswordError(error, setError);
+              },
+            });
+          }}
+        />
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

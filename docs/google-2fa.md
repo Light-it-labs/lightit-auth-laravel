@@ -296,6 +296,25 @@ the session authenticates them, so a made-up `Authorization` header can't open a
 bucket. Only the challenge routes, which have no signed-in user, are keyed by their
 challenge token.
 
+The generated frontend drives these calls from `/account/two-factor`, a page under the
+`_private` layout: turn on (password, QR code, first code, recovery codes shown once),
+regenerate recovery codes (password, new codes) and turn off (password; hidden while
+`mandatory` is `true`, and a `403` gets its own message). When `status` says 2FA is not
+`available`, the page only says so and offers no action. The dialogs that show recovery
+codes can only be closed with their "I've saved my recovery codes" button. It writes:
+
+- `src/routes/_private/account/two-factor/page.tsx`
+- `src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx`
+- `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx`
+- `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts`
+- `src/components/two-factor/authenticator-secret.tsx` and `src/components/two-factor/recovery-codes.tsx`, shared with the login setup screen
+
+The generated `AUTH-2FA-FRONTEND-TODO.md` lists every frontend file, the i18n keys to add
+and an optional sidebar link.
+
 A wrong password on any password-confirmed request below (and on `enable`) returns
 `422` (`invalid_password`), not `401`: the user is still signed in, and the frontend
 sends every `401` back to the login screen.
