@@ -53,14 +53,14 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         private readonly FrontendProjectLocator $locator,
         private readonly FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
-        private readonly ?string $frontendPath = null,
+        private readonly string|null $frontendPath = null,
     ) {
         $this->initializeOutput($this->command);
     }
 
     public static function stubDirectory(): string
     {
-        return __DIR__.'/../../Stubs/Frontend/Google2FA';
+        return __DIR__ . '/../../Stubs/Frontend/Google2FA';
     }
 
     public function install(): void
@@ -81,7 +81,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->write($root, $stub, $relative, $tokens);
         }
 
-        $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
+        $this->write($root, self::TODO_FILE . '.stub', self::TODO_FILE, $tokens);
 
         $this->command->info('Frontend two-factor authentication services and login screens generated.');
 
@@ -91,24 +91,24 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     private function printLoginFormManualStep(): void
     {
         $this->command->warn('Manual step: route the login form through the 2FA-aware login hook.');
-        $this->command->line('In '.self::LOGIN_FORM_FILE.':');
+        $this->command->line('In ' . self::LOGIN_FORM_FILE . ':');
         $this->command->line('  1. Remove:   import { useLogin } from "@/services/auth/actions";');
         $this->command->line(
             '  2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";'
         );
         $this->command->line('  3. Replace:  const loginMutation = useLogin();');
         $this->command->line('     with:     const loginMutation = useTwoFactorLogin();');
-        $this->command->line('Then add the i18n keys listed in '.self::TODO_FILE.' to src/i18n/locales/en.json.');
+        $this->command->line('Then add the i18n keys listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.');
     }
 
     /**
-     * @param  array<string, string>  $tokens
+     * @param array<string, string> $tokens
      */
     private function write(string $root, string $stub, string $relative, array $tokens): void
     {
         $destination = $this->locator->resolveDestination($root, $relative);
 
-        $outcome = $this->stubRenderer->renderTo(self::stubDirectory().'/'.$stub, $destination, $tokens);
+        $outcome = $this->stubRenderer->renderTo(self::stubDirectory() . '/' . $stub, $destination, $tokens);
 
         match ($outcome) {
             StubCopyOutcome::Written => $this->command->line("Created: {$relative}"),
@@ -120,7 +120,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
             $this->command->error(
-                'Invalid --frontend-path: '.$this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
+                'Invalid --frontend-path: ' . $this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
             );
 
             return;
@@ -128,7 +128,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->command->warn(
             'No React project found next to the application. Skipping the 2FA frontend step. '
-            .'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
+            . 'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
         );
     }
 
@@ -163,7 +163,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             'Missing dependencies. Run:',
             '',
             '```sh',
-            $this->manifest->addCommand($root).' '.implode(' ', $missing),
+            $this->manifest->addCommand($root) . ' ' . implode(' ', $missing),
             '```',
         ]));
     }
