@@ -4,10 +4,11 @@ import { toast } from "sonner";
 
 import { useTranslation } from "@/i18n";
 import { refreshTwoFactorState } from "@/services/auth/two-factor/actions";
-import type { OneTimePasswordPayload, PasswordPayload } from "@/services/auth/two-factor/types";
 import {
   isOneTimePasswordAlreadyUsed,
   isTwoFactorUnavailable,
+  type OneTimePasswordPayload,
+  type PasswordPayload,
 } from "@/services/auth/two-factor/types";
 import { handleAxiosFieldErrors } from "@/utils";
 
