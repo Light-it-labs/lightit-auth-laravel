@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/**
+ * @property array<string> $resource
+ */
+#[SchemaName('TwoFactorRecoveryCodes')]
+final class TwoFactorRecoveryCodesResource extends JsonResource
+{
+    /**
+     * @return array{recovery_codes: array<string>}
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'recovery_codes' => $this->resource,
+        ];
+    }
+}

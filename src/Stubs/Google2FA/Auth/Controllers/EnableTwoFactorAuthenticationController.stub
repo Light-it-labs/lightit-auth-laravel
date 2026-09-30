@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\EnableTwoFactorAuthenticationRequest;
+use Lightit\Authentication\App\Resources\TwoFactorEnrollmentResource;
+use Lightit\Authentication\Domain\Actions\EnableTwoFactorAuthenticationAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class EnableTwoFactorAuthenticationController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        EnableTwoFactorAuthenticationRequest $request,
+        EnableTwoFactorAuthenticationAction $enableTwoFactorAuthenticationAction,
+    ): JsonResponse {
+        $enrollment = $enableTwoFactorAuthenticationAction->execute($user, $request->getPassword());
+
+        return TwoFactorEnrollmentResource::make($enrollment)->response();
+    }
+}

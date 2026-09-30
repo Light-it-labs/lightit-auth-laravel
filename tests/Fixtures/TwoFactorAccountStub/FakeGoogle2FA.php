@@ -13,6 +13,11 @@ final class FakeGoogle2FA
     public string $nextSecret = 'GENERATED-SECRET';
 
     /**
+     * @var array<string>
+     */
+    public array $verifiedSecrets = [];
+
+    /**
      * @param array<string, int> $validCodes
      */
     public function __construct(private readonly array $validCodes = [])
@@ -21,6 +26,8 @@ final class FakeGoogle2FA
 
     public function verifyKeyNewer(string $secret, string $key, int $oldTimestamp): int|false
     {
+        $this->verifiedSecrets[] = $secret;
+
         $timestep = $this->validCodes[$key] ?? null;
 
         return $timestep !== null && $timestep > $oldTimestamp ? $timestep : false;
