@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Authentication\Domain\TwoFactorAttemptLimiter;
-use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
 use Lightit\Users\Domain\Models\User;
 
 final readonly class ConfirmTwoFactorAuthenticationAction
@@ -16,8 +15,7 @@ final readonly class ConfirmTwoFactorAuthenticationAction
     public function __construct(
         private VerifyOtpAction $verifyOtpAction,
         private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
-    ) {
-    }
+    ) {}
 
     /**
      * The attempt count and the code check stay outside the transaction: with a
@@ -27,9 +25,9 @@ final readonly class ConfirmTwoFactorAuthenticationAction
      * secret that was just checked, and two concurrent confirms can't both
      * hand out recovery codes.
      *
-     * @throws TwoFactorAuthException
-     *
      * @return array<string>
+     *
+     * @throws TwoFactorAuthException
      */
     public function execute(User $user, string $oneTimePassword): array
     {
@@ -43,9 +41,9 @@ final readonly class ConfirmTwoFactorAuthenticationAction
 
         $secret = $this->pendingSecret($user);
 
-        TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());
+        TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);
 
-        $this->verifyOtpAction->execute($user->getKey(), $secret, $oneTimePassword);
+        $this->verifyOtpAction->execute($user->id, $secret, $oneTimePassword);
 
         $recoveryCodes = $this->generateRecoveryCodesAction->generate();
 
@@ -57,13 +55,11 @@ final readonly class ConfirmTwoFactorAuthenticationAction
                 throw new TwoFactorAuthException(message: __('google2fa.invalid_otp'), reason: 'invalid_otp', status: 422);
             }
 
-            $lockedUser->{TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME} = now();
-            $lockedUser->saveOrFail();
-
+            $lockedUser->activateTwoFactorAuthentication();
             $lockedUser->replaceRecoveryCodes($recoveryCodes['hashes']);
         });
 
-        TwoFactorAttemptLimiter::clear($user->getKey());
+        TwoFactorAttemptLimiter::clear($user->id);
 
         return $recoveryCodes['codes'];
     }
