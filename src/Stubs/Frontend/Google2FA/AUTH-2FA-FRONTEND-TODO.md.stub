@@ -54,7 +54,8 @@ time `vite` runs (`dev` or `build`). Type-check after that.
    returns the user. The screen fetches the current-user query again, navigates to
    `redirect` (or `/`), clears the store and removes the setup query.
 6. When a code submission fails: `401` means the token expired or is no longer valid, so
-   the store is cleared and the user goes back to `/login`. A wrong code (`422`) or a
+   the store is cleared and the user goes back to `/login`. A wrong code (`422`), a code
+   that was already used (`422` with `otp_already_used`, which gets its own message) or a
    lockout (`429`) shows the error under the code field and keeps the user on the screen.
    Any other failure (a `500`, a network error) shows a generic error toast.
 7. When the setup screen can't load (`2fa/setup` fails), it shows an error. Both screens
@@ -129,6 +130,7 @@ As a new top-level key:
   },
   "errors": {
     "invalidCode": "That code didn't work. Try again.",
+    "codeAlreadyUsed": "That code was already used. Wait for the next one and try again.",
     "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
     "expired": "Your verification expired. Sign in again.",
     "unexpected": "Something went wrong. Try again in a moment."
