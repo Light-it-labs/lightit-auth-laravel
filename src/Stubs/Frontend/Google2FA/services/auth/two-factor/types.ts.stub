@@ -62,7 +62,7 @@ export type PasswordPayload = {
   password: string;
 };
 
-export type RegenerateRecoveryCodesResult = {
+export type RecoveryCodesResult = {
   recoveryCodes: string[];
 };
 
@@ -79,10 +79,7 @@ export const isTwoFactorUnavailable = (error: unknown) => {
   );
 };
 
-export type TwoFactorEnrollment = {
-  qr: string;
-  secret: string;
-};
+export type TwoFactorEnrollment = Pick<TwoFactorSetupPayload, "qr" | "secret">;
 
 export type MessageResult = {
   message: string;
