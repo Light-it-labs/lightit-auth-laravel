@@ -171,6 +171,25 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->toContain('getPendingTwoFactorChallenge("setup_required")');
     });
 
+    it(
+        'offers a "Back to sign in" link that clears the challenge on both screens, outside any error branch',
+        function (): void {
+            Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+    
+            $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+    
+            foreach (['page.tsx', 'setup/page.tsx'] as $screen) {
+                $contents = (string) file_get_contents(
+                    $this->root . '/src/routes/(public)/_guest/two-factor/' . $screen
+                );
+    
+                expect(substr_count($contents, 'onClick={clearChallenge}'))->toBe(1)
+                    ->and($contents)->toContain('{t("twoFactor.backToLogin")}')
+                    ->and($contents)->not->toMatch('/isError \\? \\(/');
+            }
+        }
+    );
+
     it('prints the login-form manual step with the exact lines to swap', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 

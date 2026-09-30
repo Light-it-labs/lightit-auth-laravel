@@ -33,20 +33,7 @@ const TwoFactorSetupPage = () => {
 
         {isPending ? <p className="text-sm">{t("twoFactor.setup.loading")}</p> : null}
 
-        {isError ? (
-          <div className="space-y-4">
-            <ErrorMessage errorMessage={t("twoFactor.setup.loadError")} />
-
-            <Link
-              className="text-sm underline underline-offset-4 hover:opacity-80"
-              search={{ redirect: search.redirect }}
-              to="/login"
-              onClick={clearChallenge}
-            >
-              {t("twoFactor.backToLogin")}
-            </Link>
-          </div>
-        ) : null}
+        {isError ? <ErrorMessage errorMessage={t("twoFactor.setup.loadError")} /> : null}
 
         {setup ? (
           <>
@@ -75,6 +62,17 @@ const TwoFactorSetupPage = () => {
             </section>
           </>
         ) : null}
+
+        <p className="text-center text-sm">
+          <Link
+            className="underline underline-offset-4 hover:opacity-80"
+            search={{ redirect: search.redirect }}
+            to="/login"
+            onClick={clearChallenge}
+          >
+            {t("twoFactor.backToLogin")}
+          </Link>
+        </p>
       </div>
     </div>
   );
