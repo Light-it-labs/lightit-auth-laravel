@@ -37,8 +37,7 @@ read it.
 | `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts` | Maps `422`, `409` and `429` from the account endpoints to form errors and toasts |
 
 The TanStack Router plugin adds the three routes to `src/routeTree.gen.ts` the next
-time `vite` runs (`dev` or `build`), or when you run `npx tsr generate`. Type-check
-after that.
+time `vite` runs (`dev` or `build`). Type-check after that.
 
 ## How the flow works
 
