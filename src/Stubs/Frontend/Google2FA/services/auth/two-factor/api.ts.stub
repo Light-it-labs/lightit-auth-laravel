@@ -11,7 +11,7 @@ import {
   type OneTimePasswordPayload,
   type PasswordPayload,
   type RecoveryCodePayload,
-  type RegenerateRecoveryCodesResult,
+  type RecoveryCodesResult,
   type TwoFactorChallengeResult,
   type TwoFactorEnrollment,
   type TwoFactorResetChallengeResult,
@@ -91,7 +91,7 @@ export const disableTwoFactor = async ({ password }: PasswordPayload): Promise<M
 
 export const regenerateRecoveryCodes = async ({
   password,
-}: PasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
+}: PasswordPayload): Promise<RecoveryCodesResult> => {
   const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", { password });
 
   return {{ currentUserResponseAccessor }};
@@ -113,7 +113,7 @@ export const enableTwoFactor = async ({
 
 export const confirmTwoFactor = async ({
   oneTimePassword,
-}: OneTimePasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
+}: OneTimePasswordPayload): Promise<RecoveryCodesResult> => {
   const response = await api.post("{{ twoFactorConfirmEndpoint }}", {
     one_time_password: oneTimePassword,
   });
