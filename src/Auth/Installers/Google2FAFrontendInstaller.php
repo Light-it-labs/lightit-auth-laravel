@@ -20,16 +20,31 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
 
     private const REQUIRED_DEPENDENCIES = [
+        '@hookform/resolvers',
         '@tanstack/react-query',
+        '@tanstack/react-router',
         'axios',
+        'react-hook-form',
+        'sonner',
         'zod',
+        'zustand',
     ];
+
+    private const LOGIN_FORM_FILE = 'src/routes/(public)/_guest/login/-components/login-form.tsx';
 
     private const FILES = [
         'services/auth/two-factor/types.ts.stub' => 'src/services/auth/two-factor/types.ts',
         'services/auth/two-factor/schemas.ts.stub' => 'src/services/auth/two-factor/schemas.ts',
         'services/auth/two-factor/api.ts.stub' => 'src/services/auth/two-factor/api.ts',
         'services/auth/two-factor/actions.ts.stub' => 'src/services/auth/two-factor/actions.ts',
+        'stores/use-two-factor-challenge-store.ts.stub' => 'src/stores/use-two-factor-challenge-store.ts',
+        'routes/(public)/_guest/login/-hooks/use-two-factor-login.ts.stub' => 'src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts',
+        'routes/(public)/_guest/two-factor/-hooks/use-two-factor-completion.ts.stub' => 'src/routes/(public)/_guest/two-factor/-hooks/use-two-factor-completion.ts',
+        'routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx',
+        'routes/(public)/_guest/two-factor/-components/recovery-code-form.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-code-form.tsx',
+        'routes/(public)/_guest/two-factor/-components/recovery-codes.tsx.stub' => 'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
+        'routes/(public)/_guest/two-factor/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/page.tsx',
+        'routes/(public)/_guest/two-factor/setup/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/setup/page.tsx',
     ];
 
     public function __construct(
@@ -68,9 +83,22 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->write($root, self::TODO_FILE.'.stub', self::TODO_FILE, $tokens);
 
-        $this->command->info(
-            'Frontend two-factor authentication layer generated. Read '.self::TODO_FILE.' before building the screens.'
+        $this->command->info('Frontend two-factor authentication services and login screens generated.');
+
+        $this->printLoginFormManualStep();
+    }
+
+    private function printLoginFormManualStep(): void
+    {
+        $this->command->warn('Manual step: route the login form through the 2FA-aware login hook.');
+        $this->command->line('In '.self::LOGIN_FORM_FILE.':');
+        $this->command->line('  1. Remove:   import { useLogin } from "@/services/auth/actions";');
+        $this->command->line(
+            '  2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";'
         );
+        $this->command->line('  3. Replace:  const loginMutation = useLogin();');
+        $this->command->line('     with:     const loginMutation = useTwoFactorLogin();');
+        $this->command->line('Then add the i18n keys listed in '.self::TODO_FILE.' to src/i18n/locales/en.json.');
     }
 
     /**

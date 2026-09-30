@@ -1,0 +1,65 @@
+import { type SubmitHandler, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n";
+import { useVerifyRecoveryCode } from "@/services/auth/two-factor/actions";
+import { getRecoveryCodeSchema } from "@/services/auth/two-factor/schemas";
+import type { RecoveryCodePayload } from "@/services/auth/two-factor/types";
+import { useTwoFactorCompletion } from "../-hooks/use-two-factor-completion";
+
+type RecoveryCodeFormProps = {
+  token: string;
+};
+
+export const RecoveryCodeForm = ({ token }: RecoveryCodeFormProps) => {
+  const { t } = useTranslation();
+
+  const verifyRecoveryCodeMutation = useVerifyRecoveryCode();
+  const { onCompleted, onFailed } = useTwoFactorCompletion();
+
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    setError,
+  } = useForm({
+    mode: "onSubmit",
+    resolver: zodResolver(getRecoveryCodeSchema()),
+  });
+
+  const showCodeError = (message: string) => {
+    setError("recoveryCode", { type: "backend", message }, { shouldFocus: true });
+  };
+
+  const onSubmit: SubmitHandler<RecoveryCodePayload> = (data) => {
+    verifyRecoveryCodeMutation.mutate(
+      { token, ...data },
+      {
+        onSuccess: onCompleted,
+        onError: (error) => {
+          return onFailed(error, showCodeError);
+        },
+      },
+    );
+  };
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="recoveryCode">{t("form.recoveryCode")}</Label>
+
+        <Input autoComplete="off" id="recoveryCode" autoFocus {...register("recoveryCode")} />
+
+        <ErrorMessage errorMessage={errors.recoveryCode?.message} />
+      </div>
+
+      <Button className="w-full" isLoading={verifyRecoveryCodeMutation.isPending} type="submit">
+        {t("twoFactor.verify.submit")}
+      </Button>
+    </form>
+  );
+};
