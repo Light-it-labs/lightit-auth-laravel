@@ -66,6 +66,24 @@ export type RegenerateRecoveryCodesResult = {
   recoveryCodes: string[];
 };
 
+export type TwoFactorStatus = {
+  available: boolean;
+  enabled: boolean;
+  mandatory: boolean;
+};
+
+export const isTwoFactorUnavailable = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "2fa_unavailable"
+  );
+};
+
+export type TwoFactorEnrollment = {
+  qr: string;
+  secret: string;
+};
+
 export type MessageResult = {
   message: string;
 };
