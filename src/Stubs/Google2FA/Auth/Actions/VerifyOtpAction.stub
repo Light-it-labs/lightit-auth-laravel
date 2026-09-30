@@ -14,8 +14,7 @@ final readonly class VerifyOtpAction
 {
     public function __construct(
         private Google2FA $google2FA,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws IncompatibleWithGoogleAuthenticatorException

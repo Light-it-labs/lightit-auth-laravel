@@ -26,8 +26,8 @@ describe('VerifyRecoveryCodeAction stub', function (): void {
             __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
         );
 
-        expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());')
-            ->and($stub)->toContain('TwoFactorAttemptLimiter::clear($user->getKey());')
+        expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);')
+            ->and($stub)->toContain('TwoFactorAttemptLimiter::clear($user->id);')
             ->and($stub)->not->toContain('TwoFactorAttemptLimiter::recordFailure');
     });
 });

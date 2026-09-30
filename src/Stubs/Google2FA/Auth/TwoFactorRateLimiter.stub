@@ -19,8 +19,8 @@ final class TwoFactorRateLimiter
             $hashedToken = hash('sha256', (string) $request->bearerToken());
 
             return [
-                Limit::perMinute(5)->by('2fa-token|'.$hashedToken),
-                Limit::perMinute(30)->by('2fa-ip|'.$request->ip()),
+                Limit::perMinute(5)->by('2fa-token|' . $hashedToken),
+                Limit::perMinute(30)->by('2fa-ip|' . $request->ip()),
             ];
         });
     }

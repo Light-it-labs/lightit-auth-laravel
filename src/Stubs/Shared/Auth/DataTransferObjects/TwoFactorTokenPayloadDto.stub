@@ -14,8 +14,7 @@ final readonly class TwoFactorTokenPayloadDto
         public string $typ,
         public TwoFactorReason $reason,
         public bool $mandatory,
-    ) {
-    }
+    ) {}
 
     /**
      * @param array{sub: string, exp: int, typ: string, reason: string, mandatory: bool} $data

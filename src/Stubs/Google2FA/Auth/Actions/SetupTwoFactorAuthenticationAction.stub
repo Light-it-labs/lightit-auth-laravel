@@ -15,8 +15,7 @@ final readonly class SetupTwoFactorAuthenticationAction
         private Google2FA $google2FA,
         private GenerateQRCodeAction $generateQRCodeAction,
         private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user): TwoFactorSetupDto
     {

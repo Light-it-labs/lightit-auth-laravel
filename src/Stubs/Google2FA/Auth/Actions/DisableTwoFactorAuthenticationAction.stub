@@ -13,8 +13,7 @@ final readonly class DisableTwoFactorAuthenticationAction
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
         private ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user, string $password): void
     {
@@ -33,7 +32,7 @@ final readonly class DisableTwoFactorAuthenticationAction
         if (is_null($secret)) {
             throw new TwoFactorAuthException(
                 message: __('google2fa.cannot_disable_2fa_unconfigured'),
-                reason: 'cannot_disable_2fa_unconfigured'
+                reason: 'cannot_disable_2fa_unconfigured',
             );
         }
 

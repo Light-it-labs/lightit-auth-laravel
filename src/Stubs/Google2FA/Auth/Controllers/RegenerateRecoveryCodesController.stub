@@ -21,7 +21,7 @@ final readonly class RegenerateRecoveryCodesController
         PasswordValidatorAction $passwordValidatorAction,
     ): JsonResponse {
         $passwordValidatorAction->execute($user, $request->getPassword());
-        
+
         $recoveryCodes = $generateRecoveryCodesAction->execute($user);
 
         return response()->json([
