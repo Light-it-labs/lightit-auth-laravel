@@ -1,0 +1,82 @@
+import type { UseFormSetError } from "react-hook-form";
+import { HttpStatusCode, isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { useTranslation } from "@/i18n";
+import { refreshTwoFactorState } from "@/services/auth/two-factor/actions";
+import type { OneTimePasswordPayload, PasswordPayload } from "@/services/auth/two-factor/types";
+import {
+  isOneTimePasswordAlreadyUsed,
+  isTwoFactorUnavailable,
+} from "@/services/auth/two-factor/types";
+import { handleAxiosFieldErrors } from "@/utils";
+
+const statusOf = (error: unknown) => {
+  return isAxiosError(error) ? error.response?.status : undefined;
+};
+
+export const useTwoFactorAccountErrors = () => {
+  const { t } = useTranslation();
+
+  const onStateConflict = async (error: unknown) => {
+    toast.error(
+      isTwoFactorUnavailable(error)
+        ? t("twoFactor.account.unavailable")
+        : t("twoFactor.account.errors.conflict"),
+    );
+    await refreshTwoFactorState();
+  };
+
+  const onPasswordError = async (error: unknown, setError: UseFormSetError<PasswordPayload>) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await onStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("password", { message: t("twoFactor.account.errors.invalidPassword") });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  const onOneTimePasswordError = async (
+    error: unknown,
+    setError: UseFormSetError<OneTimePasswordPayload>,
+  ) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await onStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("oneTimePassword", {
+        message: isOneTimePasswordAlreadyUsed(error)
+          ? t("twoFactor.errors.codeAlreadyUsed")
+          : t("twoFactor.errors.invalidCode"),
+      });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  return { onOneTimePasswordError, onPasswordError };
+};
