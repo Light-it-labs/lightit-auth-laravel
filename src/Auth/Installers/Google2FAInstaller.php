@@ -35,11 +35,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const LOGIN_ACTION_PATH = 'src/Authentication/Domain/Actions/LoginAction.php';
 
     /**
-     * The import + constructor injection a consumer must add to their own login.
+     * The constructor injection a consumer must add to their own login. `LoginAction` lives in
+     * the challenge action's namespace, so no `use` line: the app's Pint would delete it.
      */
     private const GATE_CONSTRUCTOR_SNIPPET = <<<'PHP'
-        use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
-
         public function __construct(
             private readonly AuthFactory $authFactory,
             private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,

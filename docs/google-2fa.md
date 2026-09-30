@@ -81,8 +81,6 @@ This package cannot edit a login it does not generate, so `LoginAction` needs th
 challenge action injected through its constructor:
 
 ```php
-use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
-
 public function __construct(
     private readonly AuthFactory $authFactory,
     private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
