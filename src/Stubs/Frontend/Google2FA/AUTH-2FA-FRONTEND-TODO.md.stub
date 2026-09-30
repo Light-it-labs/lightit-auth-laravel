@@ -19,7 +19,7 @@ shipped yet. Delete this file once you've read it.
 | File | Contents |
 | --- | --- |
 | `src/stores/use-two-factor-challenge-store.ts` | Non-persisted zustand store holding the challenge token, its type and its expiry |
-| `src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts` | `useTwoFactorLogin`, a drop-in replacement for `useLogin` whose `mutate` and `mutateAsync` route a challenge to the 2FA screens |
+| `src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts` | `useTwoFactorLogin`, a replacement for `useLogin()` (no hook-level props) whose `mutate` and `mutateAsync` route a challenge to the 2FA screens |
 | `src/routes/(public)/_guest/two-factor/page.tsx` | `/two-factor`: 6-digit code, with a switch to a recovery code |
 | `src/routes/(public)/_guest/two-factor/setup/page.tsx` | `/two-factor/setup`: QR code, manual-entry key, recovery codes and the first code |
 | `src/routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx` | Code form shared by both screens (`completeTwoFactor`) |
@@ -57,8 +57,8 @@ time `vite` runs (`dev` or `build`). Type-check after that.
    the store is cleared and the user goes back to `/login`. A wrong code (`422`) or a
    lockout (`429`) shows the error under the code field and keeps the user on the screen.
    Any other failure (a `500`, a network error) shows a generic error toast.
-7. When the setup screen can't load (`2fa/setup` fails), it shows an error with a link
-   back to sign in.
+7. When the setup screen can't load (`2fa/setup` fails), it shows an error. Both screens
+   always show the "Back to sign in" link.
 
 ## Manual step: use the 2FA-aware login hook
 
