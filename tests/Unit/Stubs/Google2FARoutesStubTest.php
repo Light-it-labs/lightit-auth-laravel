@@ -15,11 +15,14 @@ describe('Google2FA routes stub', function (): void {
 
             use Illuminate\Support\Facades\Route;
             use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
+            use Lightit\Authentication\App\Controllers\ConfirmTwoFactorAuthenticationController;
             use Lightit\Authentication\App\Controllers\DisableTwoFactorAuthenticationController;
+            use Lightit\Authentication\App\Controllers\EnableTwoFactorAuthenticationController;
             use Lightit\Authentication\App\Controllers\RegenerateRecoveryCodesController;
             use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
             use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
             use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
+            use Lightit\Authentication\App\Controllers\ShowTwoFactorAuthenticationStatusController;
             use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
             /*
@@ -42,9 +45,12 @@ describe('Google2FA routes stub', function (): void {
 
                     Route::middleware('auth:sanctum')
                         ->group(static function (): void {
-                            Route::post('disable', DisableTwoFactorAuthenticationController::class);
-                            Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class);
-                            Route::post('request-reset', RequestTwoFactorResetController::class);
+                            Route::get('status', ShowTwoFactorAuthenticationStatusController::class);
+                            Route::post('enable', EnableTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                            Route::post('confirm', ConfirmTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                            Route::post('disable', DisableTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                            Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class)->middleware('throttle:2fa');
+                            Route::post('request-reset', RequestTwoFactorResetController::class)->middleware('throttle:2fa');
                         });
                 });
 
@@ -65,7 +71,7 @@ describe('Google2FA routes stub', function (): void {
     });
 
     it(
-        'matches every twoFactor*Endpoint token the frontend stubs rely on to a Route::post segment in this stub',
+        'matches every twoFactor*Endpoint token the frontend stubs rely on to a route segment in this stub',
         function (): void {
             $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
     
@@ -79,7 +85,7 @@ describe('Google2FA routes stub', function (): void {
                 $tokenSegments[] = str_replace('2fa/', '', $value);
             }
     
-            preg_match_all("/Route::post\('([^']+)'/", $stub, $matches);
+            preg_match_all("/Route::(?:get|post)\('([^']+)'/", $stub, $matches);
             $routeSegments = $matches[1];
     
             sort($tokenSegments);
@@ -87,18 +93,26 @@ describe('Google2FA routes stub', function (): void {
     
             expect($tokenSegments)->not->toBeEmpty();
     
-            foreach ($tokenSegments as $segment) {
-                expect($stub)->toContain("Route::post('{$segment}'");
-            }
-    
             expect($routeSegments)->toBe($tokenSegments);
         }
     );
 
-    it('throttles the code-verification endpoints', function (): void {
+    it('throttles every endpoint that checks a code or the account password', function (): void {
         $stub = (string) file_get_contents(__DIR__ . '/../../../src/Stubs/Google2FA/routes/two-factor-auth.stub');
 
-        foreach (['setup', 'complete', 'verify-recovery-code', 'reset'] as $route) {
+        $throttledRoutes = [
+            'setup',
+            'complete',
+            'verify-recovery-code',
+            'reset',
+            'enable',
+            'confirm',
+            'disable',
+            'regenerate-recovery-codes',
+            'request-reset',
+        ];
+
+        foreach ($throttledRoutes as $route) {
             expect($stub)->toMatch(
                 "/Route::post\\('{$route}', \\w+Controller::class\\)->middleware\\('throttle:2fa'\\);/"
             );

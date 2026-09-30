@@ -1,0 +1,77 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Lightit\Authentication\Domain\DataTransferObjects\TwoFactorEnrollmentDto;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use Lightit\Users\Domain\Models\User;
+use PragmaRX\Google2FALaravel\Google2FA;
+
+final readonly class EnableTwoFactorAuthenticationAction
+{
+    public function __construct(
+        private PasswordValidatorAction $passwordValidatorAction,
+        private Google2FA $google2FA,
+        private GenerateQRCodeAction $generateQRCodeAction,
+    ) {
+    }
+
+    /**
+     * The secret is written on the locked row after re-checking it there, so an
+     * enable racing a confirm from another tab never swaps the secret of a setup
+     * that was just activated.
+     *
+     * @throws TwoFactorAuthException
+     */
+    public function execute(User $user, string $password): TwoFactorEnrollmentDto
+    {
+        if (! Config::boolean('google2fa.enabled', false)) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_unavailable'),
+                reason: '2fa_unavailable',
+                status: 409,
+            );
+        }
+
+        $this->ensureNotConfigured($user);
+
+        $this->passwordValidatorAction->execute($user, $password);
+
+        $secret = $this->google2FA->generateSecretKey();
+
+        DB::transaction(function () use ($user, $secret): void {
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+
+            $this->ensureNotConfigured($lockedUser);
+
+            $lockedUser->{TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME} = $secret;
+            $lockedUser->{TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME} = null;
+            $lockedUser->saveOrFail();
+        });
+
+        return new TwoFactorEnrollmentDto(
+            qr: $this->generateQRCodeAction->execute($user->getAuthenticatableHolderIdentifier(), $secret),
+            secret: $secret,
+        );
+    }
+
+    /**
+     * @throws TwoFactorAuthException
+     */
+    private function ensureNotConfigured(User $user): void
+    {
+        if ($user->hasTwoFactorAuthenticationConfigured()) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_already_configured'),
+                reason: '2fa_already_configured',
+                status: 409,
+            );
+        }
+    }
+}

@@ -48,12 +48,46 @@ TTL is `google2fa.challenge_ttl_minutes` in `config/google2fa.php`.
 With `google2fa.mandatory=false`, the challenge action only ever challenges a
 user who has already set 2FA up (see
 `IssueTwoFactorChallengeAction::execute()`); it never hands a
-`setup_required` token to a logged-in user who hasn't enrolled yet. Optional,
-self-service enrollment from an already-authenticated session is not wired
-by this package - it belongs with your account/settings screens.
+`setup_required` token to a logged-in user who hasn't enrolled yet. That user
+enables 2FA from their account instead, over the cookie session
+(`auth:sanctum`, no challenge token):
 
-`routes/two-factor-auth.php` throttles `setup`, `complete`,
-`verify-recovery-code` and `reset` with `throttle:2fa`. `lightit-auth-laravel`'s
+- `GET /2fa/status` returns `{ available, enabled, mandatory }` - the
+  boilerplate's `UserResource` has no 2FA flag, and this package never edits
+  it. `available` is `google2fa.enabled`.
+- `POST /2fa/enable` with `{ password }` stores a new secret and returns
+  `{ qr, secret }`. It answers `409` (`2fa_already_configured`) when 2FA is
+  already on, so an active secret is never overwritten.
+- `POST /2fa/confirm` with `{ one_time_password }` checks the first code,
+  sets `two_factor_auth_activated_at` and returns `{ recovery_codes }`. It
+  answers `409` when 2FA is already on or `enable` was never called.
+- Both answer `409` (`2fa_unavailable`) while `google2fa.enabled` is `false`,
+  and both re-check and write the user row under `lockForUpdate()`.
+  `confirm` counts the attempt and checks the code before that
+  transaction, so a `database` cache store can't roll a failed attempt back.
+
+2FA counts as on when the user has a secret and `two_factor_auth_activated_at`
+(`hasTwoFactorAuthenticationConfigured()`, the check the login gate uses).
+`disable` and `regenerate-recovery-codes` answer `409`
+(`cannot_disable_2fa_unconfigured` / `cannot_regenerate_2fa_unconfigured`)
+when it is not on.
+
+A wrong password on `enable`, `disable`, `regenerate-recovery-codes` or
+`request-reset` answers `422` (`invalid_password`), not `401`: the user is
+still signed in, and the frontend sends every `401` back to the login screen.
+
+A one-time password is accepted once per user: a second request with the same
+code inside its validity window answers `422` (`otp_already_used`), including
+a login `complete` right after `confirm` accepted that code. The claim lives in
+the cache (`Cache::add()`), so use a store shared by every app server, not
+`array`.
+
+`routes/two-factor-auth.php` throttles every route except `status` with
+`throttle:2fa`: 5 requests a minute per signed-in user on the account routes
+(`enable`, `confirm`, `disable`, `regenerate-recovery-codes` and
+`request-reset` share that bucket), per challenge token on the challenge
+routes, plus 30 a minute per IP. `complete` and `confirm` also count every
+attempt against the per-user lockout. `lightit-auth-laravel`'s
 own service provider registers that named limiter in `boot()` when
 `\Lightit\Authentication\Domain\TwoFactorRateLimiter` exists - no
 `AppServiceProvider` paste needed, and it still runs under `php artisan
