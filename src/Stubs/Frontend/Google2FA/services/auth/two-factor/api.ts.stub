@@ -1,3 +1,5 @@
+import { deepSnakeKeys } from "string-ts";
+
 import { api, ensureCsrf } from "@/config/api";
 import type { LoginPayload } from "@/services/auth/types";
 import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
@@ -18,12 +20,11 @@ const withChallengeToken = (token: string) => {
   return { headers: { Authorization: `Bearer ${token}` }, isAuthProbe: true };
 };
 
-export const loginWithTwoFactorChallenge = async ({
-  emailAddress,
-  password,
-}: LoginPayload): Promise<TwoFactorChallengeResult | null> => {
+export const loginWithTwoFactorChallenge = async (
+  payload: LoginPayload,
+): Promise<TwoFactorChallengeResult | null> => {
   await ensureCsrf();
-  const response = await api.post("{{ loginEndpoint }}", { email_address: emailAddress, password });
+  const response = await api.post("{{ loginEndpoint }}", deepSnakeKeys(payload));
   const body: unknown = {{ currentUserResponseAccessor }};
 
   return isTwoFactorChallenge(body) ? body : null;

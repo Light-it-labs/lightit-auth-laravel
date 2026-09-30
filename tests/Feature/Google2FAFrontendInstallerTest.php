@@ -87,7 +87,7 @@ describe('Google2FAFrontendInstaller', function (): void {
     });
 
     it(
-        'posts the challenge-aware login to the configured login endpoint after fetching the CSRF cookie',
+        'posts the challenge-aware login to the configured login endpoint after fetching the CSRF cookie, snake-cased like the template login()',
         function (): void {
             Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
@@ -95,7 +95,8 @@ describe('Google2FAFrontendInstaller', function (): void {
 
             expect(file_get_contents($this->root . '/src/services/auth/two-factor/api.ts'))
                 ->toContain('await ensureCsrf();')
-                ->toContain('api.post("auth/login", { email_address: emailAddress, password })');
+                ->toContain('api.post("auth/login", deepSnakeKeys(payload))')
+                ->toContain('import { deepSnakeKeys } from "string-ts";');
         }
     );
 

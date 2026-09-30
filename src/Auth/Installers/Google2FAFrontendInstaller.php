@@ -26,6 +26,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'axios',
         'react-hook-form',
         'sonner',
+        'string-ts',
         'zod',
         'zustand',
     ];
