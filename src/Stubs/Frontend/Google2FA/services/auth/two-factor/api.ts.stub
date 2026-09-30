@@ -13,8 +13,10 @@ import {
   type RecoveryCodePayload,
   type RegenerateRecoveryCodesResult,
   type TwoFactorChallengeResult,
+  type TwoFactorEnrollment,
   type TwoFactorResetChallengeResult,
   type TwoFactorSetupPayload,
+  type TwoFactorStatus,
 } from "./types";
 
 const withChallengeToken = (token: string) => {
@@ -91,6 +93,30 @@ export const regenerateRecoveryCodes = async ({
   password,
 }: PasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
   const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", { password });
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const getTwoFactorStatus = async (): Promise<TwoFactorStatus> => {
+  const response = await api.get("{{ twoFactorStatusEndpoint }}");
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const enableTwoFactor = async ({
+  password,
+}: PasswordPayload): Promise<TwoFactorEnrollment> => {
+  const response = await api.post("{{ twoFactorEnableEndpoint }}", { password });
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const confirmTwoFactor = async ({
+  oneTimePassword,
+}: OneTimePasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
+  const response = await api.post("{{ twoFactorConfirmEndpoint }}", {
+    one_time_password: oneTimePassword,
+  });
 
   return {{ currentUserResponseAccessor }};
 };

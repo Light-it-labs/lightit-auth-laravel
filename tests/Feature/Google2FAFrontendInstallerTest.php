@@ -75,6 +75,27 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->not->toContain('auth/regenerate-recovery-codes');
     });
 
+    it('calls the account enrollment endpoints over the cookie session, with no challenge token', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/two-factor/api.ts');
+
+        expect($api)
+            ->toContain('api.get("2fa/status")')
+            ->toContain('api.post("2fa/enable", { password })')
+            ->toContain('api.post("2fa/confirm", {');
+
+        preg_match_all('/export const (getTwoFactorStatus|enableTwoFactor|confirmTwoFactor) = [^;]+;/s', $api, $functions);
+
+        expect($functions[0])->toHaveCount(3);
+
+        foreach ($functions[0] as $function) {
+            expect($function)->not->toContain('token')->not->toContain('withChallengeToken');
+        }
+    });
+
     it('attaches a manual Authorization header per call instead of a shared authenticated client', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
