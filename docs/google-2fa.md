@@ -236,6 +236,16 @@ this flow; see [Login screens](#login-screens).
 A wrong code returns `422`, an expired or invalid token `401`, and too many failed
 attempts `429`.
 
+**Replay protection.** A one-time password is accepted once per user. `VerifyOtpAction`
+claims the timestep the code matched with an atomic `Cache::add()` keyed by user and
+timestep, kept for as long as the code stays valid (`(2 * window + 1) * 30` seconds). A
+second request with the same code - a replay, or two tabs racing - gets `422` with
+`error.code` `otp_already_used`; the user waits for the next code, and the generated
+2FA screens say so instead of "wrong code". This applies to login
+verification, the challenge setup confirmation and the account activation below. It needs
+a cache store shared by every app server (not `array`), the same store the per-user
+lockout already relies on. No schema change.
+
 **Reset 2FA (while logged in):**
 
 1. `POST /2fa/request-reset`

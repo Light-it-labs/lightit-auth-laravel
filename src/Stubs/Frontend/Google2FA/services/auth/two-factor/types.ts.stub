@@ -1,3 +1,5 @@
+import { isAxiosError } from "axios";
+
 export type TwoFactorChallengeResult = {
   accessToken: string;
   tokenType: "setup_required" | "verification_required";
@@ -29,6 +31,17 @@ export const isVerificationRequired = (
   result: TwoFactorChallengeResult,
 ): result is TwoFactorChallengeResult & { tokenType: "verification_required" } => {
   return result.tokenType === "verification_required";
+};
+
+type TwoFactorErrorBody = {
+  error?: { code?: string };
+};
+
+export const isOneTimePasswordAlreadyUsed = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "otp_already_used"
+  );
 };
 
 export type TwoFactorSetupPayload = {
