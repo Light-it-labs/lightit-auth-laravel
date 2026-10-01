@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
-use Lightitlabs\Tests\Fixtures\FakePasskeysInstallerCommand;
+use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\StubCopier;
 
 describe('PasskeysInstaller', function (): void {
     beforeEach(function (): void {
@@ -26,7 +28,15 @@ describe('PasskeysInstaller', function (): void {
             'AUTH-PASSKEYS-TODO.md',
         ];
 
-        Artisan::registerCommand(new FakePasskeysInstallerCommand());
+        Artisan::command('passkeys-installer-fake {--with-composer}', function (): void {
+            $installer = new PasskeysInstaller(
+                $this,
+                new ComposerInstaller($this),
+                new StubCopier(new OriginMarker('0.0.0-test')),
+            );
+
+            $this->option('with-composer') === true ? $installer->install() : $installer->writeFiles();
+        });
     });
 
     afterEach(function (): void {
