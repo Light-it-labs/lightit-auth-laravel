@@ -8,7 +8,10 @@ use Cose\Algorithms;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyAssertionDto;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
 use Lightit\Authentication\Domain\Models\Passkey;
 use Lightit\Users\Domain\Models\User;
@@ -17,23 +20,29 @@ use RangeException;
 use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerException;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Uid\Uuid;
 use Throwable;
 use TypeError;
 use ValueError;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
 use Webauthn\AttestationStatement\NoneAttestationStatementSupport;
+use Webauthn\AuthenticatorAssertionResponse;
+use Webauthn\AuthenticatorAssertionResponseValidator;
 use Webauthn\AuthenticatorAttestationResponse;
 use Webauthn\AuthenticatorAttestationResponseValidator;
 use Webauthn\AuthenticatorSelectionCriteria;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
+use Webauthn\CredentialRecord;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
 use Webauthn\Exception\WebauthnException;
 use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialCreationOptions;
 use Webauthn\PublicKeyCredentialDescriptor;
 use Webauthn\PublicKeyCredentialParameters;
+use Webauthn\PublicKeyCredentialRequestOptions;
 use Webauthn\PublicKeyCredentialRpEntity;
 use Webauthn\PublicKeyCredentialUserEntity;
+use Webauthn\TrustPath\EmptyTrustPath;
 
 final readonly class PasskeyCeremonyService
 {
@@ -57,7 +66,7 @@ final readonly class PasskeyCeremonyService
             ),
             user: PublicKeyCredentialUserEntity::create(
                 name: (string) $user->email,
-                id: $this->userHandle($user),
+                id: $this->userHandle($user->id),
                 displayName: $user->name,
             ),
             challenge: random_bytes(32),
@@ -71,7 +80,7 @@ final readonly class PasskeyCeremonyService
             ),
             attestation: PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
             excludeCredentials: $this->registeredCredentials($user),
-            timeout: max(1, Config::integer('passkeys.challenge_ttl_seconds', 300)) * 1000,
+            timeout: $this->timeoutMilliseconds(),
         );
 
         return $this->serializer->serialize($options, 'json', [
@@ -124,9 +133,114 @@ final readonly class PasskeyCeremonyService
         );
     }
 
-    private function userHandle(User $user): string
+    public function requestOptions(): string
     {
-        return hash_hmac('sha256', 'passkey-user:' . $user->id, Config::string('passkeys.user_handle_secret'), true);
+        $options = PublicKeyCredentialRequestOptions::create(
+            challenge: random_bytes(32),
+            rpId: $this->relyingPartyId(),
+            userVerification: PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
+            timeout: $this->timeoutMilliseconds(),
+        );
+
+        return $this->serializer->serialize($options, 'json', [
+            AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+        ]);
+    }
+
+    /**
+     * @throws PasskeyLoginFailedException
+     * @throws PasskeyNotRecognisedException
+     */
+    public function verifyAssertion(string $options, string $credential): VerifiedPasskeyAssertionDto
+    {
+        $relyingPartyId = $this->relyingPartyId();
+        $ceremonySteps = $this->ceremonySteps()->requestCeremony();
+
+        [$requestOptions, $publicKeyCredential, $response] = $this->guardLogin(
+            function () use ($options, $credential): array {
+                $requestOptions = $this->serializer->deserialize(
+                    $options,
+                    PublicKeyCredentialRequestOptions::class,
+                    'json',
+                );
+                $publicKeyCredential = $this->serializer->deserialize(
+                    $credential,
+                    PublicKeyCredential::class,
+                    'json',
+                );
+
+                if (! $publicKeyCredential->response instanceof AuthenticatorAssertionResponse) {
+                    throw new InvalidArgumentException('The credential is not an assertion response.');
+                }
+
+                return [$requestOptions, $publicKeyCredential, $publicKeyCredential->response];
+            },
+        );
+
+        $passkey = Passkey::query()
+            ->where('credential_id_hash', hash('sha256', $publicKeyCredential->rawId))
+            ->first() ?? throw new PasskeyNotRecognisedException;
+
+        $userHandle = $this->userHandle($passkey->user_id);
+
+        $record = $this->guardLogin(
+            static fn (): CredentialRecord => AuthenticatorAssertionResponseValidator::create($ceremonySteps)->check(
+                CredentialRecord::create(
+                    publicKeyCredentialId: $publicKeyCredential->rawId,
+                    type: PublicKeyCredentialDescriptor::CREDENTIAL_TYPE_PUBLIC_KEY,
+                    transports: array_values(array_filter($passkey->transports, is_string(...))),
+                    attestationType: 'none',
+                    trustPath: EmptyTrustPath::create(),
+                    aaguid: Uuid::fromString($passkey->aaguid),
+                    credentialPublicKey: Base64UrlSafe::decodeNoPadding($passkey->public_key),
+                    userHandle: $userHandle,
+                    counter: $passkey->sign_count,
+                    backupEligible: $passkey->backup_eligible,
+                    backupStatus: $passkey->backup_status,
+                ),
+                $response,
+                $requestOptions,
+                $relyingPartyId,
+                $userHandle,
+            ),
+        );
+
+        return new VerifiedPasskeyAssertionDto(
+            passkey: $passkey,
+            signCount: $record->counter,
+            backupEligible: $record->backupEligible ?? $passkey->backup_eligible,
+            backupStatus: $record->backupStatus ?? $passkey->backup_status,
+        );
+    }
+
+    /**
+     * On malformed input the library throws TypeError, RangeException, ValueError and
+     * serializer exceptions besides its own, so all of them are a rejected ceremony.
+     *
+     * @template T
+     *
+     * @param callable(): T $step
+     *
+     * @return T
+     *
+     * @throws PasskeyLoginFailedException
+     */
+    private function guardLogin(callable $step): mixed
+    {
+        try {
+            return $step();
+        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError) {
+            throw new PasskeyLoginFailedException;
+        } catch (Throwable $throwable) {
+            $this->exceptionHandler->report($throwable);
+
+            throw new PasskeyLoginFailedException;
+        }
+    }
+
+    private function userHandle(int $userId): string
+    {
+        return hash_hmac('sha256', 'passkey-user:' . $userId, Config::string('passkeys.user_handle_secret'), true);
     }
 
     /**
@@ -155,6 +269,14 @@ final readonly class PasskeyCeremonyService
         $factory->setAllowedOrigins($allowedOrigins);
 
         return $factory;
+    }
+
+    /**
+     * @return positive-int
+     */
+    private function timeoutMilliseconds(): int
+    {
+        return max(1, Config::integer('passkeys.challenge_ttl_seconds', 300)) * 1000;
     }
 
     private function relyingPartyId(): string

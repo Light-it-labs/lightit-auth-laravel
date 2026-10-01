@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
+use Lightitlabs\Auth\Installers\SharedLoginFiles;
 use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
@@ -21,7 +22,7 @@ describe('PasskeysInstaller', function (): void {
         $this->writtenFiles = [
             ...array_map(
                 static fn (string $destination): string => 'src/Authentication/' . $destination,
-                array_values(PasskeysInstaller::FILES),
+                [...array_values(PasskeysInstaller::FILES), ...array_values(SharedLoginFiles::FILES)],
             ),
             'database/migrations/2026_10_01_000000_create_passkeys_table.php',
             'config/passkeys.php',
@@ -45,7 +46,7 @@ describe('PasskeysInstaller', function (): void {
         File::deleteDirectory($this->tempBase);
     });
 
-    it('writes every passkey stub, the migration, the config, the routes and the TODO', function (): void {
+    it('writes the passkey stubs, the shared login files, the migration, config, routes and TODO', function (): void {
         $this->artisan('passkeys-installer-fake')->assertSuccessful();
 
         foreach ($this->writtenFiles as $relative) {

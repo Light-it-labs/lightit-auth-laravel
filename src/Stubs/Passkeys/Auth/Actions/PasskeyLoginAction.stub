@@ -1,0 +1,58 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyChallengeExpiredException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class PasskeyLoginAction
+{
+    public function __construct(
+        private Request $request,
+        private PasskeyCeremonyService $passkeyCeremonyService,
+        private PasskeyChallengeStore $passkeyChallengeStore,
+        private LoginByUserAction $loginByUserAction,
+    ) {}
+
+    /**
+     * @throws UnauthenticatedException
+     * @throws PasskeyChallengeExpiredException
+     * @throws PasskeyLoginFailedException
+     * @throws PasskeyNotRecognisedException
+     * @throws TwoFactorChallengeException
+     */
+    public function execute(PasskeyLoginDto $passkeyLoginDto): User
+    {
+        if (! $this->request->hasSession()) {
+            throw new UnauthenticatedException;
+        }
+
+        $options = $this->passkeyChallengeStore->pullLogin($passkeyLoginDto->ceremonyId)
+            ?? throw new PasskeyChallengeExpiredException;
+
+        $verified = $this->passkeyCeremonyService->verifyAssertion($options, $passkeyLoginDto->credential);
+
+        $passkey = $verified->passkey;
+
+        $passkey->sign_count = $verified->signCount;
+        $passkey->backup_eligible = $verified->backupEligible;
+        $passkey->backup_status = $verified->backupStatus;
+        $passkey->last_used_at = CarbonImmutable::now();
+        $passkey->saveOrFail();
+
+        $this->loginByUserAction->execute($passkey->user);
+
+        return $passkey->user;
+    }
+}

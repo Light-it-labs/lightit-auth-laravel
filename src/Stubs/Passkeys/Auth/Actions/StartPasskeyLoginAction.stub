@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginOptionsDto;
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+
+final readonly class StartPasskeyLoginAction
+{
+    public function __construct(
+        private PasskeyCeremonyService $passkeyCeremonyService,
+        private PasskeyChallengeStore $passkeyChallengeStore,
+    ) {}
+
+    public function execute(): PasskeyLoginOptionsDto
+    {
+        $options = $this->passkeyCeremonyService->requestOptions();
+
+        return new PasskeyLoginOptionsDto(
+            ceremonyId: $this->passkeyChallengeStore->putLogin($options),
+            options: $options,
+        );
+    }
+}
