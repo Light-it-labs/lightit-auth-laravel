@@ -6,14 +6,19 @@ namespace Lightit\Authentication\Domain\Services;
 
 use Cose\Algorithms;
 use Illuminate\Support\Facades\Config;
+use InvalidArgumentException;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
 use Lightit\Authentication\Domain\Models\Passkey;
 use Lightit\Users\Domain\Models\User;
 use ParagonIE\ConstantTime\Base64UrlSafe;
+use RangeException;
+use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerException;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
 use Throwable;
+use TypeError;
+use ValueError;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
 use Webauthn\AttestationStatement\NoneAttestationStatementSupport;
 use Webauthn\AuthenticatorAttestationResponse;
@@ -21,6 +26,7 @@ use Webauthn\AuthenticatorAttestationResponseValidator;
 use Webauthn\AuthenticatorSelectionCriteria;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
+use Webauthn\Exception\WebauthnException;
 use Webauthn\PublicKeyCredential;
 use Webauthn\PublicKeyCredentialCreationOptions;
 use Webauthn\PublicKeyCredentialDescriptor;
@@ -73,13 +79,16 @@ final readonly class PasskeyCeremonyService
     }
 
     /**
-     * Every failure is a rejected ceremony: on malformed input the library throws
-     * TypeError, RangeException or serializer exceptions, not only its own.
+     * On malformed input the library throws TypeError, RangeException, ValueError and
+     * serializer exceptions besides its own, so all of them are a rejected ceremony.
      *
      * @throws PasskeyRegistrationFailedException
      */
     public function verifyRegistration(string $options, string $credential): VerifiedPasskeyDto
     {
+        $relyingPartyId = $this->relyingPartyId();
+        $ceremonySteps = $this->ceremonySteps()->creationCeremony();
+
         try {
             $creationOptions = $this->serializer->deserialize(
                 $options,
@@ -89,12 +98,16 @@ final readonly class PasskeyCeremonyService
             $publicKeyCredential = $this->serializer->deserialize($credential, PublicKeyCredential::class, 'json');
 
             if (! $publicKeyCredential->response instanceof AuthenticatorAttestationResponse) {
-                throw new PasskeyRegistrationFailedException;
+                throw new InvalidArgumentException('The credential is not an attestation response.');
             }
 
-            $record = AuthenticatorAttestationResponseValidator::create($this->ceremonySteps()->creationCeremony())
-                ->check($publicKeyCredential->response, $creationOptions, $this->relyingPartyId());
-        } catch (Throwable) {
+            $record = AuthenticatorAttestationResponseValidator::create($ceremonySteps)
+                ->check($publicKeyCredential->response, $creationOptions, $relyingPartyId);
+        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError) {
+            throw new PasskeyRegistrationFailedException;
+        } catch (Throwable $throwable) {
+            report($throwable);
+
             throw new PasskeyRegistrationFailedException;
         }
 
@@ -110,13 +123,9 @@ final readonly class PasskeyCeremonyService
         );
     }
 
-    /**
-     * Keyed with the app key so the handle is stable per user (the authenticator
-     * groups a person's passkeys by it) without being derivable from the user id.
-     */
     private function userHandle(User $user): string
     {
-        return hash_hmac('sha256', 'passkey-user:' . $user->id, Config::string('app.key'), true);
+        return hash_hmac('sha256', 'passkey-user:' . $user->id, Config::string('passkeys.user_handle_secret'), true);
     }
 
     /**

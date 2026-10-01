@@ -23,10 +23,6 @@ final readonly class PasskeyChallengeStore
         );
     }
 
-    /**
-     * Returns the options once: a concurrent second request either loses the lock
-     * or finds the key already gone.
-     */
     public function pullRegistration(User $user): string|null
     {
         return $this->pull(self::REGISTRATION_KEY_PREFIX . $user->id);

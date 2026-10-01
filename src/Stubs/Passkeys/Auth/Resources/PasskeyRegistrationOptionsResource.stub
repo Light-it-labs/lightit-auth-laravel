@@ -9,8 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * The WebAuthn creation options, keyed as the browser API expects (camelCase).
- *
  * @property string $resource
  */
 #[SchemaName('PasskeyRegistrationOptions')]

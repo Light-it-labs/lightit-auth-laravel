@@ -31,5 +31,5 @@ export const renamePasskey = async ({ id, name }: RenamePasskeyPayload): Promise
 };
 
 export const deletePasskey = async ({ id, password }: DeletePasskeyPayload) => {
-  await api.delete(`passkeys/${id}`, { data: { password } });
+  await api.post(`passkeys/${id}/delete`, { password });
 };

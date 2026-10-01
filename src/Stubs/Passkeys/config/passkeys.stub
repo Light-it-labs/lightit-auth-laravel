@@ -23,6 +23,12 @@ return [
     ))),
 
     /*
+     * Keys the user handle stored on every authenticator. Changing it later breaks
+     * every passkey registered before the change.
+     */
+    'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET', env('APP_KEY')),
+
+    /*
      * How long a registration challenge stays valid, in seconds.
      */
     'challenge_ttl_seconds' => (int) env('PASSKEYS_CHALLENGE_TTL_SECONDS', 300),
