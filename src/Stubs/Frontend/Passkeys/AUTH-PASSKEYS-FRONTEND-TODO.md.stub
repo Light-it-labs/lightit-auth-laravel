@@ -21,8 +21,10 @@ The TanStack Router plugin adds the route to `src/routeTree.gen.ts` the next tim
    goes with the name to `POST passkeys`. The backend spends the challenge on that
    call, so a retry starts over from the password.
 3. A wrong password is a `422` on the `password` field and shows under it.
-4. A cancelled or timed-out browser prompt and a device that can't create passkeys
-   get their own message; any other failure shows `common.requestError`.
+4. A cancelled or timed-out browser prompt, a device that can't create passkeys, a
+   device that already holds a passkey for the account (the browser's
+   `InvalidStateError` or the backend's `409`) and an expired challenge (`410`) get
+   their own message; any other failure shows `common.requestError`.
 5. Rename and delete refresh the list. Delete asks for the password again
    (`POST passkeys/{id}/delete`).
 6. Without WebAuthn support in the browser the page says so instead of offering
@@ -67,7 +69,9 @@ The TanStack Router plugin adds the route to `src/routeTree.gen.ts` the next tim
   },
   "errors": {
     "cancelled": "The passkey request was cancelled or timed out.",
-    "unsupported": "This browser or device can't create passkeys."
+    "unsupported": "This browser or device can't create passkeys.",
+    "alreadyRegistered": "This device already has a passkey for your account.",
+    "challengeExpired": "That took too long. Try again."
   }
 }
 ```

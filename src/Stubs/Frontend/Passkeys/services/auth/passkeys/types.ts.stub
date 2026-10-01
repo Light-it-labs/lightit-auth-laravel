@@ -1,4 +1,5 @@
 import { WebAuthnError } from "@simplewebauthn/browser";
+import { isAxiosError } from "axios";
 
 export type Passkey = {
   id: number;
@@ -18,18 +19,32 @@ export type DeletePasskeyPayload = Pick<Passkey, "id"> & {
   password: string;
 };
 
-export type PasskeyCeremonyFailure = "cancelled" | "unsupported";
+export type PasskeyFailure = "cancelled" | "unsupported" | "alreadyRegistered" | "challengeExpired";
 
-const ceremonyFailureByErrorName: Partial<Record<string, PasskeyCeremonyFailure>> = {
+const failureByErrorName: Partial<Record<string, PasskeyFailure>> = {
   AbortError: "cancelled",
   NotAllowedError: "cancelled",
   NotSupportedError: "unsupported",
+  InvalidStateError: "alreadyRegistered",
 };
 
-export const getPasskeyCeremonyFailure = (error: unknown): PasskeyCeremonyFailure | null => {
+const failureByApiErrorCode: Partial<Record<string, PasskeyFailure>> = {
+  passkey_already_registered: "alreadyRegistered",
+  passkey_challenge_expired: "challengeExpired",
+};
+
+type PasskeyErrorBody = {
+  error?: { code?: string };
+};
+
+export const getPasskeyFailure = (error: unknown): PasskeyFailure | null => {
+  if (isAxiosError<PasskeyErrorBody>(error)) {
+    return failureByApiErrorCode[error.response?.data.error?.code ?? ""] ?? null;
+  }
+
   if (error instanceof WebAuthnError && error.code === "ERROR_CEREMONY_ABORTED") {
     return "cancelled";
   }
 
-  return error instanceof Error ? (ceremonyFailureByErrorName[error.name] ?? null) : null;
+  return error instanceof Error ? (failureByErrorName[error.name] ?? null) : null;
 };
