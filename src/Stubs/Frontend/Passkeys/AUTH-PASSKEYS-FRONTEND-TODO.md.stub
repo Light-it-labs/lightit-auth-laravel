@@ -93,7 +93,8 @@ the same way before or after the 2FA login-hook step.
 
 ## i18n keys
 
-`src/i18n/locales/en.json` is not edited for you. Add this block at the top level:
+`src/i18n/locales/en.json` is not edited for you. Add this block at the top level
+(and translate it in `src/i18n/locales/es.json`):
 
 ```json
 "passkeys": {
