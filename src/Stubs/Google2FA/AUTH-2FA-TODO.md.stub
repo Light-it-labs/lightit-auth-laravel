@@ -72,6 +72,13 @@ enables 2FA from their account instead, over the cookie session
 (`cannot_disable_2fa_unconfigured` / `cannot_regenerate_2fa_unconfigured`)
 when it is not on.
 
+`disable` and `regenerate-recovery-codes` take `{ password, code }`: the
+password and proof of the second factor. A 6-digit `code` is checked as a
+live one-time password (claimed once, like at login); anything else as a
+recovery code, which is spent. A wrong code answers `422` (`invalid_otp`)
+and counts toward the per-user lockout, counted outside the transaction
+that spends a recovery code.
+
 A wrong password on `enable`, `disable`, `regenerate-recovery-codes` or
 `request-reset` answers `422` (`invalid_password`), not `401`: the user is
 still signed in, and the frontend sends every `401` back to the login screen.
@@ -86,8 +93,9 @@ the cache (`Cache::add()`), so use a store shared by every app server, not
 `throttle:2fa`: 5 requests a minute per signed-in user on the account routes
 (`enable`, `confirm`, `disable`, `regenerate-recovery-codes` and
 `request-reset` share that bucket), per challenge token on the challenge
-routes, plus 30 a minute per IP. `complete` and `confirm` also count every
-attempt against the per-user lockout. `lightit-auth-laravel`'s
+routes, plus 30 a minute per IP. `complete`, `verify-recovery-code`, `confirm`,
+`disable` and `regenerate-recovery-codes` also count every code attempt
+against the per-user lockout. `lightit-auth-laravel`'s
 own service provider registers that named limiter in `boot()` when
 `\Lightit\Authentication\Domain\TwoFactorRateLimiter` exists - no
 `AppServiceProvider` paste needed, and it still runs under `php artisan
