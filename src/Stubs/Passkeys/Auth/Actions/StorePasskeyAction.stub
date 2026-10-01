@@ -28,15 +28,15 @@ final readonly class StorePasskeyAction
     public function execute(User $user, StorePasskeyDto $storePasskeyDto): Passkey
     {
         $options = $this->passkeyChallengeStore->pullRegistration($user)
-            ?? throw new PasskeyChallengeExpiredException();
+            ?? throw new PasskeyChallengeExpiredException;
 
         $verified = $this->passkeyCeremonyService->verifyRegistration($options, $storePasskeyDto->credential);
 
         if (Passkey::query()->where('credential_id_hash', $verified->credentialIdHash)->exists()) {
-            throw new PasskeyAlreadyRegisteredException();
+            throw new PasskeyAlreadyRegisteredException;
         }
 
-        $passkey = new Passkey();
+        $passkey = new Passkey;
 
         $passkey->user_id = $user->id;
         $passkey->name = $storePasskeyDto->name;
