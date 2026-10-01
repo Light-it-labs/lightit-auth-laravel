@@ -190,7 +190,7 @@ final readonly class PasskeyCeremonyService
             ->where('credential_id_hash', hash('sha256', $publicKeyCredential->rawId))
             ->first() ?? throw new PasskeyNotRecognisedException;
 
-        $userHandle = $this->userHandle($passkey->user_id);
+        $ownerHandle = $this->userHandle($passkey->user_id);
 
         $record = $this->guardLogin(
             static fn (): CredentialRecord => AuthenticatorAssertionResponseValidator::create($ceremonySteps)->check(
@@ -202,7 +202,7 @@ final readonly class PasskeyCeremonyService
                     trustPath: EmptyTrustPath::create(),
                     aaguid: Uuid::fromString($passkey->aaguid),
                     credentialPublicKey: Base64UrlSafe::decodeNoPadding($passkey->public_key),
-                    userHandle: $userHandle,
+                    userHandle: $ownerHandle,
                     counter: $passkey->sign_count,
                     backupEligible: $passkey->backup_eligible,
                     backupStatus: $passkey->backup_status,
@@ -210,7 +210,7 @@ final readonly class PasskeyCeremonyService
                 $response,
                 $requestOptions,
                 $relyingPartyId,
-                $userHandle,
+                null,
             ),
         );
 
