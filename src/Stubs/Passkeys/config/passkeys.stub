@@ -32,7 +32,7 @@ return [
     'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET'),
 
     /*
-     * How long a registration challenge stays valid, in seconds.
+     * How long a registration or sign-in challenge stays valid, in seconds.
      */
     'challenge_ttl_seconds' => (int) env('PASSKEYS_CHALLENGE_TTL_SECONDS', 300),
 

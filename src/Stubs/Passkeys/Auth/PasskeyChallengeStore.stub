@@ -12,6 +12,10 @@ final readonly class PasskeyChallengeStore
 {
     private const string REGISTRATION_KEY_PREFIX = 'passkeys:registration:';
 
+    private const string LOGIN_KEY_PREFIX = 'passkeys:login:';
+
+    public const string CEREMONY_ID_PATTERN = '/^[a-f0-9]{32}$/';
+
     private const int LOCK_SECONDS = 3;
 
     public function putRegistration(User $user, string $options): void
@@ -27,6 +31,28 @@ final readonly class PasskeyChallengeStore
     public function pullRegistration(User $user): string|null
     {
         return $this->pull(self::REGISTRATION_KEY_PREFIX . $user->id);
+    }
+
+    public function putLogin(string $options): string
+    {
+        $ceremonyId = bin2hex(random_bytes(16));
+
+        Cache::put(
+            self::LOGIN_KEY_PREFIX . $ceremonyId,
+            $options,
+            Config::integer('passkeys.challenge_ttl_seconds', 300),
+        );
+
+        return $ceremonyId;
+    }
+
+    public function pullLogin(string $ceremonyId): string|null
+    {
+        if (preg_match(self::CEREMONY_ID_PATTERN, $ceremonyId) !== 1) {
+            return null;
+        }
+
+        return $this->pull(self::LOGIN_KEY_PREFIX . $ceremonyId);
     }
 
     private function pull(string $key): string|null

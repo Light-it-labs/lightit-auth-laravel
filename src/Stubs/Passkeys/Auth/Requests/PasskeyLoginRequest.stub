@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+
+final class PasskeyLoginRequest extends FormRequest
+{
+    public const string CEREMONY_ID = 'ceremony_id';
+
+    public const string CREDENTIAL = 'credential';
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function rules(): array
+    {
+        return [
+            self::CEREMONY_ID => ['required', 'string', 'regex:' . PasskeyChallengeStore::CEREMONY_ID_PATTERN],
+            self::CREDENTIAL => ['required', 'array'],
+        ];
+    }
+
+    public function toDto(): PasskeyLoginDto
+    {
+        return new PasskeyLoginDto(
+            ceremonyId: $this->string(self::CEREMONY_ID)->toString(),
+            credential: json_encode($this->array(self::CREDENTIAL), JSON_THROW_ON_ERROR),
+        );
+    }
+}

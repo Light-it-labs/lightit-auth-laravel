@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class PasskeyNotRecognisedException extends HttpException
+{
+    #[\Override]
+    protected int $status = 422;
+
+    #[\Override]
+    protected string $errorCode = 'passkey_not_recognised';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'This passkey is not registered.';
+}

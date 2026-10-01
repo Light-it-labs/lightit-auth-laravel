@@ -18,7 +18,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 {
     public const PACKAGES = ['web-auth/webauthn-lib:^5.3'];
 
-    private const TOTAL_STEPS = 5;
+    private const TOTAL_STEPS = 6;
 
     private const ROUTES_LABEL = 'passkeys';
 
@@ -43,25 +43,36 @@ final class PasskeysInstaller implements AuthInstallerInterface
         'Models/Passkey.stub' => 'Domain/Models/Passkey.php',
         'DataTransferObjects/StorePasskeyDto.stub' => 'Domain/DataTransferObjects/StorePasskeyDto.php',
         'DataTransferObjects/VerifiedPasskeyDto.stub' => 'Domain/DataTransferObjects/VerifiedPasskeyDto.php',
+        'DataTransferObjects/VerifiedPasskeyAssertionDto.stub' => 'Domain/DataTransferObjects/VerifiedPasskeyAssertionDto.php',
+        'DataTransferObjects/PasskeyLoginOptionsDto.stub' => 'Domain/DataTransferObjects/PasskeyLoginOptionsDto.php',
+        'DataTransferObjects/PasskeyLoginDto.stub' => 'Domain/DataTransferObjects/PasskeyLoginDto.php',
         'Exceptions/PasskeyChallengeExpiredException.stub' => 'Domain/Exceptions/PasskeyChallengeExpiredException.php',
         'Exceptions/PasskeyRegistrationFailedException.stub' => 'Domain/Exceptions/PasskeyRegistrationFailedException.php',
         'Exceptions/PasskeyAlreadyRegisteredException.stub' => 'Domain/Exceptions/PasskeyAlreadyRegisteredException.php',
+        'Exceptions/PasskeyLoginFailedException.stub' => 'Domain/Exceptions/PasskeyLoginFailedException.php',
+        'Exceptions/PasskeyNotRecognisedException.stub' => 'Domain/Exceptions/PasskeyNotRecognisedException.php',
         'Actions/StartPasskeyRegistrationAction.stub' => 'Domain/Actions/StartPasskeyRegistrationAction.php',
         'Actions/StorePasskeyAction.stub' => 'Domain/Actions/StorePasskeyAction.php',
         'Actions/ListPasskeysAction.stub' => 'Domain/Actions/ListPasskeysAction.php',
         'Actions/RenamePasskeyAction.stub' => 'Domain/Actions/RenamePasskeyAction.php',
         'Actions/DeletePasskeyAction.stub' => 'Domain/Actions/DeletePasskeyAction.php',
+        'Actions/StartPasskeyLoginAction.stub' => 'Domain/Actions/StartPasskeyLoginAction.php',
+        'Actions/PasskeyLoginAction.stub' => 'Domain/Actions/PasskeyLoginAction.php',
         'Requests/StartPasskeyRegistrationRequest.stub' => 'App/Requests/StartPasskeyRegistrationRequest.php',
         'Requests/StorePasskeyRequest.stub' => 'App/Requests/StorePasskeyRequest.php',
         'Requests/RenamePasskeyRequest.stub' => 'App/Requests/RenamePasskeyRequest.php',
         'Requests/DeletePasskeyRequest.stub' => 'App/Requests/DeletePasskeyRequest.php',
+        'Requests/PasskeyLoginRequest.stub' => 'App/Requests/PasskeyLoginRequest.php',
         'Resources/PasskeyResource.stub' => 'App/Resources/PasskeyResource.php',
         'Resources/PasskeyRegistrationOptionsResource.stub' => 'App/Resources/PasskeyRegistrationOptionsResource.php',
+        'Resources/PasskeyLoginOptionsResource.stub' => 'App/Resources/PasskeyLoginOptionsResource.php',
         'Controllers/ListPasskeysController.stub' => 'App/Controllers/ListPasskeysController.php',
         'Controllers/StartPasskeyRegistrationController.stub' => 'App/Controllers/StartPasskeyRegistrationController.php',
         'Controllers/StorePasskeyController.stub' => 'App/Controllers/StorePasskeyController.php',
         'Controllers/RenamePasskeyController.stub' => 'App/Controllers/RenamePasskeyController.php',
         'Controllers/DeletePasskeyController.stub' => 'App/Controllers/DeletePasskeyController.php',
+        'Controllers/StartPasskeyLoginController.stub' => 'App/Controllers/StartPasskeyLoginController.php',
+        'Controllers/PasskeyLoginController.stub' => 'App/Controllers/PasskeyLoginController.php',
     ];
 
     public function __construct(
@@ -90,7 +101,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
         $this->writeFiles();
 
-        $this->composerInstaller->printSuccess('Passkey registration installed successfully!');
+        $this->composerInstaller->printSuccess('Passkeys installed successfully!');
     }
 
     /**
@@ -99,6 +110,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
     public function writeFiles(): void
     {
         $this->createAuthFiles();
+        $this->copySharedLoginFiles();
         $this->copyMigration();
         $this->copyConfigFile();
         $this->registerRoutes();
@@ -114,9 +126,18 @@ final class PasskeysInstaller implements AuthInstallerInterface
         }
     }
 
+    private function copySharedLoginFiles(): void
+    {
+        $this->composerInstaller->printStep(2, self::TOTAL_STEPS, 'Creating shared login primitives');
+
+        foreach (SharedLoginFiles::FILES as $stub => $destination) {
+            $this->copy(SharedLoginFiles::stubsPath() . $stub, "src/Authentication/{$destination}");
+        }
+    }
+
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(2, self::TOTAL_STEPS, 'Copying migration files');
+        $this->composerInstaller->printStep(3, self::TOTAL_STEPS, 'Copying migration files');
 
         $existing = $this->migrationLocator->find(base_path(self::MIGRATIONS_DIRECTORY), self::MIGRATION_NAME);
 
@@ -131,7 +152,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(3, self::TOTAL_STEPS, 'Copying config files');
+        $this->composerInstaller->printStep(4, self::TOTAL_STEPS, 'Copying config files');
 
         $this->copy(self::stubDirectory() . '/config/passkeys.stub', self::CONFIG_FILE);
     }
@@ -141,7 +162,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
      */
     private function registerRoutes(): void
     {
-        $this->composerInstaller->printStep(4, self::TOTAL_STEPS, 'Registering routes');
+        $this->composerInstaller->printStep(5, self::TOTAL_STEPS, 'Registering routes');
 
         $this->copy(self::stubDirectory() . '/routes/passkeys.stub', 'routes/' . self::ROUTES_FILE_NAME);
 
@@ -173,7 +194,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private function writeManualIntegrationGuide(): void
     {
-        $this->composerInstaller->printStep(5, self::TOTAL_STEPS, 'Writing integration guide');
+        $this->composerInstaller->printStep(6, self::TOTAL_STEPS, 'Writing integration guide');
 
         $outcome = $this->stubRenderer->renderTo(
             self::stubDirectory() . '/' . self::TODO_FILE . '.stub',
