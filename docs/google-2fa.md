@@ -248,7 +248,8 @@ timestep, kept for as long as the code stays valid (`(2 * window + 1) * 30` seco
 second request with the same code - a replay, or two tabs racing - gets `422` with
 `error.code` `otp_already_used`; the user waits for the next code, and the generated
 2FA screens say so instead of "wrong code". This applies to login
-verification, the challenge setup confirmation and the account activation below. It needs
+verification, the challenge setup confirmation, the account activation below and the
+code that `disable` and `regenerate-recovery-codes` ask for. It needs
 a cache store shared by every app server (not `array`), the same store the per-user
 lockout already relies on. No schema change.
 
@@ -298,7 +299,8 @@ challenge token.
 
 The generated frontend drives these calls from `/account/two-factor`, a page under the
 `_private` layout: turn on (password, QR code, first code, recovery codes shown once),
-regenerate recovery codes (password, new codes) and turn off (password; hidden while
+regenerate recovery codes (password and a code, new codes) and turn off (password and a
+code; hidden while
 `mandatory` is `true`, and a `403` gets its own message). When `status` says 2FA is not
 `available`, the page only says so and offers no action. The dialogs that show recovery
 codes can only be closed with their "I've saved my recovery codes" button. It writes:
@@ -309,6 +311,7 @@ codes can only be closed with their "I've saved my recovery codes" button. It wr
 - `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx`
 - `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx`
 - `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx`
+- `src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx`
 - `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts`
 - `src/components/two-factor/authenticator-secret.tsx` and `src/components/two-factor/recovery-codes.tsx`, shared with the login setup screen
 
@@ -329,20 +332,31 @@ sends every `401` back to the login screen.
    - Bearer: reset token
    - Returns: `{ data: { message } }`
 
+**Second factor on regenerate and disable.** Both take the password and a `code`, so a
+password and a signed-in session alone can't strip or replace the second factor. A
+6-digit `code` is checked as a live one-time password, with the replay protection above;
+anything else is checked as a recovery code, and a matching one is spent. The password is
+checked first. A wrong code returns `422` with `error.code` `invalid_otp` (`otp_already_used`
+for a replayed one) and counts toward the same per-user lockout as login: `429` after 5
+failed attempts, cleared by a valid code. The attempt is counted before, and outside, the
+transaction that spends a recovery code, so a `database` cache store keeps the count.
+
 **Regenerate recovery codes:**
 
 1. `POST /2fa/regenerate-recovery-codes`
    - Auth: cookie session
-   - Body: `{ "password": "..." }`
+   - Body: `{ "password": "...", "code": "..." }`
    - Returns: `{ data: { recovery_codes[] } }`
+   - Returns `422` for a wrong password or code, `429` after 5 failed codes
    - Returns `409` (`cannot_regenerate_2fa_unconfigured`) if 2FA is not on
 
 **Disable 2FA:**
 
 1. `POST /2fa/disable`
    - Auth: cookie session
-   - Body: `{ "password": "..." }`
+   - Body: `{ "password": "...", "code": "..." }`
    - Returns: `{ data: { message } }`
+   - Returns `422` for a wrong password or code, `429` after 5 failed codes
    - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
    - Returns `409` (`cannot_disable_2fa_unconfigured`) if 2FA is not on
 
@@ -378,7 +392,8 @@ flowchart TD
 ```
 
 **Managing 2FA once logged in.** These are separate requests made later, each
-authenticated with the cookie session above and confirmed with the account password.
+authenticated with the cookie session above and confirmed with the account password;
+regenerate and disable also need a one-time password or a recovery code.
 
 ```mermaid
 flowchart TD
@@ -391,12 +406,12 @@ flowchart TD
     Confirm -- valid --> Enabled[2FA enabled + recovery codes]
 
     Regenerate[POST /2fa/regenerate-recovery-codes] -- 2FA not on --> E409
-    Regenerate -- wrong password --> E422
+    Regenerate -- wrong password or code --> E422
     Regenerate -- valid --> NewCodes[New recovery codes]
 
     Disable[POST /2fa/disable] -- 2FA is mandatory --> E403[403 Forbidden]
     Disable -- 2FA not on --> E409
-    Disable -- wrong password --> E422
+    Disable -- wrong password or code --> E422
     Disable -- valid --> Disabled[2FA disabled]
 
     RequestReset[POST /2fa/request-reset] -- wrong password --> E422
