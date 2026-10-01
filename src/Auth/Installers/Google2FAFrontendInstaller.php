@@ -7,16 +7,12 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
-use Lightitlabs\Auth\Frontend\FrontendStubTokens;
-use Lightitlabs\Console\LightitConsoleOutput;
+use Lightitlabs\Auth\Frontend\FrontendStubWriter;
 use Lightitlabs\Contracts\AuthInstallerInterface;
-use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
 
 final class Google2FAFrontendInstaller implements AuthInstallerInterface
 {
-    use LightitConsoleOutput;
-
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
 
     private const REQUIRED_DEPENDENCIES = [
@@ -61,15 +57,17 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'routes/_private/account/two-factor/page.tsx.stub' => 'src/routes/_private/account/two-factor/page.tsx',
     ];
 
+    private readonly FrontendStubWriter $writer;
+
     public function __construct(
         protected Command $command,
-        private readonly StubRenderer $stubRenderer,
-        private readonly FrontendProjectLocator $locator,
-        private readonly FrontendPackageManifest $manifest,
+        StubRenderer $stubRenderer,
+        FrontendProjectLocator $locator,
+        FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
         private readonly string|null $frontendPath = null,
     ) {
-        $this->initializeOutput($this->command);
+        $this->writer = new FrontendStubWriter($this->command, $stubRenderer, $locator, $manifest);
     }
 
     public static function stubDirectory(): string
@@ -79,23 +77,17 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
     public function install(): void
     {
-        $root = $this->locator->locate($this->laravelRoot, $this->frontendPath);
+        $root = $this->writer->locate($this->laravelRoot, $this->frontendPath, '2FA');
 
         if ($root === null) {
-            $this->reportUnresolvedRoot();
-
             return;
         }
 
-        $this->command->info("Frontend project resolved: {$root}");
+        $tokens = $this->writer->tokens($root, $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES));
 
-        $tokens = $this->tokens($root);
-
-        foreach (self::FILES as $stub => $relative) {
-            $this->write($root, $stub, $relative, $tokens);
+        foreach ([...self::FILES, self::TODO_FILE . '.stub' => self::TODO_FILE] as $stub => $relative) {
+            $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
         }
-
-        $this->write($root, self::TODO_FILE . '.stub', self::TODO_FILE, $tokens);
 
         $this->command->info('Frontend two-factor authentication services, login screens and account page generated.');
 
@@ -121,72 +113,5 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         $this->command->line('  3. Replace:  const loginMutation = useLogin();');
         $this->command->line('     with:     const loginMutation = useTwoFactorLogin();');
         $this->command->line('Then add the i18n keys listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.');
-    }
-
-    /**
-     * @param array<string, string> $tokens
-     */
-    private function write(string $root, string $stub, string $relative, array $tokens): void
-    {
-        $destination = $this->locator->resolveDestination($root, $relative);
-
-        $outcome = $this->stubRenderer->renderTo(self::stubDirectory() . '/' . $stub, $destination, $tokens);
-
-        match ($outcome) {
-            StubCopyOutcome::Written => $this->command->line("Created: {$relative}"),
-            StubCopyOutcome::Skipped => $this->printSkipped($relative),
-        };
-    }
-
-    private function reportUnresolvedRoot(): void
-    {
-        if ($this->frontendPath !== null && $this->frontendPath !== '') {
-            $this->command->error(
-                'Invalid --frontend-path: ' . $this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
-            );
-
-            return;
-        }
-
-        $this->command->warn(
-            'No React project found next to the application. Skipping the 2FA frontend step. '
-            . 'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
-        );
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function tokens(string $root): array
-    {
-        return [
-            ...FrontendStubTokens::defaults(),
-            'packageManager' => $this->manifest->packageManager($root),
-            'dependencyReport' => $this->dependencyReport($root),
-        ];
-    }
-
-    private function dependencyReport(string $root): string
-    {
-        $installed = $this->manifest->dependencies($root);
-
-        $missing = array_values(array_filter(
-            self::REQUIRED_DEPENDENCIES,
-            static function (string $dependency) use ($installed): bool {
-                return ! \array_key_exists($dependency, $installed);
-            }
-        ));
-
-        if ($missing === []) {
-            return FrontendStubTokens::defaults()['dependencyReport'];
-        }
-
-        return trim(implode("\n", [
-            'Missing dependencies. Run:',
-            '',
-            '```sh',
-            $this->manifest->addCommand($root) . ' ' . implode(' ', $missing),
-            '```',
-        ]));
     }
 }
