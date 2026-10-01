@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
 use Illuminate\Support\Facades\Schema;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\ConfirmTwoFactorAuthenticationAction;
+use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\ConsumeRecoveryCodeAction;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\DisableTwoFactorAuthenticationAction;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\EnableTwoFactorAuthenticationAction;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\FakeGoogle2FA;
@@ -23,6 +24,7 @@ use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\StubLoader;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\TwoFactorAuthException;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\TwoFactorStatusResource;
 use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\VerifyOtpAction;
+use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\VerifyTwoFactorCodeAction;
 
 StubLoader::load(
     'Shared/Auth/TwoFactorAuthenticatable.stub',
@@ -33,6 +35,8 @@ StubLoader::load(
     'Google2FA/Auth/Actions/GenerateQRCodeAction.stub',
     'Google2FA/Auth/Actions/GenerateRecoveryCodesAction.stub',
     'Google2FA/Auth/Actions/VerifyOtpAction.stub',
+    'Google2FA/Auth/Actions/ConsumeRecoveryCodeAction.stub',
+    'Google2FA/Auth/Actions/VerifyTwoFactorCodeAction.stub',
     'Google2FA/Auth/Actions/EnableTwoFactorAuthenticationAction.stub',
     'Google2FA/Auth/Actions/ConfirmTwoFactorAuthenticationAction.stub',
     'Google2FA/Auth/Actions/RegenerateRecoveryCodesAction.stub',
@@ -110,13 +114,20 @@ beforeEach(function (): void {
         new GenerateRecoveryCodesAction(),
     );
 
+    $verifyTwoFactorCode = new VerifyTwoFactorCodeAction(
+        new VerifyOtpAction($this->google2FA),
+        new ConsumeRecoveryCodeAction(),
+    );
+
     $this->regenerate = new RegenerateRecoveryCodesAction(
         new PasswordValidatorAction(),
+        $verifyTwoFactorCode,
         new GenerateRecoveryCodesAction(),
     );
 
     $this->disable = new DisableTwoFactorAuthenticationAction(
         new PasswordValidatorAction(),
+        $verifyTwoFactorCode,
         new ResetTwoFactorAuthenticationAction(),
     );
 });
@@ -126,8 +137,20 @@ function activeTwoFactorUser(): FakeUser
     return enrollingUser([
         'two_factor_auth_secret' => 'ACTIVE-SECRET',
         'two_factor_auth_activated_at' => now(),
-        'recovery_codes' => json_encode(['old-code-hash']),
+        'recovery_codes' => json_encode([Hash::make('first-recovery-code'), Hash::make('spare-recovery-code')]),
     ]);
+}
+
+function useDatabaseCacheStore(): void
+{
+    Schema::create('cache', function (Blueprint $table): void {
+        $table->string('key')->primary();
+        $table->mediumText('value');
+        $table->integer('expiration');
+    });
+    config(['cache.default' => 'database', 'cache.stores.database.connection' => null]);
+    app()->forgetInstance(RateLimiter::class);
+    RateLimiterFacade::clearResolvedInstance(RateLimiter::class);
 }
 
 describe('EnableTwoFactorAuthenticationAction stub', function (): void {
@@ -368,31 +391,165 @@ describe('TwoFactorStatusResource stub', function (): void {
     });
 });
 
-describe('RegenerateRecoveryCodesAction stub', function (): void {
-    it('replaces the recovery codes of a user with active 2FA', function (): void {
+dataset('second-factor guarded actions', ['regenerate', 'disable']);
+
+describe('the second factor on regenerate and disable', function (): void {
+    it('rejects an empty code with 422 and changes nothing', function (string $action): void {
         $user = activeTwoFactorUser();
 
-        $recoveryCodes = $this->regenerate->execute($user, 'correct-password');
+        $exception = enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', ''));
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('invalid_otp')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue()
+            ->and($user->getRecoveryCodes())->toHaveCount(2);
+    })->with('second-factor guarded actions');
+
+    it('rejects a wrong authenticator code with 422 and changes nothing', function (string $action): void {
+        $user = activeTwoFactorUser();
+
+        $exception = enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', '000000'));
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('invalid_otp')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue()
+            ->and($user->getRecoveryCodes())->toHaveCount(2);
+    })->with('second-factor guarded actions');
+
+    it('rejects a wrong recovery code with 422 and keeps every recovery code', function (string $action): void {
+        $user = activeTwoFactorUser();
+
+        $exception = enrollmentFailure(
+            fn () => $this->{$action}->execute($user, 'correct-password', 'not-a-recovery-code')
+        );
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('invalid_otp')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue()
+            ->and($user->getRecoveryCodes())->toHaveCount(2);
+    })->with('second-factor guarded actions');
+
+    it(
+        'checks the password before the code, and does not spend the code on a wrong password',
+        function (string $action): void {
+            $user = activeTwoFactorUser();
+    
+            $exception = enrollmentFailure(fn () => $this->{$action}->execute($user, 'wrong-password', '123456'));
+    
+            expect($exception->errorCode())->toBe('invalid_password')
+                ->and($this->google2FA->verifiedSecrets)->toBe([]);
+        }
+    )->with('second-factor guarded actions');
+
+    it('locks the user out with 429 after 5 wrong codes, even before a correct one', function (string $action): void {
+        $user = activeTwoFactorUser();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            enrollmentFailure(
+                fn () => $this->{$action}->execute(
+                    $user,
+                    'correct-password',
+                    $attempt % 2 === 0 ? '000000' : 'wrong-code'
+                )
+            );
+        }
+
+        $exception = enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', '123456'));
+
+        expect($exception->statusCode())->toBe(429)
+            ->and($exception->errorCode())->toBe('too_many_attempts')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue()
+            ->and($user->getRecoveryCodes())->toHaveCount(2);
+    })->with('second-factor guarded actions');
+
+    it(
+        'keeps counting wrong recovery codes when the cache store writes to the database',
+        function (string $action): void {
+            useDatabaseCacheStore();
+            $user = activeTwoFactorUser();
+    
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', 'wrong-code'));
+            }
+    
+            $exception = enrollmentFailure(
+                fn () => $this->{$action}->execute($user, 'correct-password', 'spare-recovery-code')
+            );
+    
+            expect($exception->statusCode())->toBe(429)
+                ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue()
+                ->and($user->getRecoveryCodes())->toHaveCount(2)
+                ->and(DB::table('cache')->count())->toBeGreaterThan(0);
+        }
+    )->with('second-factor guarded actions');
+
+    it('rejects an authenticator code the same user already spent in this window', function (string $action): void {
+        $user = activeTwoFactorUser();
+        (new VerifyOtpAction($this->google2FA))->execute($user->getKey(), 'ACTIVE-SECRET', '123456');
+
+        $exception = enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', '123456'));
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('otp_already_used')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue();
+    })->with('second-factor guarded actions');
+
+    it('clears the lockout count once a valid code is accepted', function (string $action): void {
+        $user = activeTwoFactorUser();
+
+        for ($attempt = 0; $attempt < 4; $attempt++) {
+            enrollmentFailure(fn () => $this->{$action}->execute($user, 'correct-password', '000000'));
+        }
+
+        $this->{$action}->execute($user, 'correct-password', '123456');
+
+        expect(RateLimiterFacade::attempts('2fa-user-attempts|' . $user->getKey()))->toBe(0);
+    })->with('second-factor guarded actions');
+});
+
+describe('RegenerateRecoveryCodesAction stub', function (): void {
+    it('replaces the recovery codes when the password and a live authenticator code match', function (): void {
+        $user = activeTwoFactorUser();
+        $previousHashes = $user->getRecoveryCodes();
+
+        $recoveryCodes = $this->regenerate->execute($user, 'correct-password', '123456');
 
         expect($recoveryCodes)->toHaveCount(8)
-            ->and($user->getRecoveryCodes())->not->toContain('old-code-hash')
-            ->and(Hash::check($recoveryCodes[0], $user->getRecoveryCodes()[0]))->toBeTrue();
+            ->and(array_intersect($previousHashes, $user->getRecoveryCodes()))->toBe([])
+            ->and(Hash::check($recoveryCodes[0], $user->getRecoveryCodes()[0]))->toBeTrue()
+            ->and($this->google2FA->verifiedSecrets)->toBe(['ACTIVE-SECRET']);
+    });
+
+    it('accepts an unused recovery code instead, and that code no longer works afterwards', function (): void {
+        $user = activeTwoFactorUser();
+
+        $recoveryCodes = $this->regenerate->execute($user, 'correct-password', 'spare-recovery-code');
+
+        expect($recoveryCodes)->toHaveCount(8)
+            ->and(FakeUser::$lockedKeys)->toBe([$user->getKey()])
+            ->and($this->google2FA->verifiedSecrets)->toBe([]);
+
+        $exception = enrollmentFailure(
+            fn () => $this->regenerate->execute($user, 'correct-password', 'spare-recovery-code')
+        );
+
+        expect($exception->errorCode())->toBe('invalid_otp');
     });
 
     it('rejects a wrong password with 422 and keeps the current codes', function (): void {
         $user = activeTwoFactorUser();
 
-        $exception = enrollmentFailure(fn () => $this->regenerate->execute($user, 'wrong-password'));
+        $exception = enrollmentFailure(fn () => $this->regenerate->execute($user, 'wrong-password', '123456'));
 
         expect($exception->statusCode())->toBe(422)
             ->and($exception->errorCode())->toBe('invalid_password')
-            ->and($user->getRecoveryCodes())->toBe(['old-code-hash']);
+            ->and($user->getRecoveryCodes())->toHaveCount(2);
     });
 
     it('refuses with 409 when 2FA is not on, before checking the password', function (): void {
         $user = enrollingUser(['two_factor_auth_secret' => 'PENDING-SECRET']);
 
-        $exception = enrollmentFailure(fn () => $this->regenerate->execute($user, 'wrong-password'));
+        $exception = enrollmentFailure(fn () => $this->regenerate->execute($user, 'wrong-password', '123456'));
 
         expect($exception->statusCode())->toBe(409)
             ->and($exception->errorCode())->toBe('cannot_regenerate_2fa_unconfigured')
@@ -401,10 +558,41 @@ describe('RegenerateRecoveryCodesAction stub', function (): void {
 });
 
 describe('DisableTwoFactorAuthenticationAction stub', function (): void {
+    it('turns 2FA off when the password and a live authenticator code match', function (): void {
+        $user = activeTwoFactorUser();
+
+        $this->disable->execute($user, 'correct-password', '123456');
+
+        expect($user->hasTwoFactorAuthenticationConfigured())->toBeFalse()
+            ->and($user->getTwoFactorAuthSecret())->toBeNull()
+            ->and($user->getRecoveryCodes())->toBe([]);
+    });
+
+    it('turns 2FA off with an unused recovery code instead of an authenticator code', function (): void {
+        $user = activeTwoFactorUser();
+
+        $this->disable->execute($user, 'correct-password', 'spare-recovery-code');
+
+        expect($user->hasTwoFactorAuthenticationConfigured())->toBeFalse()
+            ->and(FakeUser::$lockedKeys)->toBe([$user->getKey()])
+            ->and($this->google2FA->verifiedSecrets)->toBe([]);
+    });
+
+    it('refuses with 403 while 2FA is mandatory, before checking the password or the code', function (): void {
+        config(['google2fa.mandatory' => true]);
+        $user = activeTwoFactorUser();
+
+        $exception = enrollmentFailure(fn () => $this->disable->execute($user, 'wrong-password', '000000'));
+
+        expect($exception->statusCode())->toBe(403)
+            ->and($exception->errorCode())->toBe('disable_forbidden')
+            ->and($user->hasTwoFactorAuthenticationConfigured())->toBeTrue();
+    });
+
     it('refuses with 409 for a setup that was started but never confirmed', function (): void {
         $user = enrollingUser(['two_factor_auth_secret' => 'PENDING-SECRET']);
 
-        $exception = enrollmentFailure(fn () => $this->disable->execute($user, 'correct-password'));
+        $exception = enrollmentFailure(fn () => $this->disable->execute($user, 'correct-password', '123456'));
 
         expect($exception->statusCode())->toBe(409)
             ->and($exception->errorCode())->toBe('cannot_disable_2fa_unconfigured')

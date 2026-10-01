@@ -30,6 +30,14 @@ final class FakeUser extends TwoFactorAuthenticatable
         return new FakeUserQuery();
     }
 
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        $this->forceFill($attributes);
+        $this->saves++;
+
+        return true;
+    }
+
     public function saveOrFail(array $options = []): bool
     {
         $this->saves++;

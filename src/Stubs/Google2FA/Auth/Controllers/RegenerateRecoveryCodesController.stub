@@ -19,7 +19,11 @@ final readonly class RegenerateRecoveryCodesController
         GenerateRecoveryCodesRequest $request,
         RegenerateRecoveryCodesAction $regenerateRecoveryCodesAction,
     ): JsonResponse {
-        $recoveryCodes = $regenerateRecoveryCodesAction->execute($user, $request->getPassword());
+        $recoveryCodes = $regenerateRecoveryCodesAction->execute(
+            $user,
+            $request->getPassword(),
+            $request->getCode(),
+        );
 
         return TwoFactorRecoveryCodesResource::make($recoveryCodes)->response();
     }

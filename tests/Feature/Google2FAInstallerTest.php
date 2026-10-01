@@ -21,6 +21,8 @@ describe('Google2FAInstaller', function (): void {
             'src/Authentication/Domain/TwoFactorAttemptLimiter.php',
             'src/Authentication/Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             'src/Authentication/Domain/Actions/VerifyRecoveryCodeAction.php',
+            'src/Authentication/Domain/Actions/ConsumeRecoveryCodeAction.php',
+            'src/Authentication/Domain/Actions/VerifyTwoFactorCodeAction.php',
             'src/Authentication/Domain/Actions/EnableTwoFactorAuthenticationAction.php',
             'src/Authentication/Domain/Actions/ConfirmTwoFactorAuthenticationAction.php',
             'src/Authentication/Domain/Actions/RegenerateRecoveryCodesAction.php',
