@@ -29,11 +29,12 @@ this file once you've read it.
 ## Endpoints
 
 All in `routes/passkeys.php`, which `routes/api.php` requires. The two
-`auth/passkeys/*` routes are public; the `passkeys/*` routes are under
-`auth:sanctum`. Every route but the list uses `throttle:passkeys` (6 a minute
-per user, or per IP before sign-in, and 30 per IP), registered by `lightit-auth-laravel`'s own service provider
-when `\Lightit\Authentication\Domain\PasskeyRateLimiter` exists, so the
-package must stay a runtime dependency.
+`auth/passkeys/*` sign-in routes are public and share `throttle:passkeys-sign-in`
+(20 a minute per IP, so a sign-in costs two). The `passkeys/*` routes are under
+`auth:sanctum`, and every one but the list uses `throttle:passkeys` (6 a minute
+per user, 30 per IP). Both limiters are registered by `lightit-auth-laravel`'s
+own service provider when `\Lightit\Authentication\Domain\PasskeyRateLimiter`
+exists, so the package must stay a runtime dependency.
 
 | Method | Path | Body | Answer |
 | --- | --- | --- | --- |
