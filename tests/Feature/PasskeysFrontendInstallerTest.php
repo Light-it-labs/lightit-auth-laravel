@@ -25,6 +25,8 @@ describe('PasskeysFrontendInstaller', function (): void {
             'src/routes/_private/account/passkeys/-components/rename-passkey-dialog.tsx',
             'src/routes/_private/account/passkeys/-components/delete-passkey-dialog.tsx',
             'src/routes/_private/account/passkeys/page.tsx',
+            'src/routes/(public)/_guest/login/-components/passkey-login-button.tsx',
+            'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts',
         ];
 
         $root = $this->root;
@@ -46,14 +48,17 @@ describe('PasskeysFrontendInstaller', function (): void {
         File::deleteDirectory($this->root);
     });
 
-    it('writes the passkey services, the account page and the TODO with every placeholder resolved', function (): void {
-        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-
-        foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
-            expect($this->root . '/' . $relative)->toBeFile()
-                ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
+    it(
+        'writes the passkey services, the account page, the sign-in button and the TODO with every placeholder resolved',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+    
+            foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
+                expect($this->root . '/' . $relative)->toBeFile()
+                    ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
+            }
         }
-    });
+    );
 
     it('writes the TODO as a short checklist that says to delete it when done', function (): void {
         $this->artisan('passkeys-frontend-fake')->assertSuccessful();
@@ -203,5 +208,65 @@ describe('PasskeysFrontendInstaller', function (): void {
 
         expect(file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'))
             ->toContain('pnpm add @simplewebauthn/browser date-fns');
+    });
+
+    it('signs in with the user-only hook when the 2FA frontend is not there', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
+            ->toContain('getUserSchema().parse(await authenticateWithPasskey())')
+            ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
+            ->not->toContain('two-factor');
+    });
+
+    it('routes a 2FA challenge to the 2FA screens when the 2FA frontend is already there', function (): void {
+        foreach ([
+            'src/stores/use-two-factor-challenge-store.ts',
+            'src/services/auth/two-factor/types.ts',
+            'src/routes/(public)/_guest/two-factor/page.tsx',
+            'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+        ] as $relative) {
+            File::ensureDirectoryExists(\dirname($this->root . '/' . $relative));
+            file_put_contents($this->root . '/' . $relative, 'export {};' . PHP_EOL);
+        }
+
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
+            ->toContain('from "@/services/auth/two-factor/types"')
+            ->toContain('from "@/stores/use-two-factor-challenge-store"')
+            ->toContain('startChallenge(result);')
+            ->toContain('to: isSetupRequired(result) ? "/two-factor/setup" : "/two-factor"')
+            ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })');
+    });
+
+    it('prints the login form step with the exact import and JSX the TODO documents', function (): void {
+        $this->artisan('passkeys-frontend-fake')
+            ->expectsOutputToContain('Manual step: add the passkey sign-in button to the login form.')
+            ->expectsOutputToContain('In src/routes/(public)/_guest/login/-components/login-form.tsx:')
+            ->expectsOutputToContain('import { PasskeyLoginButton } from "./passkey-login-button";')
+            ->expectsOutputToContain('<PasskeyLoginButton />')
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'))
+            ->toContain('import { PasskeyLoginButton } from "./passkey-login-button";')
+            ->toContain('<PasskeyLoginButton />')
+            ->and(
+                file_get_contents(
+                    $this->root . '/src/routes/(public)/_guest/login/-components/passkey-login-button.tsx'
+                )
+            )
+            ->toContain('export const PasskeyLoginButton = ')
+            ->toContain('type="button"')
+            ->toContain('navigate(redirectTarget(search.redirect))');
+    });
+
+    it('calls ensureCsrf before the public sign-in requests', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/passkeys/api.ts');
+
+        expect(strpos($api, 'await ensureCsrf();'))->toBeLessThan(strpos($api, 'auth/passkeys/login-options'))
+            ->and(strpos($api, 'auth/passkeys/login-options'))->toBeLessThan(strpos($api, '"auth/passkeys/login"'));
     });
 });
