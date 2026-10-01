@@ -1,0 +1,56 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\DataTransferObjects\StorePasskeyDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyAlreadyRegisteredException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyChallengeExpiredException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class StorePasskeyAction
+{
+    public function __construct(
+        private PasskeyCeremonyService $passkeyCeremonyService,
+        private PasskeyChallengeStore $passkeyChallengeStore,
+    ) {}
+
+    /**
+     * @throws PasskeyChallengeExpiredException
+     * @throws PasskeyRegistrationFailedException
+     * @throws PasskeyAlreadyRegisteredException
+     */
+    public function execute(User $user, StorePasskeyDto $storePasskeyDto): Passkey
+    {
+        $options = $this->passkeyChallengeStore->pullRegistration($user)
+            ?? throw new PasskeyChallengeExpiredException();
+
+        $verified = $this->passkeyCeremonyService->verifyRegistration($options, $storePasskeyDto->credential);
+
+        if (Passkey::query()->where('credential_id_hash', $verified->credentialIdHash)->exists()) {
+            throw new PasskeyAlreadyRegisteredException();
+        }
+
+        $passkey = new Passkey();
+
+        $passkey->user_id = $user->id;
+        $passkey->name = $storePasskeyDto->name;
+        $passkey->credential_id_hash = $verified->credentialIdHash;
+        $passkey->credential_id = $verified->credentialId;
+        $passkey->public_key = $verified->publicKey;
+        $passkey->sign_count = $verified->signCount;
+        $passkey->transports = $verified->transports;
+        $passkey->aaguid = $verified->aaguid;
+        $passkey->backup_eligible = $verified->backupEligible;
+        $passkey->backup_status = $verified->backupStatus;
+
+        $passkey->saveOrFail();
+
+        return $passkey;
+    }
+}

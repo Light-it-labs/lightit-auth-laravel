@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\RenamePasskeyRequest;
+use Lightit\Authentication\App\Resources\PasskeyResource;
+use Lightit\Authentication\Domain\Actions\RenamePasskeyAction;
+use Lightit\Authentication\Domain\Models\Passkey;
+
+final readonly class RenamePasskeyController
+{
+    public function __invoke(
+        RenamePasskeyRequest $request,
+        Passkey $passkey,
+        RenamePasskeyAction $renamePasskeyAction,
+    ): JsonResponse {
+        return PasskeyResource::make($renamePasskeyAction->execute($passkey, $request->getName()))->response();
+    }
+}

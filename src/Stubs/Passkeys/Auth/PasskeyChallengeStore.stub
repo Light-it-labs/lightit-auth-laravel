@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Config;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class PasskeyChallengeStore
+{
+    private const string REGISTRATION_KEY_PREFIX = 'passkeys:registration:';
+
+    private const int LOCK_SECONDS = 10;
+
+    public function putRegistration(User $user, string $options): void
+    {
+        Cache::put(
+            self::REGISTRATION_KEY_PREFIX . $user->id,
+            $options,
+            Config::integer('passkeys.challenge_ttl_seconds', 300),
+        );
+    }
+
+    /**
+     * Returns the options once: a concurrent second request either loses the lock
+     * or finds the key already gone.
+     */
+    public function pullRegistration(User $user): string|null
+    {
+        return $this->pull(self::REGISTRATION_KEY_PREFIX . $user->id);
+    }
+
+    private function pull(string $key): string|null
+    {
+        $options = Cache::lock($key . ':lock', self::LOCK_SECONDS)
+            ->get(static fn (): mixed => Cache::pull($key));
+
+        return is_string($options) ? $options : null;
+    }
+}

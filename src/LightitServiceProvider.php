@@ -20,6 +20,12 @@ class LightitServiceProvider extends PackageServiceProvider
      */
     private const TWO_FACTOR_RATE_LIMITER = 'Lightit\Authentication\Domain\TwoFactorRateLimiter';
 
+    /**
+     * FQCN of the stub the consuming app gets once it installs passkeys, for the
+     * same reason as TWO_FACTOR_RATE_LIMITER.
+     */
+    private const PASSKEY_RATE_LIMITER = 'Lightit\Authentication\Domain\PasskeyRateLimiter';
+
     public function configurePackage(Package $package): void
     {
         /*
@@ -47,6 +53,10 @@ class LightitServiceProvider extends PackageServiceProvider
     {
         if (class_exists(self::TWO_FACTOR_RATE_LIMITER)) {
             self::TWO_FACTOR_RATE_LIMITER::register();
+        }
+
+        if (class_exists(self::PASSKEY_RATE_LIMITER)) {
+            self::PASSKEY_RATE_LIMITER::register();
         }
     }
 }
