@@ -19,6 +19,7 @@ describe('Google2FAFrontendInstaller', function (): void {
             'src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx',
             'src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx',
             'src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx',
+            'src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx',
             'src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts',
         ];
 
@@ -293,6 +294,25 @@ describe('Google2FAFrontendInstaller', function (): void {
         ))
             ->toContain('error.response?.status === HttpStatusCode.Forbidden')
             ->toContain('t("twoFactor.account.disable.mandatory")');
+    });
+
+    it('sends the password and a second-factor code to disable and regenerate', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/services/auth/two-factor/api.ts'))
+            ->toContain('api.post("2fa/disable", { password, code })')
+            ->toMatch('/api\.post\("2fa\/regenerate-recovery-codes", \{\s+password,\s+code,\s+\}\)/');
+
+        foreach ([
+            'src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx',
+            'src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx',
+        ] as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->toContain('<SecondFactorConfirmationForm')
+                ->not->toContain('PasswordConfirmationForm');
+        }
     });
 
     it('never posts from an effect, so StrictMode cannot send an account request twice', function (): void {

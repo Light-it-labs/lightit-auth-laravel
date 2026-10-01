@@ -12,6 +12,7 @@ import {
   type PasswordPayload,
   type RecoveryCodePayload,
   type RecoveryCodesResult,
+  type SecondFactorConfirmationPayload,
   type TwoFactorChallengeResult,
   type TwoFactorEnrollment,
   type TwoFactorResetChallengeResult,
@@ -83,16 +84,23 @@ export const resetTwoFactor = async ({ token }: { token: string }): Promise<Mess
   return {{ currentUserResponseAccessor }};
 };
 
-export const disableTwoFactor = async ({ password }: PasswordPayload): Promise<MessageResult> => {
-  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password });
+export const disableTwoFactor = async ({
+  code,
+  password,
+}: SecondFactorConfirmationPayload): Promise<MessageResult> => {
+  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password, code });
 
   return {{ currentUserResponseAccessor }};
 };
 
 export const regenerateRecoveryCodes = async ({
+  code,
   password,
-}: PasswordPayload): Promise<RecoveryCodesResult> => {
-  const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", { password });
+}: SecondFactorConfirmationPayload): Promise<RecoveryCodesResult> => {
+  const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", {
+    password,
+    code,
+  });
 
   return {{ currentUserResponseAccessor }};
 };

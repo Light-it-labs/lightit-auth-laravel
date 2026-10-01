@@ -1,0 +1,136 @@
+import { useState } from "react";
+import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Input } from "@/components/ui/input";
+import { InputOtp } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useTranslation } from "@/i18n";
+import { getSecondFactorConfirmationSchema } from "@/services/auth/two-factor/schemas";
+import type { SecondFactorConfirmationPayload } from "@/services/auth/two-factor/types";
+import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
+
+const ONE_TIME_PASSWORD_LENGTH = 6;
+
+const ONE_TIME_PASSWORD_SLOTS = Array.from({ length: ONE_TIME_PASSWORD_LENGTH }, (_, index) => {
+  return index;
+});
+
+type SecondFactorConfirmationFormProps = {
+  isPending: boolean;
+  submitLabel: string;
+  onConfirm: (
+    payload: SecondFactorConfirmationPayload,
+    onFailed: (error: unknown) => Promise<void>,
+  ) => void;
+};
+
+export const SecondFactorConfirmationForm = ({
+  isPending,
+  onConfirm,
+  submitLabel,
+}: SecondFactorConfirmationFormProps) => {
+  const { t } = useTranslation();
+
+  const [isUsingRecoveryCode, setIsUsingRecoveryCode] = useState(false);
+
+  const { onSecondFactorError } = useTwoFactorAccountErrors();
+
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+    register,
+    resetField,
+    setError,
+  } = useForm({
+    defaultValues: { password: "", code: "" },
+    mode: "onTouched",
+    resolver: zodResolver(getSecondFactorConfirmationSchema(isUsingRecoveryCode)),
+  });
+
+  const toggleCodeMethod = () => {
+    resetField("code");
+    setIsUsingRecoveryCode((current) => {
+      return !current;
+    });
+  };
+
+  const onFailed = (error: unknown) => {
+    resetField("code");
+
+    return onSecondFactorError(error, setError);
+  };
+
+  const onSubmit: SubmitHandler<SecondFactorConfirmationPayload> = (data) => {
+    onConfirm(data, onFailed);
+  };
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="password">{t("form.password")}</Label>
+
+        <PasswordInput
+          autoComplete="current-password"
+          id="password"
+          autoFocus
+          {...register("password")}
+        />
+
+        <ErrorMessage errorMessage={errors.password?.message} />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="code">{isUsingRecoveryCode ? t("form.recoveryCode") : t("form.otp")}</Label>
+
+        {isUsingRecoveryCode ? (
+          <Input autoComplete="off" id="code" {...register("code")} />
+        ) : (
+          <Controller
+            control={control}
+            name="code"
+            render={({ field }) => {
+              return (
+                <InputOtp.Root
+                  autoComplete="one-time-code"
+                  id="code"
+                  maxLength={ONE_TIME_PASSWORD_LENGTH}
+                  {...field}
+                >
+                  <InputOtp.Group>
+                    {ONE_TIME_PASSWORD_SLOTS.map((index) => {
+                      return <InputOtp.Slot key={index} index={index} />;
+                    })}
+                  </InputOtp.Group>
+                </InputOtp.Root>
+              );
+            }}
+          />
+        )}
+
+        <ErrorMessage errorMessage={errors.code?.message} />
+
+        <Button className="self-start" type="button" variant="plainText" onClick={toggleCodeMethod}>
+          {isUsingRecoveryCode
+            ? t("twoFactor.verify.useOneTimePassword")
+            : t("twoFactor.verify.useRecoveryCode")}
+        </Button>
+      </div>
+
+      <Dialog.Footer>
+        <Dialog.Close disabled={isPending} asChild>
+          <Button variant="outlined">{t("buttons.cancel")}</Button>
+        </Dialog.Close>
+
+        <Button isLoading={isPending} type="submit">
+          {submitLabel}
+        </Button>
+      </Dialog.Footer>
+    </form>
+  );
+};

@@ -4,8 +4,7 @@ import { toast } from "sonner";
 import { Dialog } from "@/components/ui/dialog";
 import { useTranslation } from "@/i18n";
 import { refreshTwoFactorState, useDisableTwoFactor } from "@/services/auth/two-factor/actions";
-import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
-import { PasswordConfirmationForm } from "./password-confirmation-form";
+import { SecondFactorConfirmationForm } from "./second-factor-confirmation-form";
 
 type DisableTwoFactorDialogProps = {
   isOpen: boolean;
@@ -16,7 +15,6 @@ export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFacto
   const { t } = useTranslation();
 
   const disableTwoFactorMutation = useDisableTwoFactor();
-  const { onPasswordError } = useTwoFactorAccountErrors();
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
@@ -27,10 +25,10 @@ export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFacto
           <Dialog.Description>{t("twoFactor.account.disable.description")}</Dialog.Description>
         </Dialog.Header>
 
-        <PasswordConfirmationForm
+        <SecondFactorConfirmationForm
           isPending={disableTwoFactorMutation.isPending}
           submitLabel={t("twoFactor.account.disable.submit")}
-          onConfirm={(payload, setError) => {
+          onConfirm={(payload, onFailed) => {
             disableTwoFactorMutation.mutate(payload, {
               onSuccess: async () => {
                 toast.success(t("twoFactor.account.disable.success"));
@@ -46,7 +44,7 @@ export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFacto
                   return;
                 }
 
-                await onPasswordError(error, setError);
+                await onFailed(error);
               },
             });
           }}

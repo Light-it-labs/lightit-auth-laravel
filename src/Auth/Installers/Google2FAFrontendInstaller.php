@@ -49,6 +49,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         'routes/(public)/_guest/two-factor/setup/page.tsx.stub' => 'src/routes/(public)/_guest/two-factor/setup/page.tsx',
         'routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts.stub' => 'src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts',
         'routes/_private/account/two-factor/-components/password-confirmation-form.tsx.stub' => 'src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx',
+        'routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx.stub' => 'src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx',
         'routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx.stub' => 'src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx',
         'routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx.stub' => 'src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx',
         'routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx.stub' => 'src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx',

@@ -5,10 +5,12 @@ import { toast } from "sonner";
 import { useTranslation } from "@/i18n";
 import { refreshTwoFactorState } from "@/services/auth/two-factor/actions";
 import {
+  isInvalidPassword,
   isOneTimePasswordAlreadyUsed,
   isTwoFactorUnavailable,
   type OneTimePasswordPayload,
   type PasswordPayload,
+  type SecondFactorConfirmationPayload,
 } from "@/services/auth/two-factor/types";
 import { handleAxiosFieldErrors } from "@/utils";
 
@@ -79,5 +81,40 @@ export const useTwoFactorAccountErrors = () => {
     );
   };
 
-  return { onOneTimePasswordError, onPasswordError };
+  const onSecondFactorError = async (
+    error: unknown,
+    setError: UseFormSetError<SecondFactorConfirmationPayload>,
+  ) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await onStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity && isInvalidPassword(error)) {
+      setError("password", { message: t("twoFactor.account.errors.invalidPassword") });
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("code", {
+        message: isOneTimePasswordAlreadyUsed(error)
+          ? t("twoFactor.errors.codeAlreadyUsed")
+          : t("twoFactor.errors.invalidCode"),
+      });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  return { onOneTimePasswordError, onPasswordError, onSecondFactorError };
 };
