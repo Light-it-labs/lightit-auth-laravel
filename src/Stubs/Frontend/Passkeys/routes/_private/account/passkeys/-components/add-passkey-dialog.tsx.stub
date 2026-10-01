@@ -1,0 +1,104 @@
+import { type SubmitHandler, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useTranslation } from "@/i18n";
+import { useAddPasskey } from "@/services/auth/passkeys/actions";
+import { getAddPasskeySchema } from "@/services/auth/passkeys/schemas";
+import type { AddPasskeyPayload } from "@/services/auth/passkeys/types";
+import { usePasskeyErrors } from "../-hooks/use-passkey-errors";
+
+type AddPasskeyDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const AddPasskeyDialog = ({ isOpen, onOpenChange }: AddPasskeyDialogProps) => {
+  const { t } = useTranslation();
+
+  const { isPending, mutate: addPasskey } = useAddPasskey();
+  const { onPasskeyError } = usePasskeyErrors();
+
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    reset,
+    setError,
+  } = useForm({
+    defaultValues: { name: "", password: "" },
+    mode: "onTouched",
+    resolver: zodResolver(getAddPasskeySchema()),
+  });
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      reset();
+    }
+
+    onOpenChange(open);
+  };
+
+  const onSubmit: SubmitHandler<AddPasskeyPayload> = (data) => {
+    addPasskey(data, {
+      onSuccess: () => {
+        toast.success(t("passkeys.add.success"));
+        handleOpenChange(false);
+      },
+      onError: (error) => {
+        onPasskeyError(error, setError);
+      },
+    });
+  };
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog.Content isDismissible={!isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("passkeys.add.title")}</Dialog.Title>
+
+          <Dialog.Description>{t("passkeys.add.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="passkey-name">{t("passkeys.form.name")}</Label>
+
+            <Input id="passkey-name" size="sm" autoFocus {...register("name")} />
+
+            <ErrorMessage errorMessage={errors.name?.message} />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="passkey-password">{t("form.password")}</Label>
+
+            <PasswordInput
+              autoComplete="current-password"
+              id="passkey-password"
+              size="sm"
+              {...register("password")}
+            />
+
+            <ErrorMessage errorMessage={errors.password?.message} />
+          </div>
+
+          <Dialog.Footer>
+            <Dialog.Close disabled={isPending} asChild>
+              <Button variant="outlined">{t("buttons.cancel")}</Button>
+            </Dialog.Close>
+
+            <Button isLoading={isPending} type="submit">
+              {t("passkeys.add.submit")}
+            </Button>
+          </Dialog.Footer>
+        </form>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

@@ -1,0 +1,68 @@
+import { WebAuthnError, type WebAuthnErrorCode } from "@simplewebauthn/browser";
+import { isAxiosError } from "axios";
+
+export type Passkey = {
+  id: number;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+export type AddPasskeyPayload = {
+  name: string;
+  password: string;
+};
+
+export type RenamePasskeyPayload = Pick<Passkey, "id" | "name">;
+
+export type DeletePasskeyPayload = Pick<Passkey, "id"> & {
+  password: string;
+};
+
+export type PasskeyFailure =
+  | "cancelled"
+  | "unsupported"
+  | "invalidDomain"
+  | "alreadyRegistered"
+  | "challengeExpired"
+  | "verificationFailed";
+
+const failureByWebAuthnCode: Partial<Record<WebAuthnErrorCode, PasskeyFailure>> = {
+  ERROR_CEREMONY_ABORTED: "cancelled",
+  ERROR_INVALID_DOMAIN: "invalidDomain",
+  ERROR_INVALID_RP_ID: "invalidDomain",
+  ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED: "alreadyRegistered",
+  ERROR_AUTHENTICATOR_MISSING_DISCOVERABLE_CREDENTIAL_SUPPORT: "unsupported",
+  ERROR_AUTHENTICATOR_MISSING_USER_VERIFICATION_SUPPORT: "unsupported",
+  ERROR_AUTHENTICATOR_NO_SUPPORTED_PUBKEYCREDPARAMS_ALG: "unsupported",
+};
+
+const failureByErrorName: Partial<Record<string, PasskeyFailure>> = {
+  AbortError: "cancelled",
+  NotAllowedError: "cancelled",
+  InvalidStateError: "alreadyRegistered",
+  NotSupportedError: "unsupported",
+  SecurityError: "invalidDomain",
+};
+
+const failureByApiErrorCode: Partial<Record<string, PasskeyFailure>> = {
+  passkey_already_registered: "alreadyRegistered",
+  passkey_challenge_expired: "challengeExpired",
+  passkey_registration_failed: "verificationFailed",
+};
+
+type PasskeyErrorBody = {
+  error?: { code?: string };
+};
+
+export const getPasskeyFailure = (error: unknown): PasskeyFailure | null => {
+  if (isAxiosError<PasskeyErrorBody>(error)) {
+    return failureByApiErrorCode[error.response?.data.error?.code ?? ""] ?? null;
+  }
+
+  if (error instanceof WebAuthnError) {
+    return failureByWebAuthnCode[error.code] ?? failureByErrorName[error.name] ?? null;
+  }
+
+  return error instanceof Error ? (failureByErrorName[error.name] ?? null) : null;
+};

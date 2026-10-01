@@ -1,0 +1,87 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n";
+import { useRenamePasskey } from "@/services/auth/passkeys/actions";
+import { getRenamePasskeySchema } from "@/services/auth/passkeys/schemas";
+import type { Passkey } from "@/services/auth/passkeys/types";
+import { handleAxiosFieldErrors } from "@/utils";
+
+type RenamePasskeyDialogProps = {
+  passkey: Passkey | null;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const RenamePasskeyDialog = ({ onOpenChange, passkey }: RenamePasskeyDialogProps) => {
+  const { t } = useTranslation();
+
+  const { isPending, mutate: renamePasskey } = useRenamePasskey();
+
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    setError,
+  } = useForm({
+    mode: "onTouched",
+    resolver: zodResolver(getRenamePasskeySchema()),
+    values: { name: passkey?.name ?? "" },
+  });
+
+  const onSubmit = handleSubmit(({ name }) => {
+    if (!passkey) {
+      return;
+    }
+
+    renamePasskey(
+      { id: passkey.id, name },
+      {
+        onSuccess: () => {
+          toast.success(t("passkeys.rename.success"));
+          onOpenChange(false);
+        },
+        onError: (error) => {
+          handleAxiosFieldErrors(error, setError);
+        },
+      },
+    );
+  });
+
+  return (
+    <Dialog.Root open={passkey !== null} onOpenChange={onOpenChange}>
+      <Dialog.Content isDismissible={!isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("passkeys.rename.title")}</Dialog.Title>
+
+          <Dialog.Description>{t("passkeys.rename.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        <form className="space-y-6" onSubmit={onSubmit}>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="passkey-new-name">{t("passkeys.form.name")}</Label>
+
+            <Input id="passkey-new-name" size="sm" autoFocus {...register("name")} />
+
+            <ErrorMessage errorMessage={errors.name?.message} />
+          </div>
+
+          <Dialog.Footer>
+            <Dialog.Close disabled={isPending} asChild>
+              <Button variant="outlined">{t("buttons.cancel")}</Button>
+            </Dialog.Close>
+
+            <Button isLoading={isPending} type="submit">
+              {t("passkeys.rename.submit")}
+            </Button>
+          </Dialog.Footer>
+        </form>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

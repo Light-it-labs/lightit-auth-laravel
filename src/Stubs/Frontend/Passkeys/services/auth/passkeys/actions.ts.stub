@@ -1,0 +1,51 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+import { queryClient } from "@/config/query-client";
+import type { UseMutationProps } from "@/services/types";
+import { addPasskey, deletePasskey, getPasskeys, renamePasskey } from "./api";
+
+export const passkeysQuery = {
+  queryKey: ["{{ queryKeyScope }}", "passkeys"],
+  queryFn: getPasskeys,
+};
+
+export const usePasskeys = () => {
+  return useQuery(passkeysQuery);
+};
+
+const refreshPasskeys = () => {
+  return queryClient.invalidateQueries({ queryKey: passkeysQuery.queryKey });
+};
+
+export const useAddPasskey = (props?: UseMutationProps<typeof addPasskey>) => {
+  return useMutation({
+    mutationFn: addPasskey,
+    ...props,
+    onSuccess: async (...args) => {
+      await refreshPasskeys();
+      await props?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useRenamePasskey = (props?: UseMutationProps<typeof renamePasskey>) => {
+  return useMutation({
+    mutationFn: renamePasskey,
+    ...props,
+    onSuccess: async (...args) => {
+      await refreshPasskeys();
+      await props?.onSuccess?.(...args);
+    },
+  });
+};
+
+export const useDeletePasskey = (props?: UseMutationProps<typeof deletePasskey>) => {
+  return useMutation({
+    mutationFn: deletePasskey,
+    ...props,
+    onSuccess: async (...args) => {
+      await refreshPasskeys();
+      await props?.onSuccess?.(...args);
+    },
+  });
+};
