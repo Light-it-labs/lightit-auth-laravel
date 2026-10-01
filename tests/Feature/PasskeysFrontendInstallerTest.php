@@ -214,7 +214,8 @@ describe('PasskeysFrontendInstaller', function (): void {
         $this->artisan('passkeys-frontend-fake')->assertSuccessful();
 
         expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
-            ->toContain('getUserSchema().parse(await authenticateWithPasskey())')
+            ->toContain('await authenticateWithPasskey();')
+            ->not->toContain('.parse(')
             ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
             ->not->toContain('two-factor');
     });
@@ -235,8 +236,10 @@ describe('PasskeysFrontendInstaller', function (): void {
         expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
             ->toContain('from "@/services/auth/two-factor/types"')
             ->toContain('from "@/stores/use-two-factor-challenge-store"')
-            ->toContain('startChallenge(result);')
-            ->toContain('to: isSetupRequired(result) ? "/two-factor/setup" : "/two-factor"')
+            ->toContain('return isTwoFactorChallenge(body) ? body : null;')
+            ->toContain('startChallenge(challenge);')
+            ->toContain('to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor"')
+            ->not->toContain('.parse(')
             ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })');
     });
 

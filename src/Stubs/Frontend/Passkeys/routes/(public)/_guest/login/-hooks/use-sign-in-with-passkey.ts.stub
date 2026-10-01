@@ -4,11 +4,9 @@ import { queryClient } from "@/config/query-client";
 import { currentUserQuery } from "@/services/auth/actions";
 import { authenticateWithPasskey } from "@/services/auth/passkeys/api";
 import type { UseMutationProps } from "@/services/types";
-import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
-import type { User } from "{{ userTypeImportPath }}";
 
-const signInWithPasskey = async (): Promise<User> => {
-  return {{ userSchemaFactory }}().parse(await authenticateWithPasskey());
+const signInWithPasskey = async () => {
+  await authenticateWithPasskey();
 };
 
 export const useSignInWithPasskey = (props?: UseMutationProps<typeof signInWithPasskey>) => {
