@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Route;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Auth\Installers\SharedLoginFiles;
 
@@ -60,4 +61,44 @@ describe('Passkeys backend stubs', function (): void {
             ->toContain('use Lightit\Users\App\Resources\UserResource;')
             ->toContain('return UserResource::make(');
     });
+
+    it(
+        'keeps the two sign-in routes public, on their own limiter, and the account routes behind auth:sanctum',
+        function (): void {
+            $namespace = 'Lightitlabs\\Tests\\Fixtures\\PasskeysRoutesStub';
+            $routes = (string) file_get_contents(PasskeysInstaller::stubDirectory() . '/routes/passkeys.stub');
+            preg_match_all(
+                '/^use Lightit\\\\Authentication\\\\App\\\\Controllers\\\\(\\w+);$/m',
+                $routes,
+                $controllers
+            );
+    
+            foreach ($controllers[1] as $controller) {
+                if (! class_exists("{$namespace}\\{$controller}")) {
+                    eval("namespace {$namespace}; final class {$controller} { public function __invoke(): void {} }");
+                }
+            }
+    
+            $tempFile = sys_get_temp_dir() . '/passkeys-routes-stub-' . bin2hex(random_bytes(6)) . '.php';
+            file_put_contents(
+                $tempFile,
+                str_replace('use Lightit\\Authentication\\App\\Controllers\\', "use {$namespace}\\", $routes)
+            );
+            require $tempFile;
+            unlink($tempFile);
+    
+            $middleware = [];
+            foreach (Route::getRoutes()->getRoutes() as $route) {
+                $middleware[$route->methods()[0] . ' ' . $route->uri()] = $route->middleware();
+            }
+    
+            foreach (['POST auth/passkeys/login-options', 'POST auth/passkeys/login'] as $signIn) {
+                expect($middleware[$signIn])->toContain('throttle:passkeys-sign-in')
+                    ->not->toContain('auth:sanctum');
+            }
+    
+            expect($middleware['POST passkeys/registration-options'])->toContain('auth:sanctum')
+                ->toContain('throttle:passkeys');
+        }
+    );
 });
