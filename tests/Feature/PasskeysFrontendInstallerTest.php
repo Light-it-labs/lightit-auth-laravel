@@ -5,7 +5,10 @@ declare(strict_types=1);
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Lightitlabs\Tests\Fixtures\FakePasskeysFrontendCommand;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
+use Lightitlabs\Tools\StubRenderer;
 
 describe('PasskeysFrontendInstaller', function (): void {
     beforeEach(function (): void {
@@ -24,7 +27,19 @@ describe('PasskeysFrontendInstaller', function (): void {
             'src/routes/_private/account/passkeys/page.tsx',
         ];
 
-        Artisan::registerCommand(new FakePasskeysFrontendCommand($this->root));
+        $root = $this->root;
+        Artisan::command('passkeys-frontend-fake', function () use ($root): void {
+            $manifest = new FrontendPackageManifest();
+
+            (new PasskeysFrontendInstaller(
+                $this,
+                new StubRenderer(),
+                new FrontendProjectLocator($manifest),
+                $manifest,
+                sys_get_temp_dir() . '/lightit-passkeys-laravel-root',
+                $root,
+            ))->install();
+        });
     });
 
     afterEach(function (): void {
