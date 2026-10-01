@@ -1,0 +1,104 @@
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { useTranslation } from "@/i18n";
+import { useDeletePasskey } from "@/services/auth/passkeys/actions";
+import { getDeletePasskeySchema } from "@/services/auth/passkeys/schemas";
+import type { Passkey } from "@/services/auth/passkeys/types";
+import { handleAxiosFieldErrors } from "@/utils";
+
+type DeletePasskeyDialogProps = {
+  passkey: Passkey | null;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const DeletePasskeyDialog = ({ onOpenChange, passkey }: DeletePasskeyDialogProps) => {
+  const { t } = useTranslation();
+
+  const { isPending, mutate: deletePasskey } = useDeletePasskey();
+
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    reset,
+    setError,
+  } = useForm({
+    defaultValues: { password: "" },
+    mode: "onTouched",
+    resolver: zodResolver(getDeletePasskeySchema()),
+  });
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      reset();
+    }
+
+    onOpenChange(open);
+  };
+
+  const onSubmit = handleSubmit(({ password }) => {
+    if (!passkey) {
+      return;
+    }
+
+    deletePasskey(
+      { id: passkey.id, password },
+      {
+        onSuccess: () => {
+          toast.success(t("passkeys.delete.success", { name: passkey.name }));
+          handleOpenChange(false);
+        },
+        onError: (error) => {
+          handleAxiosFieldErrors(error, setError);
+        },
+      },
+    );
+  });
+
+  return (
+    <Dialog.Root open={passkey !== null} onOpenChange={handleOpenChange}>
+      <Dialog.Content isDismissible={!isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("passkeys.delete.title")}</Dialog.Title>
+
+          <Dialog.Description>
+            {t("passkeys.delete.description", { name: passkey?.name ?? "" })}
+          </Dialog.Description>
+        </Dialog.Header>
+
+        <form className="space-y-6" onSubmit={onSubmit}>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="passkey-delete-password">{t("form.password")}</Label>
+
+            <PasswordInput
+              autoComplete="current-password"
+              id="passkey-delete-password"
+              size="sm"
+              autoFocus
+              {...register("password")}
+            />
+
+            <ErrorMessage errorMessage={errors.password?.message} />
+          </div>
+
+          <Dialog.Footer>
+            <Dialog.Close disabled={isPending} asChild>
+              <Button variant="outlined">{t("buttons.cancel")}</Button>
+            </Dialog.Close>
+
+            <Button isLoading={isPending} type="submit">
+              {t("passkeys.delete.submit")}
+            </Button>
+          </Dialog.Footer>
+        </form>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

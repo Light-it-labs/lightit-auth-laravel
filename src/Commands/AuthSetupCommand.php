@@ -14,6 +14,7 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
@@ -35,7 +36,7 @@ class AuthSetupCommand extends Command
         $this->initializeOutput($this);
     }
 
-    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication is selected; an invalid path fails the whole command even if Two-Factor Authentication is not selected}';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication or Passkeys is selected; an invalid path fails the whole command even if neither is selected}';
 
     protected $description = 'Setup the authentication structure';
 
@@ -231,6 +232,21 @@ class AuthSetupCommand extends Command
         $stubCopier = new StubCopier(OriginMarker::resolved());
         $passkeysInstaller = new PasskeysInstaller($this, $composerInstaller, $stubCopier);
         $passkeysInstaller->install();
+        $this->printSectionSeparator();
+
+        $this->printBoxedMessage('🛠 Setting up passkeys frontend...');
+
+        $manifest = new FrontendPackageManifest();
+
+        (new PasskeysFrontendInstaller(
+            $this,
+            new StubRenderer(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+            $this->frontendPathOption(),
+        ))->install();
+
         $this->printSectionSeparator();
     }
 
