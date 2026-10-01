@@ -116,8 +116,11 @@ The package does not edit your navigation. To add a link, in
 the `links` array:
 
 ```tsx
-{ path: "/account/two-factor", label: t("twoFactor.account.title"), icon: <Icons.Lock /> },
+{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },
 ```
+
+Its label is the short `navigation.links.twoFactor` key from the i18n step below,
+like the other links; the screen title does not fit the sidebar's fixed width.
 
 ## Manual step: use the 2FA-aware login hook
 
@@ -230,6 +233,13 @@ As a new top-level key:
     }
   }
 }
+```
+
+Only if you add the sidebar link above, add `twoFactor` next to the existing
+`navigation.links` keys:
+
+```json
+"navigation": { "links": { "twoFactor": "Two-factor" } }
 ```
 
 The screens also reuse `login.success`, `form.password`, `buttons.cancel` and
