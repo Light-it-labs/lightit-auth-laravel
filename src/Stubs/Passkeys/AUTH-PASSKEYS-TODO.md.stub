@@ -59,8 +59,9 @@ The login options carry no `allowCredentials`, so the browser offers every
 passkey it holds for the relying party. The challenge is stored under a random
 `ceremony_id`, lives `passkeys.challenge_ttl_seconds` and is spent by the first
 `POST /auth/passkeys/login` under a cache lock. The credential is looked up by
-the SHA-256 of its id; the user handle must be the owner's, user verification is
-required and a signature counter that goes backwards fails the ceremony. A
+the SHA-256 of its id; the assertion must carry a user handle equal to the
+owner's (a missing one fails), user verification is required and a signature
+counter that goes backwards fails the ceremony. A
 valid assertion stores the new counter and `last_used_at`.
 
 The user is then signed in through
