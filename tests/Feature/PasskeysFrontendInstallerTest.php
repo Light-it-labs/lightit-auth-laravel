@@ -48,17 +48,14 @@ describe('PasskeysFrontendInstaller', function (): void {
         File::deleteDirectory($this->root);
     });
 
-    it(
-        'writes the passkey services, the account page, the sign-in button and the TODO with every placeholder resolved',
-        function (): void {
-            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-    
-            foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
-                expect($this->root . '/' . $relative)->toBeFile()
-                    ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
-            }
+    it('writes the passkey services, the account page and the TODO with every placeholder resolved', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
+            expect($this->root . '/' . $relative)->toBeFile()
+                ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
         }
-    );
+    });
 
     it('reports Skipped on a second run and never touches a file the app already has', function (): void {
         mkdir($this->root . '/src/routes/_private/account/passkeys', 0755, true);
