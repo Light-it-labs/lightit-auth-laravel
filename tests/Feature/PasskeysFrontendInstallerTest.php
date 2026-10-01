@@ -48,17 +48,14 @@ describe('PasskeysFrontendInstaller', function (): void {
         File::deleteDirectory($this->root);
     });
 
-    it(
-        'writes the passkey services, the account page, the sign-in button and the TODO with every placeholder resolved',
-        function (): void {
-            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-    
-            foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
-                expect($this->root . '/' . $relative)->toBeFile()
-                    ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
-            }
+    it('writes the passkey services, the account page and the TODO with every placeholder resolved', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
+            expect($this->root . '/' . $relative)->toBeFile()
+                ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
         }
-    );
+    });
 
     it('writes the TODO as a short checklist that says to delete it when done', function (): void {
         $this->artisan('passkeys-frontend-fake')->assertSuccessful();
