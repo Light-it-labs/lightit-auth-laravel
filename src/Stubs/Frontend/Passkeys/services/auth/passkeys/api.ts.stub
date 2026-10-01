@@ -1,7 +1,7 @@
-import { startRegistration } from "@simplewebauthn/browser";
+import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import { z } from "zod";
 
-import { api } from "@/config/api";
+import { api, ensureCsrf } from "@/config/api";
 import { getPasskeySchema } from "./schemas";
 import type {
   AddPasskeyPayload,
@@ -32,4 +32,16 @@ export const renamePasskey = async ({ id, name }: RenamePasskeyPayload): Promise
 
 export const deletePasskey = async ({ id, password }: DeletePasskeyPayload) => {
   await api.post(`passkeys/${id}/delete`, { password });
+};
+
+export const authenticateWithPasskey = async (): Promise<unknown> => {
+  await ensureCsrf();
+  const options = await api.post("auth/passkeys/login-options");
+  const credential = await startAuthentication({ optionsJSON: options.data.data.options });
+  const response = await api.post("auth/passkeys/login", {
+    ceremony_id: options.data.data.ceremonyId,
+    credential,
+  });
+
+  return response.data.data;
 };
