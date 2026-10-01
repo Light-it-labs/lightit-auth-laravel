@@ -9,6 +9,10 @@ describe('Feature::selectable()', function (): void {
         expect(Feature::selectable())->toContain(Feature::TwoFactorAuthentication);
     });
 
+    it('offers passkeys in auth:setup', function (): void {
+        expect(Feature::selectable())->toContain(Feature::Passkeys);
+    });
+
     it('still withholds OTP and Google SSO', function (): void {
         expect(Feature::selectable())
             ->not->toContain(Feature::Otp)
