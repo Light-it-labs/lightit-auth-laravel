@@ -26,6 +26,14 @@ export const getPasswordConfirmationSchema = () => {
   });
 };
 
+export const getSecondFactorConfirmationSchema = (isUsingRecoveryCode: boolean) => {
+  return getPasswordConfirmationSchema().extend({
+    code: isUsingRecoveryCode
+      ? getRecoveryCodeSchema().shape.recoveryCode
+      : getOneTimePasswordSchema().shape.oneTimePassword,
+  });
+};
+
 export const twoFactorSetupSchema = z.object({
   qr: z.string(),
   secret: z.string(),

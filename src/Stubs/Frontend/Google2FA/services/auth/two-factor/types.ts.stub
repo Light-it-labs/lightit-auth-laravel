@@ -44,6 +44,13 @@ export const isOneTimePasswordAlreadyUsed = (error: unknown) => {
   );
 };
 
+export const isInvalidPassword = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "invalid_password"
+  );
+};
+
 export type TwoFactorSetupPayload = {
   qr: string;
   secret: string;
@@ -60,6 +67,10 @@ export type RecoveryCodePayload = {
 
 export type PasswordPayload = {
   password: string;
+};
+
+export type SecondFactorConfirmationPayload = PasswordPayload & {
+  code: string;
 };
 
 export type RecoveryCodesResult = {

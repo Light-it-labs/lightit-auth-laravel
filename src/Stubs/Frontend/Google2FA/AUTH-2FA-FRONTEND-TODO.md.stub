@@ -11,7 +11,7 @@ read it.
 | File | Contents |
 | --- | --- |
 | `src/services/auth/two-factor/types.ts` | Response/payload types, the `TwoFactorChallengeResult` discriminant and its guards |
-| `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code and password zod schemas |
+| `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code, password and password-plus-code zod schemas |
 | `src/services/auth/two-factor/api.ts` | `loginWithTwoFactorChallenge` plus one function per 2FA endpoint; the challenge-token endpoints attach a manual `Authorization: Bearer` header and set `isAuthProbe`, the session endpoints call the app's normal cookie-authenticated client |
 | `src/services/auth/two-factor/actions.ts` | `useTwoFactorSetup` (a query keyed by the challenge token, fetched once), `removeTwoFactorSetupQueries`, `useTwoFactorStatus`, `refreshTwoFactorState` (invalidates the status and current-user queries) and `useMutation`-based hooks for the other endpoints |
 
@@ -31,9 +31,10 @@ read it.
 | `src/routes/_private/account/two-factor/page.tsx` | `/account/two-factor`: reads `useTwoFactorStatus` and offers turn on, regenerate recovery codes and turn off |
 | `src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx` | Password, then QR code and first code, then the recovery codes (shown once) |
 | `src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx` | First-code form (`confirmTwoFactor`) |
-| `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx` | Password, then the new recovery codes |
-| `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx` | Password; a `403` (2FA is mandatory) gets its own message |
-| `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx` | Password form shared by the three dialogs |
+| `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx` | Password and a code, then the new recovery codes |
+| `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx` | Password and a code; a `403` (2FA is mandatory) gets its own message |
+| `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx` | Password form of the turn-on dialog |
+| `src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx` | Password plus a 6-digit code, with a switch to a recovery code, shared by the regenerate and turn-off dialogs |
 | `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts` | Maps `422`, `409` and `429` from the account endpoints to form errors and toasts |
 
 The TanStack Router plugin adds the three routes to `src/routeTree.gen.ts` the next
@@ -85,17 +86,22 @@ token.
    code and the manual-entry key. The first code goes to `{{ twoFactorConfirmEndpoint }}`,
    which turns 2FA on and returns the recovery codes. They are shown once, in the
    dialog.
-3. Regenerate: the password goes to `{{ twoFactorRegenerateRecoveryCodesEndpoint }}`
-   and the new codes are shown once.
+3. Regenerate: the password and a code go to `{{ twoFactorRegenerateRecoveryCodesEndpoint }}`
+   and the new codes are shown once. The code is the current 6-digit code from the
+   authenticator app or, after "Use a recovery code instead", one of the recovery
+   codes; a recovery code used here is spent.
    While recovery codes are on screen, Escape and a click outside don't close the
    dialog: the only way out is the "I've saved my recovery codes" button.
-4. Turn off: the password goes to `{{ twoFactorDisableEndpoint }}`. The button is hidden
+4. Turn off: the password and a code (same choice as above) go to
+   `{{ twoFactorDisableEndpoint }}`. The button is hidden
    while `mandatory` is `true`, and a `403` (the backend is mandatory after all) gets
    its own message instead of the wrong-password one.
 5. After turning 2FA on or off, the status and current-user queries are invalidated.
 6. Each request is sent by a submit, never from an effect, so StrictMode's double
    mount sends nothing twice.
-7. A wrong password or code is a `422` and stays on the form. A code that was already
+7. A wrong password or code is a `422` and stays on the form: `invalid_password`
+   marks the password field, anything else the code field, which is cleared. Wrong
+   codes on regenerate and turn off count toward the same per-user lockout as login. A code that was already
    used is a `422` with `otp_already_used` for as long as it stays valid:
    `(2 * window + 1) * 30` seconds, 90 seconds with the default `window` of 1 in the
    backend's `config/google2fa.php`. The form says to wait for the next code. `429`
@@ -239,8 +245,8 @@ The screens also reuse `login.success`, `form.password`, `buttons.cancel` and
 | `verifyRecoveryCode` | `{{ twoFactorVerifyRecoveryCodeEndpoint }}` | challenge token | Lost-device path; creates the session and returns the user, same as `completeTwoFactor` |
 | `requestTwoFactorReset` | `{{ twoFactorRequestResetEndpoint }}` | cookie session | Re-validates the password before issuing a reset challenge token |
 | `resetTwoFactor` | `{{ twoFactorResetEndpoint }}` | reset challenge token | Clears the secret; the user re-enrolls through setup afterward |
-| `disableTwoFactor` | `{{ twoFactorDisableEndpoint }}` | cookie session | Fails with 403 when `google2fa.mandatory` is `true` on the backend |
-| `regenerateRecoveryCodes` | `{{ twoFactorRegenerateRecoveryCodesEndpoint }}` | cookie session | Replaces every recovery code and returns the new ones |
+| `disableTwoFactor` | `{{ twoFactorDisableEndpoint }}` | cookie session | Password plus `code` (live code or recovery code); fails with 403 when `google2fa.mandatory` is `true` on the backend |
+| `regenerateRecoveryCodes` | `{{ twoFactorRegenerateRecoveryCodesEndpoint }}` | cookie session | Password plus `code` (live code or recovery code); replaces every recovery code and returns the new ones |
 | `getTwoFactorStatus` | `{{ twoFactorStatusEndpoint }}` | cookie session | `{ available, enabled, mandatory }` for the signed-in user; `available` is `google2fa.enabled` |
 | `enableTwoFactor` | `{{ twoFactorEnableEndpoint }}` | cookie session | Checks the password, stores a new secret, returns the QR code and the manual-entry key; `409` if 2FA is already on |
 | `confirmTwoFactor` | `{{ twoFactorConfirmEndpoint }}` | cookie session | Checks the first code, turns 2FA on and returns the recovery codes; `409` if 2FA is already on or `enableTwoFactor` was not called |

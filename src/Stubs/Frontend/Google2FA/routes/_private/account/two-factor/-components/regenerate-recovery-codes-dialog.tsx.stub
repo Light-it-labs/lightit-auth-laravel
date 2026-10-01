@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { useTranslation } from "@/i18n";
 import { useRegenerateRecoveryCodes } from "@/services/auth/two-factor/actions";
-import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
-import { PasswordConfirmationForm } from "./password-confirmation-form";
+import { SecondFactorConfirmationForm } from "./second-factor-confirmation-form";
 
 type RegenerateRecoveryCodesDialogProps = {
   isOpen: boolean;
@@ -22,7 +21,6 @@ export const RegenerateRecoveryCodesDialog = ({
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
 
   const regenerateRecoveryCodesMutation = useRegenerateRecoveryCodes();
-  const { onPasswordError } = useTwoFactorAccountErrors();
 
   const handleOpenChange = (open: boolean) => {
     if (!open) {
@@ -52,16 +50,16 @@ export const RegenerateRecoveryCodesDialog = ({
             </Dialog.Footer>
           </>
         ) : (
-          <PasswordConfirmationForm
+          <SecondFactorConfirmationForm
             isPending={regenerateRecoveryCodesMutation.isPending}
             submitLabel={t("twoFactor.account.regenerate.submit")}
-            onConfirm={(payload, setError) => {
+            onConfirm={(payload, onFailed) => {
               regenerateRecoveryCodesMutation.mutate(payload, {
                 onSuccess: (result) => {
                   setRecoveryCodes(result.recoveryCodes);
                 },
                 onError: (error) => {
-                  return onPasswordError(error, setError);
+                  return onFailed(error);
                 },
               });
             }}
