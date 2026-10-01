@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Lightitlabs\LightitServiceProvider;
 
@@ -42,7 +44,7 @@ describe('LightitServiceProvider 2fa rate limiter registration', function (): vo
 });
 
 describe('LightitServiceProvider passkeys rate limiter registration', function (): void {
-    it('registers the passkeys limiter once PasskeyRateLimiter is installed', function (): void {
+    it('registers the passkeys and passkey sign-in limiters once PasskeyRateLimiter is installed', function (): void {
         $provider = new LightitServiceProvider($this->app);
 
         if (! class_exists('Lightit\Authentication\Domain\PasskeyRateLimiter', false)) {
@@ -62,5 +64,16 @@ describe('LightitServiceProvider passkeys rate limiter registration', function (
         $provider->packageBooted();
 
         expect(RateLimiter::limiter('passkeys'))->not->toBeNull();
+
+        $signIn = RateLimiter::limiter('passkeys-sign-in');
+        $limit = $signIn === null ? null : $signIn(Request::create(
+            '/',
+            'POST',
+            server: ['REMOTE_ADDR' => '203.0.113.7']
+        ));
+
+        expect($limit)->toBeInstanceOf(Limit::class)
+            ->and($limit?->maxAttempts)->toBe(20)
+            ->and($limit?->key)->toBe('passkeys-sign-in|203.0.113.7');
     });
 });

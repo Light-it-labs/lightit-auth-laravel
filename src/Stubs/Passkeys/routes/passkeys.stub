@@ -12,7 +12,7 @@ use Lightit\Authentication\App\Controllers\StartPasskeyRegistrationController;
 use Lightit\Authentication\App\Controllers\StorePasskeyController;
 
 Route::prefix('auth/passkeys')
-    ->middleware('throttle:passkeys')
+    ->middleware('throttle:passkeys-sign-in')
     ->group(static function (): void {
         Route::post('login-options', StartPasskeyLoginController::class);
         Route::post('login', PasskeyLoginController::class);
