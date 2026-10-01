@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\Config;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Tests\Fixtures\PasskeyChallengeStoreStub\PasskeyChallengeStore;
 
-$tempFile = sys_get_temp_dir() . '/passkey-challenge-store-stub.php';
+$tempFile = sys_get_temp_dir() . '/passkey-challenge-store-stub-' . bin2hex(random_bytes(6)) . '.php';
 file_put_contents($tempFile, str_replace(
     ['namespace Lightit\Authentication\Domain;', 'use Lightit\Users\Domain\Models\User;'],
     ['namespace Lightitlabs\Tests\Fixtures\PasskeyChallengeStoreStub;', 'use Illuminate\Foundation\Auth\User;'],
     (string) file_get_contents(PasskeysInstaller::stubDirectory() . '/Auth/PasskeyChallengeStore.stub'),
 ));
 require_once $tempFile;
+unlink($tempFile);
 
 function passkeyUser(int $id): User
 {

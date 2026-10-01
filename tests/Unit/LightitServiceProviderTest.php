@@ -50,12 +50,13 @@ describe('LightitServiceProvider passkeys rate limiter registration', function (
 
             expect(RateLimiter::limiter('passkeys'))->toBeNull();
 
-            $tempFile = sys_get_temp_dir() . '/lightit-service-provider-passkey-rate-limiter.php';
+            $tempFile = sys_get_temp_dir() . '/lightit-passkey-rate-limiter-' . bin2hex(random_bytes(6)) . '.php';
             file_put_contents(
                 $tempFile,
                 (string) file_get_contents(__DIR__ . '/../../src/Stubs/Passkeys/Auth/PasskeyRateLimiter.stub')
             );
             require_once $tempFile;
+            unlink($tempFile);
         }
 
         $provider->packageBooted();

@@ -20,7 +20,7 @@ Route::prefix('passkeys')
             ->middleware('throttle:passkeys')
             ->group(static function (): void {
                 Route::patch('/', RenamePasskeyController::class);
-                Route::delete('/', DeletePasskeyController::class);
+                Route::post('delete', DeletePasskeyController::class);
             })
             ->whereNumber('passkey');
     });

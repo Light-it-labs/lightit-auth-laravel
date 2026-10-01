@@ -30,7 +30,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private const CONFIG_FILE = 'config/passkeys.php';
 
-    private const FILES = [
+    public const FILES = [
         'PasskeyRateLimiter.stub' => 'Domain/PasskeyRateLimiter.php',
         'PasskeyChallengeStore.stub' => 'Domain/PasskeyChallengeStore.php',
         'Services/PasskeyCeremonyService.stub' => 'Domain/Services/PasskeyCeremonyService.php',

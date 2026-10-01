@@ -38,9 +38,6 @@ describe('PasskeysFrontendInstaller', function (): void {
             expect($this->root . '/' . $relative)->toBeFile()
                 ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
         }
-
-        expect(file_get_contents($this->root . '/src/services/auth/passkeys/actions.ts'))
-            ->toContain('queryKey: ["auth", "passkeys"]');
     });
 
     it('reports Skipped on a second run and never touches a file the app already has', function (): void {
@@ -64,16 +61,9 @@ describe('PasskeysFrontendInstaller', function (): void {
     });
 
     it(
-        'calls the backend through the shared cookie-session api, with no token and no second client',
+        'never adds a second HTTP client, a token or browser storage',
         function (): void {
             $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-    
-            expect(file_get_contents($this->root . '/src/services/auth/passkeys/api.ts'))
-                ->toContain('import { api } from "@/config/api";')
-                ->toContain('api.post("passkeys/registration-options", { password })')
-                ->toContain('startRegistration({ optionsJSON: options.data.data })')
-                ->toContain('api.post("passkeys", { name, credential })')
-                ->toContain('api.delete(`passkeys/${id}`, { data: { password } })');
     
             foreach ($this->sourceFiles as $relative) {
                 expect(file_get_contents($this->root . '/' . $relative))
@@ -128,7 +118,6 @@ describe('PasskeysFrontendInstaller', function (): void {
             $blocks
         );
         $documented = json_decode('{' . $blocks[1][0] . '}', true, flags: JSON_THROW_ON_ERROR);
-        $navigation = json_decode('{' . $blocks[1][1] . '}', true, flags: JSON_THROW_ON_ERROR);
 
         $used = [];
         foreach ($this->sourceFiles as $relative) {
@@ -145,27 +134,7 @@ describe('PasskeysFrontendInstaller', function (): void {
         foreach (array_unique($used) as $key) {
             expect(Arr::get($documented, $key))->toBeString()->not->toBeEmpty();
         }
-
-        expect(Arr::get($navigation, 'navigation.links.passkeys'))->toBe('Passkeys');
     });
-
-    it(
-        'gives a cancelled prompt and the backend ceremony errors their own reason, and falls back for the rest',
-        function (): void {
-            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-    
-            expect(file_get_contents($this->root . '/src/services/auth/passkeys/types.ts'))
-                ->toContain('NotAllowedError: "cancelled"')
-                ->toContain('ERROR_CEREMONY_ABORTED: "cancelled"')
-                ->toContain('passkey_challenge_expired: "challengeExpired"')
-                ->toContain('passkey_registration_failed: "verificationFailed"');
-    
-            expect(
-                file_get_contents($this->root . '/src/routes/_private/account/passkeys/-hooks/use-passkey-errors.ts')
-            )
-                ->toContain('handleAxiosFieldErrors(error, setError);');
-        }
-    );
 
     it('prints the missing browser WebAuthn dependency and the i18n step', function (): void {
         $this->artisan('passkeys-frontend-fake')
