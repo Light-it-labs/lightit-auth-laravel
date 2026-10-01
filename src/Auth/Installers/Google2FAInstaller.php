@@ -163,6 +163,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/PasswordValidatorAction.stub' => 'Domain/Actions/PasswordValidatorAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
+            '/Actions/ConsumeRecoveryCodeAction.stub' => 'Domain/Actions/ConsumeRecoveryCodeAction.php',
+            '/Actions/VerifyTwoFactorCodeAction.stub' => 'Domain/Actions/VerifyTwoFactorCodeAction.php',
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',

@@ -12,10 +12,14 @@ final readonly class DisableTwoFactorAuthenticationAction
 {
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
+        private VerifyTwoFactorCodeAction $verifyTwoFactorCodeAction,
         private ResetTwoFactorAuthenticationAction $resetTwoFactorAuthenticationAction,
     ) {}
 
-    public function execute(User $user, string $password): void
+    /**
+     * @throws TwoFactorAuthException
+     */
+    public function execute(User $user, string $password, string $code): void
     {
         $mandatory = Config::boolean('google2fa.mandatory', true);
 
@@ -36,6 +40,8 @@ final readonly class DisableTwoFactorAuthenticationAction
         }
 
         $this->passwordValidatorAction->execute($user, $password);
+
+        $this->verifyTwoFactorCodeAction->execute($user, $code);
 
         $this->resetTwoFactorAuthenticationAction->execute($user);
     }

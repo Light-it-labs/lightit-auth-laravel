@@ -11,6 +11,7 @@ final readonly class RegenerateRecoveryCodesAction
 {
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
+        private VerifyTwoFactorCodeAction $verifyTwoFactorCodeAction,
         private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
     ) {}
 
@@ -19,7 +20,7 @@ final readonly class RegenerateRecoveryCodesAction
      *
      * @throws TwoFactorAuthException
      */
-    public function execute(User $user, string $password): array
+    public function execute(User $user, string $password, string $code): array
     {
         if (! $user->hasTwoFactorAuthenticationConfigured()) {
             throw new TwoFactorAuthException(
@@ -30,6 +31,8 @@ final readonly class RegenerateRecoveryCodesAction
         }
 
         $this->passwordValidatorAction->execute($user, $password);
+
+        $this->verifyTwoFactorCodeAction->execute($user, $code);
 
         return $this->generateRecoveryCodesAction->execute($user);
     }

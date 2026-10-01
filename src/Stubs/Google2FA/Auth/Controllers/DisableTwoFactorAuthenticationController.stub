@@ -18,9 +18,7 @@ final readonly class DisableTwoFactorAuthenticationController
         /** @var User $user */
         $user = $request->user();
 
-        $password = $request->getPassword();
-
-        $action->execute($user, $password);
+        $action->execute($user, $request->getPassword(), $request->getCode());
 
         return response()->json([
             'data' => [
