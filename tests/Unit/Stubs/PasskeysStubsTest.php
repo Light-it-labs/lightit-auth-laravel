@@ -55,7 +55,7 @@ describe('Passkeys backend stubs', function (): void {
     it('turns every ceremony failure into the dedicated 422 instead of a 500', function (): void {
         expect(passkeyStub('Auth/Services/PasskeyCeremonyService.stub'))
             ->toContain('} catch (Throwable) {')
-            ->toContain('throw new PasskeyRegistrationFailedException();');
+            ->toContain('throw new PasskeyRegistrationFailedException;');
 
         expect(passkeyStub('Auth/Exceptions/PasskeyRegistrationFailedException.stub'))->toContain('$status = 422;');
         expect(passkeyStub('Auth/Exceptions/PasskeyChallengeExpiredException.stub'))->toContain('$status = 410;');

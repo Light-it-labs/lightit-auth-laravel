@@ -37,7 +37,7 @@ final readonly class PasskeyCeremonyService
     public function __construct()
     {
         $this->serializer = new WebauthnSerializerFactory(
-            new AttestationStatementSupportManager([new NoneAttestationStatementSupport()]),
+            new AttestationStatementSupportManager([new NoneAttestationStatementSupport]),
         )->create();
     }
 
@@ -64,7 +64,7 @@ final readonly class PasskeyCeremonyService
             ),
             attestation: PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
             excludeCredentials: $this->registeredCredentials($user),
-            timeout: Config::integer('passkeys.challenge_ttl_seconds', 300) * 1000,
+            timeout: max(1, Config::integer('passkeys.challenge_ttl_seconds', 300)) * 1000,
         );
 
         return $this->serializer->serialize($options, 'json', [
@@ -88,18 +88,14 @@ final readonly class PasskeyCeremonyService
             );
             $publicKeyCredential = $this->serializer->deserialize($credential, PublicKeyCredential::class, 'json');
 
-            if (
-                ! $creationOptions instanceof PublicKeyCredentialCreationOptions
-                || ! $publicKeyCredential instanceof PublicKeyCredential
-                || ! $publicKeyCredential->response instanceof AuthenticatorAttestationResponse
-            ) {
-                throw new PasskeyRegistrationFailedException();
+            if (! $publicKeyCredential->response instanceof AuthenticatorAttestationResponse) {
+                throw new PasskeyRegistrationFailedException;
             }
 
             $record = AuthenticatorAttestationResponseValidator::create($this->ceremonySteps()->creationCeremony())
                 ->check($publicKeyCredential->response, $creationOptions, $this->relyingPartyId());
         } catch (Throwable) {
-            throw new PasskeyRegistrationFailedException();
+            throw new PasskeyRegistrationFailedException;
         }
 
         return new VerifiedPasskeyDto(
@@ -128,21 +124,22 @@ final readonly class PasskeyCeremonyService
      */
     private function registeredCredentials(User $user): array
     {
-        return Passkey::query()
+        $descriptors = Passkey::query()
             ->whereBelongsTo($user)
             ->get()
             ->map(static fn (Passkey $passkey): PublicKeyCredentialDescriptor => PublicKeyCredentialDescriptor::create(
                 type: PublicKeyCredentialDescriptor::CREDENTIAL_TYPE_PUBLIC_KEY,
                 id: Base64UrlSafe::decodeNoPadding($passkey->credential_id),
-                transports: $passkey->transports,
+                transports: array_values(array_filter($passkey->transports, is_string(...))),
             ))
-            ->values()
             ->all();
+
+        return array_values($descriptors);
     }
 
     private function ceremonySteps(): CeremonyStepManagerFactory
     {
-        $factory = new CeremonyStepManagerFactory();
+        $factory = new CeremonyStepManagerFactory;
         /** @var list<string> $allowedOrigins */
         $allowedOrigins = Config::array('passkeys.allowed_origins');
         $factory->setAllowedOrigins($allowedOrigins);
