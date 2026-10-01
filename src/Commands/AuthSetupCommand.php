@@ -14,6 +14,7 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Exceptions\SetupAbortedException;
@@ -122,6 +123,7 @@ class AuthSetupCommand extends Command
             Feature::Otp => $this->setupOtp(),
             Feature::ForgotPassword => $this->setupForgotPassword(),
             Feature::GoogleSso => $this->setupGoogleSSO(),
+            Feature::Passkeys => $this->setupPasskeys(),
         };
     }
 
@@ -219,6 +221,17 @@ class AuthSetupCommand extends Command
         $this->error('Invalid --frontend-path: ' . $locator->rejectionReason(base_path(), $path));
 
         return false;
+    }
+
+    protected function setupPasskeys(): void
+    {
+        $this->printBoxedMessage('Setting up Passkeys...');
+
+        $composerInstaller = new ComposerInstaller($this);
+        $stubCopier = new StubCopier(OriginMarker::resolved());
+        $passkeysInstaller = new PasskeysInstaller($this, $composerInstaller, $stubCopier);
+        $passkeysInstaller->install();
+        $this->printSectionSeparator();
     }
 
     protected function setupRolesAndPermissions(): void

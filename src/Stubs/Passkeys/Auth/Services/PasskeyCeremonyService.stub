@@ -1,0 +1,157 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Services;
+
+use Cose\Algorithms;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Users\Domain\Models\User;
+use ParagonIE\ConstantTime\Base64UrlSafe;
+use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
+use Symfony\Component\Serializer\SerializerInterface;
+use Throwable;
+use Webauthn\AttestationStatement\AttestationStatementSupportManager;
+use Webauthn\AttestationStatement\NoneAttestationStatementSupport;
+use Webauthn\AuthenticatorAttestationResponse;
+use Webauthn\AuthenticatorAttestationResponseValidator;
+use Webauthn\AuthenticatorSelectionCriteria;
+use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
+use Webauthn\Denormalizer\WebauthnSerializerFactory;
+use Webauthn\PublicKeyCredential;
+use Webauthn\PublicKeyCredentialCreationOptions;
+use Webauthn\PublicKeyCredentialDescriptor;
+use Webauthn\PublicKeyCredentialParameters;
+use Webauthn\PublicKeyCredentialRpEntity;
+use Webauthn\PublicKeyCredentialUserEntity;
+
+final readonly class PasskeyCeremonyService
+{
+    private const array ALGORITHMS = [Algorithms::COSE_ALGORITHM_ES256, Algorithms::COSE_ALGORITHM_RS256];
+
+    private SerializerInterface $serializer;
+
+    public function __construct()
+    {
+        $this->serializer = new WebauthnSerializerFactory(
+            new AttestationStatementSupportManager([new NoneAttestationStatementSupport()]),
+        )->create();
+    }
+
+    public function creationOptions(User $user): string
+    {
+        $options = PublicKeyCredentialCreationOptions::create(
+            rp: PublicKeyCredentialRpEntity::create(
+                name: Config::string('passkeys.relying_party.name'),
+                id: $this->relyingPartyId(),
+            ),
+            user: PublicKeyCredentialUserEntity::create(
+                name: (string) $user->email,
+                id: $this->userHandle($user),
+                displayName: $user->name,
+            ),
+            challenge: random_bytes(32),
+            pubKeyCredParams: array_map(
+                PublicKeyCredentialParameters::createPk(...),
+                self::ALGORITHMS,
+            ),
+            authenticatorSelection: AuthenticatorSelectionCriteria::create(
+                userVerification: AuthenticatorSelectionCriteria::USER_VERIFICATION_REQUIREMENT_REQUIRED,
+                residentKey: AuthenticatorSelectionCriteria::RESIDENT_KEY_REQUIREMENT_REQUIRED,
+            ),
+            attestation: PublicKeyCredentialCreationOptions::ATTESTATION_CONVEYANCE_PREFERENCE_NONE,
+            excludeCredentials: $this->registeredCredentials($user),
+            timeout: Config::integer('passkeys.challenge_ttl_seconds', 300) * 1000,
+        );
+
+        return $this->serializer->serialize($options, 'json', [
+            AbstractObjectNormalizer::SKIP_NULL_VALUES => true,
+        ]);
+    }
+
+    /**
+     * Every failure is a rejected ceremony: on malformed input the library throws
+     * TypeError, RangeException or serializer exceptions, not only its own.
+     *
+     * @throws PasskeyRegistrationFailedException
+     */
+    public function verifyRegistration(string $options, string $credential): VerifiedPasskeyDto
+    {
+        try {
+            $creationOptions = $this->serializer->deserialize(
+                $options,
+                PublicKeyCredentialCreationOptions::class,
+                'json',
+            );
+            $publicKeyCredential = $this->serializer->deserialize($credential, PublicKeyCredential::class, 'json');
+
+            if (
+                ! $creationOptions instanceof PublicKeyCredentialCreationOptions
+                || ! $publicKeyCredential instanceof PublicKeyCredential
+                || ! $publicKeyCredential->response instanceof AuthenticatorAttestationResponse
+            ) {
+                throw new PasskeyRegistrationFailedException();
+            }
+
+            $record = AuthenticatorAttestationResponseValidator::create($this->ceremonySteps()->creationCeremony())
+                ->check($publicKeyCredential->response, $creationOptions, $this->relyingPartyId());
+        } catch (Throwable) {
+            throw new PasskeyRegistrationFailedException();
+        }
+
+        return new VerifiedPasskeyDto(
+            credentialIdHash: hash('sha256', $record->publicKeyCredentialId),
+            credentialId: Base64UrlSafe::encodeUnpadded($record->publicKeyCredentialId),
+            publicKey: Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
+            signCount: $record->counter,
+            transports: array_values(array_filter($record->transports, is_string(...))),
+            aaguid: $record->aaguid->toRfc4122(),
+            backupEligible: $record->backupEligible ?? false,
+            backupStatus: $record->backupStatus ?? false,
+        );
+    }
+
+    /**
+     * Keyed with the app key so the handle is stable per user (the authenticator
+     * groups a person's passkeys by it) without being derivable from the user id.
+     */
+    private function userHandle(User $user): string
+    {
+        return hash_hmac('sha256', 'passkey-user:' . $user->id, Config::string('app.key'), true);
+    }
+
+    /**
+     * @return list<PublicKeyCredentialDescriptor>
+     */
+    private function registeredCredentials(User $user): array
+    {
+        return Passkey::query()
+            ->whereBelongsTo($user)
+            ->get()
+            ->map(static fn (Passkey $passkey): PublicKeyCredentialDescriptor => PublicKeyCredentialDescriptor::create(
+                type: PublicKeyCredentialDescriptor::CREDENTIAL_TYPE_PUBLIC_KEY,
+                id: Base64UrlSafe::decodeNoPadding($passkey->credential_id),
+                transports: $passkey->transports,
+            ))
+            ->values()
+            ->all();
+    }
+
+    private function ceremonySteps(): CeremonyStepManagerFactory
+    {
+        $factory = new CeremonyStepManagerFactory();
+        /** @var list<string> $allowedOrigins */
+        $allowedOrigins = Config::array('passkeys.allowed_origins');
+        $factory->setAllowedOrigins($allowedOrigins);
+
+        return $factory;
+    }
+
+    private function relyingPartyId(): string
+    {
+        return Config::string('passkeys.relying_party.id');
+    }
+}

@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Models;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * @property int                  $id
+ * @property int                  $user_id
+ * @property string               $name
+ * @property string               $credential_id_hash
+ * @property string               $credential_id
+ * @property string               $public_key
+ * @property int                  $sign_count
+ * @property list<string>         $transports
+ * @property string               $aaguid
+ * @property bool                 $backup_eligible
+ * @property bool                 $backup_status
+ * @property CarbonImmutable|null $last_used_at
+ * @property CarbonImmutable      $created_at
+ * @property CarbonImmutable      $updated_at
+ * @property-read User $user
+ */
+final class Passkey extends Model
+{
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'sign_count' => 'integer',
+            'transports' => 'array',
+            'backup_eligible' => 'boolean',
+            'backup_status' => 'boolean',
+            'last_used_at' => 'immutable_datetime',
+            'created_at' => 'immutable_datetime',
+            'updated_at' => 'immutable_datetime',
+        ];
+    }
+}
