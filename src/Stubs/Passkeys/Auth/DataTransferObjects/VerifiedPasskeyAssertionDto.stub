@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\DataTransferObjects;
+
+use Lightit\Authentication\Domain\Models\Passkey;
+
+final readonly class VerifiedPasskeyAssertionDto
+{
+    public function __construct(
+        public Passkey $passkey,
+        public int $signCount,
+        public bool $backupEligible,
+        public bool $backupStatus,
+    ) {}
+}
