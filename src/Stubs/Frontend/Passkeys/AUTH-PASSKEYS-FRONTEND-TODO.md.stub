@@ -52,16 +52,17 @@ to use another one, add it to `src/components/ui/icons/available-icons.ts` first
    `allowCredentials`, so `startAuthentication` lets the user pick any passkey the
    device holds for the site. The result goes with the `ceremony_id` to
    `POST auth/passkeys/login`.
-2. A normal sign-in creates the cookie session and returns the user.
-   `useSignInWithPasskey` fetches the current-user query again, like the template's
+2. A normal sign-in creates the cookie session. `useSignInWithPasskey` ignores the
+   response body and fetches the current-user query again, like the template's
    `useLogin`, and the button navigates to the `redirect` search param (or `/`)
    through `redirectTarget`, like the login form.
 3. When the user has 2FA, the backend answers with the same challenge as the password
    login. If the 2FA frontend was already generated when this file was, the hook puts it
    in the 2FA challenge store and navigates to `/two-factor` or `/two-factor/setup`,
    keeping `redirect`, so a passkey never skips the second factor. Otherwise the hook
-   only knows the user response, and a challenge shows `common.requestError`. If you
-   add 2FA later, delete `-hooks/use-sign-in-with-passkey.ts` and run `auth:setup`
+   does not know about challenges: the backend still creates no session, so the
+   current user stays empty and the app's guards send the user back to `/login`,
+   exactly like the template's `useLogin` without the 2FA hook. If you add 2FA later, delete `-hooks/use-sign-in-with-passkey.ts` and run `auth:setup`
    with Passkeys again: it writes the 2FA-aware hook and skips every other file.
 4. A cancelled or timed-out prompt, a browser without WebAuthn, a passkey the backend
    doesn't know (`422` `passkey_not_recognised`, e.g. deleted from the account) and an
