@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Services;
 
 use Cose\Algorithms;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
 use InvalidArgumentException;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
@@ -40,7 +41,7 @@ final readonly class PasskeyCeremonyService
 
     private SerializerInterface $serializer;
 
-    public function __construct()
+    public function __construct(private ExceptionHandler $exceptionHandler)
     {
         $this->serializer = new WebauthnSerializerFactory(
             new AttestationStatementSupportManager([new NoneAttestationStatementSupport]),
@@ -106,7 +107,7 @@ final readonly class PasskeyCeremonyService
         } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError) {
             throw new PasskeyRegistrationFailedException;
         } catch (Throwable $throwable) {
-            report($throwable);
+            $this->exceptionHandler->report($throwable);
 
             throw new PasskeyRegistrationFailedException;
         }
