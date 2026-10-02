@@ -118,6 +118,12 @@ Route::prefix('2fa')->group(static function (): void {
 });
 ```
 
+> [!WARNING]
+> `google2fa.enabled=false` (`TWO_FACTOR_AUTHENTICATION_ENABLED`) stops challenging everyone, including
+> users who already enrolled: they sign in with their password alone until it is `true` again. Their
+> secret and recovery codes stay stored. To stop forcing enrollment but keep challenging enrolled
+> users, set `google2fa.mandatory=false` instead.
+
 ---
 
 ### Flow
