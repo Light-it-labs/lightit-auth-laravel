@@ -17,7 +17,7 @@ export const PasskeyLoginButton = () => {
 
   const failureMessages: Partial<Record<PasskeySignInFailure, string>> = {
     cancelled: t("passkeys.errors.cancelled"),
-    unsupported: t("passkeys.errors.unsupported"),
+    unsupported: t("passkeys.signIn.unsupported"),
     notRecognised: t("passkeys.errors.notRecognised"),
     challengeExpired: t("passkeys.errors.challengeExpired"),
   };
@@ -37,7 +37,7 @@ export const PasskeyLoginButton = () => {
 
   const signIn = () => {
     if (!browserSupportsWebAuthn()) {
-      toast.error(t("passkeys.errors.unsupported"));
+      toast.error(t("passkeys.signIn.unsupported"));
 
       return;
     }

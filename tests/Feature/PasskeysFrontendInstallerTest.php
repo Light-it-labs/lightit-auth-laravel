@@ -195,6 +195,30 @@ describe('PasskeysFrontendInstaller', function (): void {
         }
     );
 
+    it(
+        'tells a browser without WebAuthn it cannot sign in with a passkey, not that it cannot create one',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+    
+            preg_match(
+                '/```json\n(.*?)```/s',
+                (string) file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'),
+                $block
+            );
+            $documented = json_decode('{' . $block[1] . '}', true, flags: JSON_THROW_ON_ERROR);
+    
+            expect(
+                file_get_contents(
+                    $this->root . '/src/routes/(public)/_guest/login/-components/passkey-login-button.tsx'
+                )
+            )
+                ->toContain('t("passkeys.signIn.unsupported")')
+                ->not->toContain('t("passkeys.errors.unsupported")')
+                ->and($documented['passkeys']['signIn']['unsupported'])->toContain('sign in')
+                ->not->toContain('create');
+        }
+    );
+
     it('prints the missing browser WebAuthn dependency and the i18n step', function (): void {
         $this->artisan('passkeys-frontend-fake')
             ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')
