@@ -1,0 +1,181 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
+use Lightitlabs\Tools\StubRenderer;
+
+describe('PasskeysFrontendInstaller', function (): void {
+    beforeEach(function (): void {
+        $this->root = sys_get_temp_dir() . '/lightit-passkeys-frontend-' . bin2hex(random_bytes(6));
+        File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->root);
+
+        $this->sourceFiles = [
+            'src/services/auth/passkeys/types.ts',
+            'src/services/auth/passkeys/schemas.ts',
+            'src/services/auth/passkeys/api.ts',
+            'src/services/auth/passkeys/actions.ts',
+            'src/routes/_private/account/passkeys/-hooks/use-passkey-errors.ts',
+            'src/routes/_private/account/passkeys/-components/add-passkey-dialog.tsx',
+            'src/routes/_private/account/passkeys/-components/rename-passkey-dialog.tsx',
+            'src/routes/_private/account/passkeys/-components/delete-passkey-dialog.tsx',
+            'src/routes/_private/account/passkeys/page.tsx',
+        ];
+
+        $root = $this->root;
+        Artisan::command('passkeys-frontend-fake', function () use ($root): void {
+            $manifest = new FrontendPackageManifest();
+
+            (new PasskeysFrontendInstaller(
+                $this,
+                new StubRenderer(),
+                new FrontendProjectLocator($manifest),
+                $manifest,
+                sys_get_temp_dir() . '/lightit-passkeys-laravel-root',
+                $root,
+            ))->install();
+        });
+    });
+
+    afterEach(function (): void {
+        File::deleteDirectory($this->root);
+    });
+
+    it('writes the passkey services, the account page and the TODO with every placeholder resolved', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        foreach ([...$this->sourceFiles, 'AUTH-PASSKEYS-FRONTEND-TODO.md'] as $relative) {
+            expect($this->root . '/' . $relative)->toBeFile()
+                ->and(file_get_contents($this->root . '/' . $relative))->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
+        }
+    });
+
+    it('reports Skipped on a second run and never touches a file the app already has', function (): void {
+        mkdir($this->root . '/src/routes/_private/account/passkeys', 0755, true);
+        file_put_contents($this->root . '/src/routes/_private/account/passkeys/page.tsx', 'export {};' . PHP_EOL);
+
+        $this->artisan('passkeys-frontend-fake')
+            ->expectsOutputToContain('Skipped src/routes/_private/account/passkeys/page.tsx')
+            ->assertSuccessful();
+
+        $before = file_get_contents($this->root . '/src/services/auth/passkeys/api.ts');
+
+        $this->artisan('passkeys-frontend-fake')
+            ->expectsOutputToContain('Skipped src/services/auth/passkeys/api.ts')
+            ->expectsOutputToContain('Skipped AUTH-PASSKEYS-FRONTEND-TODO.md')
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/routes/_private/account/passkeys/page.tsx'))
+            ->toBe('export {};' . PHP_EOL)
+            ->and(file_get_contents($this->root . '/src/services/auth/passkeys/api.ts'))->toBe($before);
+    });
+
+    it(
+        'never adds a second HTTP client, a token or browser storage',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+    
+            foreach ($this->sourceFiles as $relative) {
+                expect(file_get_contents($this->root . '/' . $relative))
+                    ->not->toContain('axios.create')
+                    ->not->toContain('Bearer')
+                    ->not->toContain('accessToken')
+                    ->not->toContain('localStorage');
+            }
+        }
+    );
+
+    it('writes no comments into the generated TypeScript', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        foreach ($this->sourceFiles as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->not->toMatch('#^\s*//#m')
+                ->not->toContain('/*')
+                ->not->toContain('eslint-disable');
+        }
+    });
+
+    it('registers the page as a file route and builds it from the template\'s real UI', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/routes/_private/account/passkeys/page.tsx'))
+            ->toContain('export const Route = createFileRoute("/_private/account/passkeys/")')
+            ->not->toContain('export default');
+
+        foreach ($this->sourceFiles as $relative) {
+            $contents = (string) file_get_contents($this->root . '/' . $relative);
+
+            preg_match_all('#from "@/components/ui/([a-z-]+)"#', $contents, $components);
+            expect(
+                array_diff($components[1], ['button', 'dialog', 'error-message', 'input', 'label', 'password-input'])
+            )
+                ->toBe([])
+                ->and($contents)->not->toMatch('/import \{[^}]*Dialog(Content|Header|Footer|Title|Description)/');
+
+            preg_match_all('/variant="([a-zA-Z]+)"/', $contents, $variants);
+            expect(array_diff($variants[1], ['primary', 'secondary', 'tertiary', 'outlined', 'elevated', 'plainText']))
+                ->toBe([]);
+        }
+    });
+
+    it('documents every passkeys.* key the generated files translate, with English copy', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        preg_match_all(
+            '/```json\n(.*?)```/s',
+            (string) file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'),
+            $blocks
+        );
+        $documented = json_decode('{' . $blocks[1][0] . '}', true, flags: JSON_THROW_ON_ERROR);
+
+        $used = [];
+        foreach ($this->sourceFiles as $relative) {
+            preg_match_all(
+                '/\bt\("(passkeys\.[a-zA-Z.]+)"/',
+                (string) file_get_contents($this->root . '/' . $relative),
+                $keys
+            );
+            $used = [...$used, ...$keys[1]];
+        }
+
+        expect($used)->not->toBeEmpty();
+
+        foreach (array_unique($used) as $key) {
+            expect(Arr::get($documented, $key))->toBeString()->not->toBeEmpty();
+        }
+    });
+
+    it('offers an optional sidebar link labelled with a short navigation key the TODO documents', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        $todo = (string) file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md');
+
+        preg_match_all('/```json\n(.*?)```/s', $todo, $blocks);
+        $documented = json_decode('{' . $blocks[1][1] . '}', true, flags: JSON_THROW_ON_ERROR);
+
+        expect($todo)
+            ->toContain('{ path: "/account/passkeys", label: t("navigation.links.passkeys"), icon: <Icons.Lock /> }')
+            ->toContain('src/routes/_private/-components/sidebar/sidebar.tsx')
+            ->and(Arr::get($documented, 'navigation.links.passkeys'))->toBe('Passkeys')
+            ->and(file_get_contents($this->root . '/src/routes/_private/account/passkeys/page.tsx'))
+            ->toContain('createFileRoute("/_private/account/passkeys/")');
+    });
+
+    it('prints the missing browser WebAuthn dependency and the i18n step', function (): void {
+        $this->artisan('passkeys-frontend-fake')
+            ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')
+            ->expectsOutputToContain(
+                'Manual step: add the passkeys i18n block listed in AUTH-PASSKEYS-FRONTEND-TODO.md'
+            )
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'))
+            ->toContain('pnpm add @simplewebauthn/browser date-fns');
+    });
+});

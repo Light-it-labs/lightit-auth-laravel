@@ -11,6 +11,7 @@ enum Feature: string
     case Otp = 'otp';
     case ForgotPassword = 'forgot-password';
     case GoogleSso = 'google-sso';
+    case Passkeys = 'passkeys';
 
     /**
      * The features `auth:setup` offers.
@@ -26,6 +27,7 @@ enum Feature: string
             self::TwoFactorAuthentication,
             self::RolesAndPermissions,
             self::ForgotPassword,
+            self::Passkeys,
         ];
     }
 
@@ -37,6 +39,7 @@ enum Feature: string
             self::Otp => 'OTP (one-time password)',
             self::ForgotPassword => 'Forgot Password',
             self::GoogleSso => 'Google SSO',
+            self::Passkeys => 'Passkeys',
         };
     }
 }

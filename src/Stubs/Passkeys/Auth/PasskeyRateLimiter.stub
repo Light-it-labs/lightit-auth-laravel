@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+
+final class PasskeyRateLimiter
+{
+    public static function register(): void
+    {
+        RateLimiter::for('passkeys', static function (Request $request): array {
+            $userId = $request->user()?->getAuthIdentifier();
+            $subject = is_scalar($userId) ? 'passkeys-user|' . $userId : 'passkeys-guest|' . $request->ip();
+
+            return [
+                Limit::perMinute(6)->by($subject),
+                Limit::perMinute(30)->by('passkeys-ip|' . $request->ip()),
+            ];
+        });
+    }
+}

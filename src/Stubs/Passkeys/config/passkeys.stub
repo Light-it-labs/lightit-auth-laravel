@@ -1,0 +1,36 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+
+    /*
+     * The relying party the browser binds every passkey to. `id` is the frontend's
+     * host or a registrable parent domain of it (never a sibling host), without
+     * scheme or port.
+     */
+    'relying_party' => [
+        'id' => env('PASSKEYS_RP_ID', 'localhost'),
+        'name' => env('PASSKEYS_RP_NAME', env('APP_NAME', 'Laravel')),
+    ],
+
+    /*
+     * Full origins (scheme, host and port) allowed to run a ceremony, comma-separated.
+     */
+    'allowed_origins' => array_values(array_filter(array_map(
+        trim(...),
+        explode(',', (string) env('PASSKEYS_ALLOWED_ORIGINS', 'http://localhost:5173')),
+    ))),
+
+    /*
+     * Keys the user handle stored on every authenticator. Changing it later breaks
+     * every passkey registered before the change.
+     */
+    'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET', env('APP_KEY')),
+
+    /*
+     * How long a registration challenge stays valid, in seconds.
+     */
+    'challenge_ttl_seconds' => (int) env('PASSKEYS_CHALLENGE_TTL_SECONDS', 300),
+
+];
