@@ -42,6 +42,15 @@ final class StubLoader
         );
         $contents = (string) preg_replace('/^use Lightit\\\\Authentication\\\\[^;]+;\n/m', '', $contents);
 
+        // Property-level #[\Override] needs PHP 8.5, the consumer app's version; this package's CI runs 8.4.
+        if (\PHP_VERSION_ID < 80500) {
+            $contents = (string) preg_replace(
+                '/^[ \t]*#\[\\\\Override\]\n(?=[ \t]*(?:public|protected|private)[^(\n]*\$)/m',
+                '',
+                $contents
+            );
+        }
+
         return str_replace(
             [
                 'use Lightit\Users\Domain\Models\User;',
