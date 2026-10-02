@@ -148,6 +148,9 @@ final readonly class PasskeyCeremonyService
     }
 
     /**
+     * Call inside a transaction: the credential row stays locked until it commits, so a
+     * concurrent assertion checks its counter against the value this one saves.
+     *
      * @throws PasskeyLoginFailedException
      * @throws PasskeyNotRecognisedException
      */
@@ -179,6 +182,7 @@ final readonly class PasskeyCeremonyService
 
         $passkey = Passkey::query()
             ->where('credential_id_hash', hash('sha256', $publicKeyCredential->rawId))
+            ->lockForUpdate()
             ->first() ?? throw new PasskeyNotRecognisedException;
 
         $ownerHandle = $this->userHandle($passkey->user_id);
