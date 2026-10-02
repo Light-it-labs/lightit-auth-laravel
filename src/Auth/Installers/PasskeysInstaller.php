@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -72,12 +73,13 @@ final class PasskeysInstaller implements AuthInstallerInterface
         return __DIR__ . '/../../Stubs/Passkeys';
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function install(): void
     {
         if (! $this->composerInstaller->requirePackages(self::PACKAGES)) {
-            $this->composerInstaller->printFailure('Failed to install ' . implode(', ', self::PACKAGES));
-
-            return;
+            throw new SetupAbortedException('Failed to install ' . implode(', ', self::PACKAGES));
         }
 
         $this->writeFiles();
