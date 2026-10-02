@@ -151,6 +151,22 @@ describe('PasskeysFrontendInstaller', function (): void {
         }
     });
 
+    it('offers an optional sidebar link labelled with a short navigation key the TODO documents', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        $todo = (string) file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md');
+
+        preg_match_all('/```json\n(.*?)```/s', $todo, $blocks);
+        $documented = json_decode('{' . $blocks[1][1] . '}', true, flags: JSON_THROW_ON_ERROR);
+
+        expect($todo)
+            ->toContain('{ path: "/account/passkeys", label: t("navigation.links.passkeys"), icon: <Icons.Lock /> }')
+            ->toContain('src/routes/_private/-components/sidebar/sidebar.tsx')
+            ->and(Arr::get($documented, 'navigation.links.passkeys'))->toBe('Passkeys')
+            ->and(file_get_contents($this->root . '/src/routes/_private/account/passkeys/page.tsx'))
+            ->toContain('createFileRoute("/_private/account/passkeys/")');
+    });
+
     it('prints the missing browser WebAuthn dependency and the i18n step', function (): void {
         $this->artisan('passkeys-frontend-fake')
             ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')

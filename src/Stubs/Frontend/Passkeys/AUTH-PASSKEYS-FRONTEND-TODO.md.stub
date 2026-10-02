@@ -30,6 +30,20 @@ The TanStack Router plugin adds the route to `src/routeTree.gen.ts` the next tim
 6. Without WebAuthn support in the browser the page says so instead of offering
    "Add passkey".
 
+## Optional: link the page from the sidebar
+
+The package does not edit your navigation. To add a link, in
+`src/routes/_private/-components/sidebar/sidebar.tsx` add this entry at the end of
+the `links` array:
+
+```tsx
+{ path: "/account/passkeys", label: t("navigation.links.passkeys"), icon: <Icons.Lock /> },
+```
+
+Its label is the short `navigation.links.passkeys` key from the i18n step below,
+like the other links. `Lock` is the closest icon the template's `Icons` set ships;
+to use another one, add it to `src/components/ui/icons/available-icons.ts` first.
+
 ## i18n keys
 
 `src/i18n/locales/en.json` is not edited for you. Add this block at the top level:
@@ -74,6 +88,13 @@ The TanStack Router plugin adds the route to `src/routeTree.gen.ts` the next tim
     "challengeExpired": "That took too long. Try again."
   }
 }
+```
+
+Only if you add the sidebar link above, add `passkeys` next to the existing
+`navigation.links` keys:
+
+```json
+"navigation": { "links": { "passkeys": "Passkeys" } }
 ```
 
 The screens also reuse `form.password`, `form.errors.required`, `buttons.cancel`
