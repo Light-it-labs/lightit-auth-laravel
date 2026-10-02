@@ -6,7 +6,9 @@ namespace Lightit\Authentication\Domain\Actions;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyAssertionDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyChallengeExpiredException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
@@ -41,18 +43,22 @@ final readonly class PasskeyLoginAction
         $options = $this->passkeyChallengeStore->pullLogin($passkeyLoginDto->ceremonyId)
             ?? throw new PasskeyChallengeExpiredException;
 
-        $verified = $this->passkeyCeremonyService->verifyAssertion($options, $passkeyLoginDto->credential);
+        $verified = DB::transaction(function () use ($options, $passkeyLoginDto): VerifiedPasskeyAssertionDto {
+            $verified = $this->passkeyCeremonyService->verifyAssertion($options, $passkeyLoginDto->credential);
 
-        $passkey = $verified->passkey;
+            $passkey = $verified->passkey;
 
-        $passkey->sign_count = $verified->signCount;
-        $passkey->backup_eligible = $verified->backupEligible;
-        $passkey->backup_status = $verified->backupStatus;
-        $passkey->last_used_at = CarbonImmutable::now();
-        $passkey->saveOrFail();
+            $passkey->sign_count = $verified->signCount;
+            $passkey->backup_eligible = $verified->backupEligible;
+            $passkey->backup_status = $verified->backupStatus;
+            $passkey->last_used_at = CarbonImmutable::now();
+            $passkey->saveOrFail();
 
-        $this->loginByUserAction->execute($passkey->user);
+            return $verified;
+        });
 
-        return $passkey->user;
+        $this->loginByUserAction->execute($verified->passkey->user);
+
+        return $verified->passkey->user;
     }
 }

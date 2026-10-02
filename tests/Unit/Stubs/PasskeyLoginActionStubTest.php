@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Database\Events\TransactionCommitted;
 use Illuminate\Http\Request;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
+use Illuminate\Support\Facades\Event;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\FakePasskey;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\LoginByUserAction;
@@ -13,6 +15,7 @@ use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyChallengeExpiredExc
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginAction;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginDto;
+use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\Trace;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\TwoFactorChallengeException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\UnauthenticatedException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\User;
@@ -28,6 +31,17 @@ $fakes = <<<'PHP'
 
     final class User
     {
+    }
+
+    final class Trace
+    {
+        /** @var list<string> */
+        public static array $steps = [];
+
+        public static function record(string $step): void
+        {
+            self::$steps[] = $step . '@' . \Illuminate\Support\Facades\DB::transactionLevel();
+        }
     }
 
     final class PasskeyLoginDto
@@ -75,6 +89,7 @@ $fakes = <<<'PHP'
 
         public function saveOrFail(): bool
         {
+            Trace::record('saveOrFail');
             ++$this->saves;
 
             return true;
@@ -103,6 +118,7 @@ $fakes = <<<'PHP'
 
         public function pullLogin(string $ceremonyId): string|null
         {
+            Trace::record('pullLogin');
             $this->pulled[] = $ceremonyId;
             $options = $this->options;
             $this->options = null;
@@ -119,6 +135,8 @@ $fakes = <<<'PHP'
 
         public function verifyAssertion(string $options, string $credential): VerifiedPasskeyAssertionDto
         {
+            Trace::record('verifyAssertion');
+
             return new VerifiedPasskeyAssertionDto($this->passkey, 9, true, true);
         }
     }
@@ -133,6 +151,7 @@ $fakes = <<<'PHP'
 
         public function execute(User $user): void
         {
+            Trace::record('loginByUser');
             ++$this->calls;
 
             if ($this->challenges) {
@@ -197,6 +216,22 @@ describe('PasskeyLoginAction stub', function (): void {
                 ->and($this->passkey->sign_count)->toBe(9)
                 ->and($this->passkey->backup_status)->toBeTrue()
                 ->and($this->passkey->last_used_at)->not->toBeNull();
+        }
+    );
+
+    it(
+        'checks and saves the counter in one transaction, outside of which it spends the challenge and runs the 2FA gate',
+        function () use ($action): void {
+            Trace::$steps = [];
+            Event::listen(TransactionCommitted::class, static function (): void {
+                Trace::$steps[] = 'commit';
+            });
+
+            $action->call($this, new PasskeyChallengeStore('{}'), new LoginByUserAction(challenges: false))
+                ->execute($this->dto);
+
+            expect(Trace::$steps)
+                ->toBe(['pullLogin@0', 'verifyAssertion@1', 'saveOrFail@1', 'commit', 'loginByUser@0']);
         }
     );
 

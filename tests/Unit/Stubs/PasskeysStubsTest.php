@@ -55,7 +55,7 @@ describe('Passkeys backend stubs', function (): void {
         );
 
         expect($action)
-            ->toContain('$this->loginByUserAction->execute($passkey->user);')
+            ->toContain('$this->loginByUserAction->execute($verified->passkey->user);')
             ->not->toContain('executeAfterChallenge')
             ->and($controller)
             ->toContain('use Lightit\Users\App\Resources\UserResource;')
