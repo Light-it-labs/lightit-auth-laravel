@@ -88,6 +88,13 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
         return $decoded;
     }
 
+    public function storePendingTwoFactorSecret(string $secret): void
+    {
+        $this->setAttribute(self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME, $secret);
+        $this->setAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME, null);
+        $this->saveOrFail();
+    }
+
     public function activateTwoFactorAuthentication(): void
     {
         $this->setAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME, now());

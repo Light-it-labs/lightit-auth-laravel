@@ -4,17 +4,20 @@ import { api, ensureCsrf } from "@/config/api";
 import type { LoginPayload } from "@/services/auth/types";
 import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
 import type { User } from "{{ userTypeImportPath }}";
-import { twoFactorSetupSchema } from "./schemas";
+import { twoFactorEnrollmentSchema, twoFactorSetupSchema } from "./schemas";
 import {
   isTwoFactorChallenge,
   type MessageResult,
   type OneTimePasswordPayload,
   type PasswordPayload,
   type RecoveryCodePayload,
-  type RegenerateRecoveryCodesResult,
+  type RecoveryCodesResult,
+  type SecondFactorConfirmationPayload,
   type TwoFactorChallengeResult,
+  type TwoFactorEnrollment,
   type TwoFactorResetChallengeResult,
   type TwoFactorSetupPayload,
+  type TwoFactorStatus,
 } from "./types";
 
 const withChallengeToken = (token: string) => {
@@ -81,16 +84,47 @@ export const resetTwoFactor = async ({ token }: { token: string }): Promise<Mess
   return {{ currentUserResponseAccessor }};
 };
 
-export const disableTwoFactor = async ({ password }: PasswordPayload): Promise<MessageResult> => {
-  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password });
+export const disableTwoFactor = async ({
+  code,
+  password,
+}: SecondFactorConfirmationPayload): Promise<MessageResult> => {
+  const response = await api.post("{{ twoFactorDisableEndpoint }}", { password, code });
 
   return {{ currentUserResponseAccessor }};
 };
 
 export const regenerateRecoveryCodes = async ({
+  code,
   password,
-}: PasswordPayload): Promise<RegenerateRecoveryCodesResult> => {
-  const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", { password });
+}: SecondFactorConfirmationPayload): Promise<RecoveryCodesResult> => {
+  const response = await api.post("{{ twoFactorRegenerateRecoveryCodesEndpoint }}", {
+    password,
+    code,
+  });
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const getTwoFactorStatus = async (): Promise<TwoFactorStatus> => {
+  const response = await api.get("{{ twoFactorStatusEndpoint }}");
+
+  return {{ currentUserResponseAccessor }};
+};
+
+export const enableTwoFactor = async ({
+  password,
+}: PasswordPayload): Promise<TwoFactorEnrollment> => {
+  const response = await api.post("{{ twoFactorEnableEndpoint }}", { password });
+
+  return twoFactorEnrollmentSchema.parse({{ currentUserResponseAccessor }});
+};
+
+export const confirmTwoFactor = async ({
+  oneTimePassword,
+}: OneTimePasswordPayload): Promise<RecoveryCodesResult> => {
+  const response = await api.post("{{ twoFactorConfirmEndpoint }}", {
+    one_time_password: oneTimePassword,
+  });
 
   return {{ currentUserResponseAccessor }};
 };

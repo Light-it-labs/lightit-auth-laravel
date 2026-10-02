@@ -1,0 +1,58 @@
+import { HttpStatusCode, isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { Dialog } from "@/components/ui/dialog";
+import { useTranslation } from "@/i18n";
+import { refreshTwoFactorState, useDisableTwoFactor } from "@/services/auth/two-factor/actions";
+import { SecondFactorConfirmationForm } from "./second-factor-confirmation-form";
+
+type DisableTwoFactorDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFactorDialogProps) => {
+  const { t } = useTranslation();
+
+  const disableTwoFactorMutation = useDisableTwoFactor();
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={onOpenChange}>
+      <Dialog.Content isDismissible={!disableTwoFactorMutation.isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("twoFactor.account.disable.title")}</Dialog.Title>
+
+          <Dialog.Description>{t("twoFactor.account.disable.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        <SecondFactorConfirmationForm
+          isPending={disableTwoFactorMutation.isPending}
+          submitLabel={t("twoFactor.account.disable.submit")}
+          onConfirm={(payload, onFailed) => {
+            disableTwoFactorMutation.mutate(payload, {
+              onSuccess: async () => {
+                toast.success(t("twoFactor.account.disable.success"));
+                onOpenChange(false);
+                await refreshTwoFactorState();
+              },
+              onError: async (error) => {
+                if (isAxiosError(error) && error.response?.status === HttpStatusCode.Forbidden) {
+                  toast.error(t("twoFactor.account.disable.mandatory"));
+                  onOpenChange(false);
+                  await refreshTwoFactorState();
+
+                  return;
+                }
+
+                await onFailed(error);
+              },
+            });
+          }}
+          onStateConflict={() => {
+            onOpenChange(false);
+          }}
+        />
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

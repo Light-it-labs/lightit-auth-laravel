@@ -1,0 +1,97 @@
+import { useState } from "react";
+
+import { AuthenticatorSecret } from "@/components/two-factor/authenticator-secret";
+import { RecoveryCodes } from "@/components/two-factor/recovery-codes";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { useTranslation } from "@/i18n";
+import { useEnableTwoFactor } from "@/services/auth/two-factor/actions";
+import type { TwoFactorEnrollment } from "@/services/auth/two-factor/types";
+import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
+import { ConfirmTwoFactorForm } from "./confirm-two-factor-form";
+import { PasswordConfirmationForm } from "./password-confirmation-form";
+
+type EnableTwoFactorDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const EnableTwoFactorDialog = ({ isOpen, onOpenChange }: EnableTwoFactorDialogProps) => {
+  const { t } = useTranslation();
+
+  const [enrollment, setEnrollment] = useState<TwoFactorEnrollment | null>(null);
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setEnrollment(null);
+      setRecoveryCodes(null);
+    }
+
+    onOpenChange(open);
+  };
+
+  const closeDialog = () => {
+    handleOpenChange(false);
+  };
+
+  const enableTwoFactorMutation = useEnableTwoFactor();
+  const { onPasswordError } = useTwoFactorAccountErrors({ onStateConflict: closeDialog });
+
+  const description = () => {
+    if (recoveryCodes) {
+      return t("twoFactor.account.enable.success");
+    }
+
+    return enrollment
+      ? t("twoFactor.setup.confirmDescription")
+      : t("twoFactor.account.passwordDescription");
+  };
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog.Content isDismissible={!enableTwoFactorMutation.isPending && !recoveryCodes}>
+        <Dialog.Header>
+          <Dialog.Title>{t("twoFactor.account.enable.title")}</Dialog.Title>
+
+          <Dialog.Description>{description()}</Dialog.Description>
+        </Dialog.Header>
+
+        {recoveryCodes ? (
+          <>
+            <RecoveryCodes recoveryCodes={recoveryCodes} />
+
+            <Dialog.Footer>
+              <Dialog.Close asChild>
+                <Button>{t("twoFactor.account.recoveryCodesSaved")}</Button>
+              </Dialog.Close>
+            </Dialog.Footer>
+          </>
+        ) : null}
+
+        {enrollment && !recoveryCodes ? (
+          <>
+            <AuthenticatorSecret qr={enrollment.qr} secret={enrollment.secret} />
+
+            <ConfirmTwoFactorForm onConfirmed={setRecoveryCodes} onStateConflict={closeDialog} />
+          </>
+        ) : null}
+
+        {enrollment ? null : (
+          <PasswordConfirmationForm
+            isPending={enableTwoFactorMutation.isPending}
+            submitLabel={t("twoFactor.account.enable.continue")}
+            onConfirm={(payload, setError) => {
+              enableTwoFactorMutation.mutate(payload, {
+                onSuccess: setEnrollment,
+                onError: (error) => {
+                  return onPasswordError(error, setError);
+                },
+              });
+            }}
+          />
+        )}
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

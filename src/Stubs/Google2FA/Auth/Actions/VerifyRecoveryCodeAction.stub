@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use Lightit\Authentication\Domain\TwoFactorAttemptLimiter;
 use Lightit\Users\Domain\Models\User;
@@ -13,47 +11,22 @@ use Lightit\Users\Domain\Models\User;
 final readonly class VerifyRecoveryCodeAction
 {
     public function __construct(
+        private ConsumeRecoveryCodeAction $consumeRecoveryCodeAction,
         private LoginByUserAction $loginByUserAction,
     ) {}
 
     /**
-     * Locks the user row for the whole check-then-consume sequence: reading
-     * the codes, matching the supplied one and persisting the list without
-     * it must all see (and act on) the same snapshot, or two concurrent
-     * requests with the same recovery code could both pass the match above
-     * and each burn a different code.
-     *
      * @throws TwoFactorAuthException
      */
     public function execute(User $user, string $suppliedCode): User
     {
         TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);
 
-        $lockedUser = DB::transaction(function () use ($user, $suppliedCode): User {
-            /** @var User $lockedUser */
-            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+        $lockedUser = $this->consumeRecoveryCodeAction->execute($user, $suppliedCode);
 
-            $hashedCodes = $lockedUser->getRecoveryCodes();
-
-            $matchIndex = -1;
-
-            foreach ($hashedCodes as $index => $hash) {
-                if (Hash::check($suppliedCode, $hash)) {
-                    $matchIndex = $index;
-
-                    break;
-                }
-            }
-
-            if ($matchIndex === -1) {
-                throw new TwoFactorAuthException(message: __('google2fa.invalid_recovery_code'), reason: 'invalid_recovery_code', status: 422);
-            }
-
-            unset($hashedCodes[$matchIndex]);
-            $lockedUser->replaceRecoveryCodes(array_values($hashedCodes));
-
-            return $lockedUser;
-        });
+        if (is_null($lockedUser)) {
+            throw new TwoFactorAuthException(message: __('google2fa.invalid_recovery_code'), reason: 'invalid_recovery_code', status: 422);
+        }
 
         TwoFactorAttemptLimiter::clear($user->id);
 

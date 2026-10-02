@@ -1,3 +1,5 @@
+import { isAxiosError } from "axios";
+
 export type TwoFactorChallengeResult = {
   accessToken: string;
   tokenType: "setup_required" | "verification_required";
@@ -31,6 +33,24 @@ export const isVerificationRequired = (
   return result.tokenType === "verification_required";
 };
 
+type TwoFactorErrorBody = {
+  error?: { code?: string };
+};
+
+export const isOneTimePasswordAlreadyUsed = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "otp_already_used"
+  );
+};
+
+export const isInvalidPassword = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "invalid_password"
+  );
+};
+
 export type TwoFactorSetupPayload = {
   qr: string;
   secret: string;
@@ -49,9 +69,28 @@ export type PasswordPayload = {
   password: string;
 };
 
-export type RegenerateRecoveryCodesResult = {
+export type SecondFactorConfirmationPayload = PasswordPayload & {
+  code: string;
+};
+
+export type RecoveryCodesResult = {
   recoveryCodes: string[];
 };
+
+export type TwoFactorStatus = {
+  available: boolean;
+  enabled: boolean;
+  mandatory: boolean;
+};
+
+export const isTwoFactorUnavailable = (error: unknown) => {
+  return (
+    isAxiosError<TwoFactorErrorBody>(error) &&
+    error.response?.data.error?.code === "2fa_unavailable"
+  );
+};
+
+export type TwoFactorEnrollment = Pick<TwoFactorSetupPayload, "qr" | "secret">;
 
 export type MessageResult = {
   message: string;

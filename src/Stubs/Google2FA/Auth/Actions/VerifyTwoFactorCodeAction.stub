@@ -1,0 +1,64 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Authentication\Domain\TwoFactorAttemptLimiter;
+use Lightit\Users\Domain\Models\User;
+use PragmaRX\Google2FA\Exceptions\IncompatibleWithGoogleAuthenticatorException;
+use PragmaRX\Google2FA\Exceptions\InvalidCharactersException;
+use PragmaRX\Google2FA\Exceptions\SecretKeyTooShortException;
+
+final readonly class VerifyTwoFactorCodeAction
+{
+    private const string ONE_TIME_PASSWORD_PATTERN = '/\A\d{6}\z/';
+
+    public function __construct(
+        private VerifyOtpAction $verifyOtpAction,
+        private ConsumeRecoveryCodeAction $consumeRecoveryCodeAction,
+    ) {}
+
+    /**
+     * Proves possession of the second factor on a signed-in request: a
+     * 6-digit code is checked as a live one-time password (claimed once, like
+     * at login), anything else as a recovery code, which is spent.
+     *
+     * The attempt is counted before the check and outside any transaction:
+     * with a database cache store on the same connection, a rolled-back
+     * transaction would erase the lockout hit along with it.
+     *
+     * @throws IncompatibleWithGoogleAuthenticatorException
+     * @throws InvalidCharactersException
+     * @throws SecretKeyTooShortException
+     * @throws TwoFactorAuthException
+     */
+    public function execute(User $user, string $code): void
+    {
+        TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);
+
+        $secret = $user->getTwoFactorAuthSecret();
+
+        if (is_null($secret)) {
+            throw $this->invalidCode();
+        }
+
+        if (preg_match(self::ONE_TIME_PASSWORD_PATTERN, $code) === 1) {
+            $this->verifyOtpAction->execute($user->id, $secret, $code);
+        } elseif (is_null($this->consumeRecoveryCodeAction->execute($user, $code))) {
+            throw $this->invalidCode();
+        }
+
+        TwoFactorAttemptLimiter::clear($user->id);
+    }
+
+    private function invalidCode(): TwoFactorAuthException
+    {
+        return new TwoFactorAuthException(
+            message: __('google2fa.invalid_two_factor_code'),
+            reason: 'invalid_otp',
+            status: 422,
+        );
+    }
+}

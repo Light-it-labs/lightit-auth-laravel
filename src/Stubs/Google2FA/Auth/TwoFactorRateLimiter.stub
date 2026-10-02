@@ -16,12 +16,30 @@ final class TwoFactorRateLimiter
     public static function register(): void
     {
         RateLimiter::for('2fa', function (Request $request): array {
-            $hashedToken = hash('sha256', (string) $request->bearerToken());
-
             return [
-                Limit::perMinute(5)->by('2fa-token|' . $hashedToken),
+                Limit::perMinute(5)->by(self::subjectKey($request)),
                 Limit::perMinute(30)->by('2fa-ip|' . $request->ip()),
             ];
         });
+    }
+
+    /**
+     * A signed-in user is keyed by id before anything else: on the `auth:sanctum`
+     * routes the session authenticates the request and Sanctum ignores the
+     * `Authorization` header, so keying by a header the caller chooses would hand
+     * out a fresh bucket per invented token. Only the challenge endpoints, which
+     * have no signed-in user, are keyed by their challenge token.
+     */
+    private static function subjectKey(Request $request): string
+    {
+        $userId = $request->user()?->getAuthIdentifier();
+
+        if (is_scalar($userId)) {
+            return '2fa-user|' . $userId;
+        }
+
+        $token = $request->bearerToken();
+
+        return $token !== null ? '2fa-token|' . hash('sha256', $token) : '2fa-guest|' . $request->ip();
     }
 }
