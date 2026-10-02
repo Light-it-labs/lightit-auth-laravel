@@ -4,7 +4,7 @@ import { api, ensureCsrf } from "@/config/api";
 import type { LoginPayload } from "@/services/auth/types";
 import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
 import type { User } from "{{ userTypeImportPath }}";
-import { twoFactorSetupSchema } from "./schemas";
+import { twoFactorEnrollmentSchema, twoFactorSetupSchema } from "./schemas";
 import {
   isTwoFactorChallenge,
   type MessageResult,
@@ -116,7 +116,7 @@ export const enableTwoFactor = async ({
 }: PasswordPayload): Promise<TwoFactorEnrollment> => {
   const response = await api.post("{{ twoFactorEnableEndpoint }}", { password });
 
-  return {{ currentUserResponseAccessor }};
+  return twoFactorEnrollmentSchema.parse({{ currentUserResponseAccessor }});
 };
 
 export const confirmTwoFactor = async ({

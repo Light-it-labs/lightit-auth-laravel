@@ -39,3 +39,5 @@ export const twoFactorSetupSchema = z.object({
   secret: z.string(),
   recoveryCodes: z.array(z.string()),
 });
+
+export const twoFactorEnrollmentSchema = twoFactorSetupSchema.pick({ qr: true, secret: true });
