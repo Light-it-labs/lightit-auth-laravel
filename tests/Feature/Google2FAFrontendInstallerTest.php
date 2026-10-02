@@ -191,6 +191,21 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     });
 
+    it('validates the enrollment QR code and secret instead of trusting the response shape', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/two-factor/api.ts');
+        preg_match('/export const enableTwoFactor = .+?\n};\n/s', $api, $enableTwoFactor);
+
+        expect($enableTwoFactor[0] ?? '')->toContain('return twoFactorEnrollmentSchema.parse(response.data.data);')
+            ->and(file_get_contents($this->root . '/src/services/auth/two-factor/schemas.ts'))
+            ->toContain(
+                'export const twoFactorEnrollmentSchema = twoFactorSetupSchema.pick({ qr: true, secret: true });'
+            );
+    });
+
     it('closes the enable, regenerate and disable dialogs when the server answers 409', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
