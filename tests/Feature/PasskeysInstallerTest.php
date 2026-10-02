@@ -123,6 +123,9 @@ describe('PasskeysInstaller', function (): void {
             ->toContain('php artisan migrate')
             ->toContain('PASSKEYS_RP_ID=')
             ->toContain('PASSKEYS_ALLOWED_ORIGINS=')
-            ->toContain('`\Lightit\Authentication\Domain\PasskeyRateLimiter`');
+            ->toContain('`\Lightit\Authentication\Domain\PasskeyRateLimiter`')
+            ->toContain('No backend file needs editing.')
+            ->toContain('in `AUTH-PASSKEYS-FRONTEND-TODO.md`')
+            ->not->toContain('No boilerplate file needs editing');
     });
 });
