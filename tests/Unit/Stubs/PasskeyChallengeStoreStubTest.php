@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Sleep;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
 use Lightitlabs\Tests\Fixtures\PasskeyChallengeStoreStub\PasskeyChallengeStore;
 
@@ -47,6 +48,29 @@ describe('PasskeyChallengeStore stub', function (): void {
         $lock->release();
 
         expect($this->store->pullRegistration(passkeyUser(7)))->toBe('{"challenge":"abc"}');
+    });
+
+    it('keeps options written while an earlier request is still pulling the previous ones', function (): void {
+        $this->store->putRegistration(passkeyUser(7), '{"challenge":"old"}');
+
+        $inFlightPull = Cache::lock('passkeys:registration:7:lock', 10);
+        $inFlightPull->get();
+        $pullPending = true;
+        $finishInFlightPull = static function () use ($inFlightPull, &$pullPending): void {
+            if ($pullPending) {
+                Cache::forget('passkeys:registration:7');
+                $inFlightPull->release();
+                $pullPending = false;
+            }
+        };
+
+        Sleep::fake(syncWithCarbon: true);
+        Sleep::whenFakingSleep($finishInFlightPull);
+
+        $this->store->putRegistration(passkeyUser(7), '{"challenge":"new"}');
+        $finishInFlightPull();
+
+        expect($this->store->pullRegistration(passkeyUser(7)))->toBe('{"challenge":"new"}');
     });
 
     it('drops the options after the configured TTL', function (): void {

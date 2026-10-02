@@ -16,10 +16,11 @@ final readonly class PasskeyChallengeStore
 
     public function putRegistration(User $user, string $options): void
     {
-        Cache::put(
-            self::REGISTRATION_KEY_PREFIX . $user->id,
-            $options,
-            Config::integer('passkeys.challenge_ttl_seconds', 300),
+        $key = self::REGISTRATION_KEY_PREFIX . $user->id;
+
+        Cache::lock($key . ':lock', self::LOCK_SECONDS)->block(
+            self::LOCK_SECONDS,
+            static fn (): bool => Cache::put($key, $options, Config::integer('passkeys.challenge_ttl_seconds', 300)),
         );
     }
 
