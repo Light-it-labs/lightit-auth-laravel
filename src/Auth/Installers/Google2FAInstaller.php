@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -22,6 +23,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/Domain/Enums',
         'Authentication/Domain/Exceptions',
         'Authentication/App/Resources',
+    ];
+
+    private const PACKAGES = [
+        'pragmarx/google2fa-laravel',
+        'pragmarx/google2fa-qrcode',
+        'bacon/bacon-qr-code',
     ];
 
     private const ROUTES_LABEL = 'two-factor authentication';
@@ -68,16 +75,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
     ) {
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function install(): void
     {
-        if (! $this->composerInstaller->requirePackages([
-            'pragmarx/google2fa-laravel',
-            'pragmarx/google2fa-qrcode',
-            'bacon/bacon-qr-code',
-        ])) {
-            $this->command->error('Installing Google 2FA laravel and QR Code');
-
-            return;
+        if (! $this->composerInstaller->requirePackages(self::PACKAGES)) {
+            throw new SetupAbortedException('Failed to install ' . implode(', ', self::PACKAGES));
         }
 
         $this->createAuthFiles();

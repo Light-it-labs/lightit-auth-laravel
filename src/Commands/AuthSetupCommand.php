@@ -16,9 +16,11 @@ use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubRenderer;
+use Throwable;
 
 use function Laravel\Prompts\multiselect;
 
@@ -75,7 +77,13 @@ class AuthSetupCommand extends Command
             $selected[] = Feature::from((string) $value);
         }
 
-        $this->setupFeatures($selected);
+        $failedFeatures = $this->setupFeatures($selected);
+
+        if ($failedFeatures !== []) {
+            $this->reportIncompleteSetup($failedFeatures);
+
+            return self::FAILURE;
+        }
 
         $this->printSuccess('Authentication setup completed!');
 
@@ -83,19 +91,64 @@ class AuthSetupCommand extends Command
     }
 
     /**
-     * @param  array<Feature>  $features
+     * Runs every feature even when one fails: they are independent, and every installer
+     * skips the files that already exist, so re-running the failed ones afterwards is safe.
+     *
+     * @param array<Feature> $features
+     *
+     * @return array<Feature>
      */
-    protected function setupFeatures(array $features): void
+    protected function setupFeatures(array $features): array
     {
+        $failedFeatures = [];
+
         foreach ($features as $feature) {
-            match ($feature) {
-                Feature::TwoFactorAuthentication => $this->setup2FA(),
-                Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
-                Feature::Otp => $this->setupOtp(),
-                Feature::ForgotPassword => $this->setupForgotPassword(),
-                Feature::GoogleSso => $this->setupGoogleSSO(),
-            };
+            try {
+                $this->setupFeature($feature);
+            } catch (Throwable $exception) {
+                $this->reportFailedFeature($feature, $exception);
+                $failedFeatures[] = $feature;
+            }
         }
+
+        return $failedFeatures;
+    }
+
+    protected function setupFeature(Feature $feature): void
+    {
+        match ($feature) {
+            Feature::TwoFactorAuthentication => $this->setup2FA(),
+            Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
+            Feature::Otp => $this->setupOtp(),
+            Feature::ForgotPassword => $this->setupForgotPassword(),
+            Feature::GoogleSso => $this->setupGoogleSSO(),
+        };
+    }
+
+    private function reportFailedFeature(Feature $feature, Throwable $exception): void
+    {
+        $this->printFailure("{$feature->label()} setup failed: {$exception->getMessage()}");
+        $this->warn('The files it wrote before failing were kept. Continuing with the remaining features.');
+
+        if (! $exception instanceof SetupAbortedException && $this->output->isVerbose()) {
+            $this->line((string) $exception);
+        }
+
+        $this->printSectionSeparator();
+    }
+
+    /**
+     * @param array<Feature> $failedFeatures
+     */
+    private function reportIncompleteSetup(array $failedFeatures): void
+    {
+        $labels = array_map(static fn (Feature $feature): string => $feature->label(), $failedFeatures);
+
+        $this->printFailure('Authentication setup did not complete: ' . implode(', ', $labels) . ' failed.');
+        $this->line(
+            'Fix the cause above and run php artisan auth:setup again with the same features. It is safe to re-run: '
+            . 'files that already exist are reported as Skipped and never overwritten.'
+        );
     }
 
     protected function setupGoogleSSO(): void
@@ -126,11 +179,11 @@ class AuthSetupCommand extends Command
     {
         $this->printBoxedMessage('🛠 Setting up 2FA frontend...');
 
-        $manifest = new FrontendPackageManifest;
+        $manifest = new FrontendPackageManifest();
 
         $frontendInstaller = new Google2FAFrontendInstaller(
             $this,
-            new StubRenderer,
+            new StubRenderer(),
             new FrontendProjectLocator($manifest),
             $manifest,
             base_path(),
@@ -142,7 +195,7 @@ class AuthSetupCommand extends Command
         $this->printSectionSeparator();
     }
 
-    private function frontendPathOption(): ?string
+    private function frontendPathOption(): string|null
     {
         $value = $this->option('frontend-path');
 
@@ -157,13 +210,13 @@ class AuthSetupCommand extends Command
             return true;
         }
 
-        $locator = new FrontendProjectLocator(new FrontendPackageManifest);
+        $locator = new FrontendProjectLocator(new FrontendPackageManifest());
 
         if ($locator->locate(base_path(), $path) !== null) {
             return true;
         }
 
-        $this->error('Invalid --frontend-path: '.$locator->rejectionReason(base_path(), $path));
+        $this->error('Invalid --frontend-path: ' . $locator->rejectionReason(base_path(), $path));
 
         return false;
     }
