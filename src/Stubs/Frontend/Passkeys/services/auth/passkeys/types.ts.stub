@@ -48,3 +48,16 @@ export const getPasskeyFailure = (error: unknown): PasskeyFailure | null => {
 
   return error instanceof Error ? (failureByErrorName[error.name] ?? null) : null;
 };
+
+export type PasskeySignInFailure = PasskeyFailure | "notRecognised";
+
+export const getPasskeySignInFailure = (error: unknown): PasskeySignInFailure | null => {
+  if (
+    isAxiosError<PasskeyErrorBody>(error) &&
+    error.response?.data.error?.code === "passkey_not_recognised"
+  ) {
+    return "notRecognised";
+  }
+
+  return getPasskeyFailure(error);
+};

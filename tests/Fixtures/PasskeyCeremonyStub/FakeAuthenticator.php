@@ -11,7 +11,8 @@ use RuntimeException;
 /**
  * A software ES256 authenticator: produces the `none`-attestation credential a
  * browser posts after navigator.credentials.create(), with every field the
- * relying party checks (challenge, origin, RP ID hash, UV flag) settable.
+ * relying party checks (challenge, origin, RP ID hash, UV flag) settable, and
+ * the signed assertion it posts after navigator.credentials.get().
  */
 final class FakeAuthenticator
 {
@@ -76,6 +77,46 @@ final class FakeAuthenticator
                 'clientDataJSON' => Base64UrlSafe::encodeUnpadded($clientDataJson),
                 'attestationObject' => Base64UrlSafe::encodeUnpadded($attestationObject),
                 'transports' => ['internal'],
+            ],
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $requestOptions the decoded JSON the server handed the browser
+     */
+    public function assertion(
+        array $requestOptions,
+        string $origin,
+        string $userHandle,
+        int $counter,
+    ): string {
+        $clientDataJson = (string) json_encode([
+            'type' => 'webauthn.get',
+            'challenge' => $requestOptions['challenge'],
+            'origin' => $origin,
+            'crossOrigin' => false,
+        ], \JSON_UNESCAPED_SLASHES);
+
+        $authenticatorData = hash('sha256', $requestOptions['rpId'], true)
+            . \chr(self::FLAG_USER_PRESENT|self::FLAG_USER_VERIFIED)
+            . pack('N', $counter);
+
+        openssl_sign(
+            $authenticatorData . hash('sha256', $clientDataJson, true),
+            $signature,
+            $this->privateKey,
+            \OPENSSL_ALGO_SHA256,
+        ) ?: throw new RuntimeException('Could not sign the assertion.');
+
+        return (string) json_encode([
+            'id' => Base64UrlSafe::encodeUnpadded($this->credentialId),
+            'rawId' => Base64UrlSafe::encodeUnpadded($this->credentialId),
+            'type' => 'public-key',
+            'response' => [
+                'clientDataJSON' => Base64UrlSafe::encodeUnpadded($clientDataJson),
+                'authenticatorData' => Base64UrlSafe::encodeUnpadded($authenticatorData),
+                'signature' => Base64UrlSafe::encodeUnpadded((string) $signature),
+                'userHandle' => Base64UrlSafe::encodeUnpadded($userHandle),
             ],
         ]);
     }

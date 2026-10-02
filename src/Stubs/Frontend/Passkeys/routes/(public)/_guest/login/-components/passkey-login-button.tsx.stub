@@ -1,0 +1,59 @@
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
+import { getPasskeySignInFailure, type PasskeySignInFailure } from "@/services/auth/passkeys/types";
+import { redirectTarget } from "@/utils";
+import { useSignInWithPasskey } from "../-hooks/use-sign-in-with-passkey";
+
+export const PasskeyLoginButton = () => {
+  const { t } = useTranslation();
+
+  const router = useRouter();
+  const search = useSearch({ from: "/(public)/_guest/login/" });
+  const navigate = useNavigate();
+
+  const failureMessages: Partial<Record<PasskeySignInFailure, string>> = {
+    cancelled: t("passkeys.errors.cancelled"),
+    unsupported: t("passkeys.signIn.unsupported"),
+    notRecognised: t("passkeys.errors.notRecognised"),
+    challengeExpired: t("passkeys.errors.challengeExpired"),
+  };
+
+  const signInMutation = useSignInWithPasskey({
+    onSuccess: async () => {
+      toast.success(t("login.success"));
+      await router.invalidate();
+      await navigate(redirectTarget(search.redirect));
+    },
+    onError: (error) => {
+      const failure = getPasskeySignInFailure(error);
+
+      toast.error((failure && failureMessages[failure]) ?? t("common.requestError"));
+    },
+  });
+
+  const signIn = () => {
+    if (!browserSupportsWebAuthn()) {
+      toast.error(t("passkeys.signIn.unsupported"));
+
+      return;
+    }
+
+    signInMutation.mutate(undefined);
+  };
+
+  return (
+    <Button
+      className="w-full"
+      disabled={signInMutation.isPending}
+      type="button"
+      variant="outlined"
+      onClick={signIn}
+    >
+      {t("passkeys.signIn.submit")}
+    </Button>
+  );
+};

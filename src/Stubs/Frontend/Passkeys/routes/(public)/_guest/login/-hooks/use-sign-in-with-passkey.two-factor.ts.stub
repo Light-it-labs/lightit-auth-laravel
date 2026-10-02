@@ -1,0 +1,46 @@
+import { useMutation } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { authenticateWithPasskey } from "@/services/auth/passkeys/api";
+import {
+  isSetupRequired,
+  isTwoFactorChallenge,
+  type TwoFactorChallengeResult,
+} from "@/services/auth/two-factor/types";
+import type { UseMutationProps } from "@/services/types";
+import { useTwoFactorChallengeStore } from "@/stores/use-two-factor-challenge-store";
+
+const signInWithPasskey = async (): Promise<TwoFactorChallengeResult | null> => {
+  const body = await authenticateWithPasskey();
+
+  return isTwoFactorChallenge(body) ? body : null;
+};
+
+export const useSignInWithPasskey = (props?: UseMutationProps<typeof signInWithPasskey>) => {
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/(public)/_guest" });
+  const startChallenge = useTwoFactorChallengeStore.use.startChallenge();
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  return useMutation({
+    mutationFn: signInWithPasskey,
+    ...props,
+    onSuccess: async (challenge, ...rest) => {
+      if (challenge) {
+        startChallenge(challenge);
+        await navigate({
+          to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor",
+          search: { redirect: search.redirect },
+        });
+
+        return;
+      }
+
+      clearChallenge();
+      await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+      await props?.onSuccess?.(challenge, ...rest);
+    },
+  });
+};
