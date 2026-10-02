@@ -31,22 +31,11 @@ class User extends TwoFactorAuthenticatable
 }
 ```
 
-#### 3. Update casts
+`TwoFactorAuthenticatable` stores the TOTP secret with Laravel's `encrypted` cast, merged with your
+model's own `casts()`, so there is no cast to add. Encrypted values are tied to `APP_KEY`: rotating it
+without `APP_PREVIOUS_KEYS` leaves enrolled users unable to complete 2FA.
 
-Add the following casts to your model to ensure proper encryption and date handling:
-
-```php
-protected function casts(): array
-{
-    return [
-        // ...
-        self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => 'encrypted',
-        self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => 'immutable_datetime',
-    ];
-}
-```
-
-#### 4. Ensure `UnauthorizedException` exists
+#### 3. Ensure `UnauthorizedException` exists
 
 The 2FA stubs depend on `Lightit\Shared\App\Exceptions\Http\UnauthorizedException`. If your app doesn't have it yet, create it:
 
@@ -71,11 +60,11 @@ class UnauthorizedException extends HttpException
 }
 ```
 
-#### 5. Configure the authentication guard
+#### 4. Configure the authentication guard
 
 Use the guard the boilerplate already configures for its own login flow; this package does not add one.
 
-#### 6. Wire the challenge action into `LoginAction`
+#### 5. Wire the challenge action into `LoginAction`
 
 This package cannot edit a login it does not generate, so `LoginAction` needs the
 challenge action injected through its constructor:
@@ -99,7 +88,7 @@ throwing a challenge, so a user with 2FA configured gets a `200` with
 `token_type: "verification_required"` (or `"setup_required"`) instead of a
 session on login. See the generated `AUTH-2FA-TODO.md` for the full detail.
 
-#### 7. Define 2FA-related routes
+#### 6. Define 2FA-related routes
 
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;

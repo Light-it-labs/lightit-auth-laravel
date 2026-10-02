@@ -1,8 +1,14 @@
 <?php
 
 declare(strict_types=1);
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\ConcreteTwoFactorAuthenticatable;
+use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\ConsumerUser;
+use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\TwoFactorAuthenticatable;
 use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\TwoFactorReason;
 
 /**
@@ -111,4 +117,74 @@ describe('TwoFactorAuthenticatable stub create2faToken()', function (): void {
             expect($payload['mandatory'])->toBeTrue();
         }
     );
+});
+
+/**
+ * The users table as the consumer ends up with it: a bare table, then the package's own
+ * migration stub run against it, so the secret column's real type is what is exercised.
+ */
+function createUsersTableWithTwoFactorColumns(): void
+{
+    Schema::create('users', function (Blueprint $table): void {
+        $table->id();
+        $table->string('email');
+        $table->timestamp('email_verified_at')->nullable();
+        $table->timestamps();
+    });
+
+    $migrationFile = sys_get_temp_dir() . '/two-factor-authenticatable-stub-migration.php';
+    file_put_contents($migrationFile, str_replace(
+        'use Lightit\Authentication\Domain\TwoFactorAuthenticatable;',
+        'use Lightitlabs\Tests\Fixtures\TwoFactorAuthenticatableStub\TwoFactorAuthenticatable;',
+        (string) file_get_contents(
+            __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub'
+        ),
+    ));
+
+    (require $migrationFile)->up();
+}
+
+describe('TwoFactorAuthenticatable stub, persisted', function (): void {
+    beforeEach(function (): void {
+        config(['app.key' => 'base64:' . base64_encode(random_bytes(32))]);
+
+        createUsersTableWithTwoFactorColumns();
+    });
+
+    it(
+        'stores the TOTP secret encrypted and reads it back in plaintext, next to the User\'s own casts()',
+        function (): void {
+            $user = new ConsumerUser();
+            $user->email = 'user@example.com';
+            $user->email_verified_at = '2026-01-02 03:04:05';
+            $user->setAttribute(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME, 'JBSWY3DPEHPK3PXP');
+            $user->saveOrFail();
+    
+            $stored = (string) DB::table('users')->value(
+                TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME
+            );
+            $reloaded = ConsumerUser::query()->findOrFail($user->id);
+    
+            expect($stored)->not->toContain('JBSWY3DPEHPK3PXP')
+                ->and(Crypt::decryptString($stored))->toBe('JBSWY3DPEHPK3PXP')
+                ->and($reloaded->getTwoFactorAuthSecret())->toBe('JBSWY3DPEHPK3PXP')
+                ->and($reloaded->hasTwoFactorAuthenticationSecretStored())->toBeTrue()
+                ->and($reloaded->email_verified_at)->toBeInstanceOf(CarbonImmutable::class);
+        }
+    );
+
+    it('keeps the cast a User declares for the secret column itself', function (): void {
+        $user = new class() extends ConsumerUser {
+            protected function casts(): array
+            {
+                return [TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => 'string'];
+            }
+        };
+        $user->email = 'user@example.com';
+        $user->setAttribute(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME, 'JBSWY3DPEHPK3PXP');
+        $user->saveOrFail();
+
+        expect(DB::table('users')->value(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME))
+            ->toBe('JBSWY3DPEHPK3PXP');
+    });
 });

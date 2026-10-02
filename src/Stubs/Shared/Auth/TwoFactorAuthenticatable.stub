@@ -27,6 +27,18 @@ abstract class TwoFactorAuthenticatable extends Authenticatable
 
     public const RECOVERY_CODES_COLUMN_NAME = 'recovery_codes';
 
+    /**
+     * Merged here rather than declared in casts(), which the User's own casts() replaces.
+     * A cast the User declares for the secret column wins.
+     */
+    #[\Override]
+    protected function initializeHasAttributes(): void
+    {
+        parent::initializeHasAttributes();
+
+        $this->casts[self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME] ??= 'encrypted';
+    }
+
     public function hasTwoFactorAuthenticationEnabled(): bool
     {
         return (bool) $this->getAttribute(self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
