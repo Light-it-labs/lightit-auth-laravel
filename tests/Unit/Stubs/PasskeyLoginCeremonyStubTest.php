@@ -10,6 +10,7 @@ use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\LockRecordingGrammar;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginFailedException;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginRequest;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StartPasskeyRegistrationAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyDto;
@@ -31,6 +32,7 @@ StubLoader::load(
     'PasskeyChallengeStore.stub',
     'Actions/StartPasskeyRegistrationAction.stub',
     'Actions/StorePasskeyAction.stub',
+    'Requests/PasskeyLoginRequest.stub',
 );
 
 const PASSKEY_LOGIN_TEST_ORIGIN = 'https://app.example.test';
@@ -106,6 +108,21 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
         $exception = rejectedLogin(
             fn () => $this->service->verifyAssertion($this->requestOptions, ($this->signedAssertion)(5))
         );
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('passkey_login_failed');
+    });
+
+    it('turns a credential with malformed UTF-8 into the 422 ceremony rejection, not a 500', function (): void {
+        $credential = json_decode(($this->signedAssertion)(1), true, flags: \JSON_THROW_ON_ERROR);
+        $credential['response']['clientDataJSON'] .= "\xB1";
+
+        $dto = PasskeyLoginRequest::create('/api/auth/passkeys/login', 'POST', [
+            PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32),
+            PasskeyLoginRequest::CREDENTIAL => $credential,
+        ])->toDto();
+
+        $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $dto->credential));
 
         expect($exception->statusCode())->toBe(422)
             ->and($exception->errorCode())->toBe('passkey_login_failed');
