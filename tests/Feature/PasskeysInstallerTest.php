@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 
@@ -100,12 +101,11 @@ describe('PasskeysInstaller', function (): void {
             ->toBe(1);
     });
 
-    it('stops before writing anything when composer cannot require webauthn-lib', function (): void {
+    it('aborts before writing anything when composer cannot require webauthn-lib', function (): void {
         file_put_contents($this->tempBase . '/composer.json', '{ not json');
 
-        $this->artisan('passkeys-installer-fake', ['--with-composer' => true])
-            ->expectsOutputToContain('Failed to install web-auth/webauthn-lib:^5.3')
-            ->assertSuccessful();
+        expect(fn () => $this->artisan('passkeys-installer-fake', ['--with-composer' => true])->run())
+            ->toThrow(SetupAbortedException::class, 'Failed to install web-auth/webauthn-lib:^5.3');
 
         expect($this->tempBase . '/src')->not->toBeDirectory()
             ->and($this->tempBase . '/AUTH-PASSKEYS-TODO.md')->not->toBeFile();
