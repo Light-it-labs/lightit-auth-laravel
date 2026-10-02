@@ -179,6 +179,18 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     );
 
+    it('drops the TOTP secret and the recovery codes from the mutation cache of every account call', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $actions = (string) file_get_contents($this->root . '/src/services/auth/two-factor/actions.ts');
+
+        foreach (['enableTwoFactor', 'confirmTwoFactor', 'regenerateRecoveryCodes'] as $mutation) {
+            expect($actions)->toContain("useMutation({ mutationFn: {$mutation}, gcTime: 0, ...props })");
+        }
+    });
+
     it('closes the enable, regenerate and disable dialogs when the server answers 409', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
