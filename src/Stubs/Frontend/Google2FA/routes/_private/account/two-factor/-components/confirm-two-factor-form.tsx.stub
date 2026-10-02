@@ -19,13 +19,17 @@ const ONE_TIME_PASSWORD_SLOTS = Array.from({ length: ONE_TIME_PASSWORD_LENGTH },
 
 type ConfirmTwoFactorFormProps = {
   onConfirmed: (recoveryCodes: string[]) => void;
+  onStateConflict: () => void;
 };
 
-export const ConfirmTwoFactorForm = ({ onConfirmed }: ConfirmTwoFactorFormProps) => {
+export const ConfirmTwoFactorForm = ({
+  onConfirmed,
+  onStateConflict,
+}: ConfirmTwoFactorFormProps) => {
   const { t } = useTranslation();
 
   const confirmTwoFactorMutation = useConfirmTwoFactor();
-  const { onOneTimePasswordError } = useTwoFactorAccountErrors();
+  const { onOneTimePasswordError } = useTwoFactorAccountErrors({ onStateConflict });
 
   const {
     control,

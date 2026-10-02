@@ -106,8 +106,8 @@ token.
    `(2 * window + 1) * 30` seconds, 90 seconds with the default `window` of 1 in the
    backend's `config/google2fa.php`. The form says to wait for the next code. `429`
    means too many attempts. `409` means another tab already changed the state, or 2FA
-   was switched off on the backend (`2fa_unavailable`), so the page says which and
-   reloads the status.
+   was switched off on the backend (`2fa_unavailable`), so the dialog closes and the
+   page says which and reloads the status.
 
 ### Optional: link the page from the sidebar
 

@@ -48,6 +48,9 @@ export const DisableTwoFactorDialog = ({ isOpen, onOpenChange }: DisableTwoFacto
               },
             });
           }}
+          onStateConflict={() => {
+            onOpenChange(false);
+          }}
         />
       </Dialog.Content>
     </Dialog.Root>

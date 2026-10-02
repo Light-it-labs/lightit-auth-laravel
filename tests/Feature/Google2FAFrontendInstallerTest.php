@@ -160,6 +160,38 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     );
 
+    it('closes the enable, regenerate and disable dialogs when the server answers 409', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $read = fn (string $file): string => (string) file_get_contents(
+            $this->root . '/src/routes/_private/account/two-factor/' . $file
+        );
+
+        expect($read('-hooks/use-two-factor-account-errors.ts'))
+            ->toContain(
+                'export const useTwoFactorAccountErrors = ({ onStateConflict }: TwoFactorAccountErrorsOptions) => {'
+            )
+            ->toMatch(
+                '/const handleStateConflict = async \(error: unknown\) => \{.+?onStateConflict\(\);\n\s+await refreshTwoFactorState\(\);/s'
+            )
+            ->not->toContain('useTwoFactorAccountErrors()');
+
+        expect($read('-components/enable-two-factor-dialog.tsx'))
+            ->toMatch('/const closeDialog = \(\) => \{\s+handleOpenChange\(false\);\s+\};/')
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict: closeDialog })')
+            ->toContain('<ConfirmTwoFactorForm onConfirmed={setRecoveryCodes} onStateConflict={closeDialog} />')
+            ->and($read('-components/confirm-two-factor-form.tsx'))
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict })')
+            ->and($read('-components/second-factor-confirmation-form.tsx'))
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict })')
+            ->and($read('-components/regenerate-recovery-codes-dialog.tsx'))
+            ->toMatch('/onStateConflict=\{\(\) => \{\s+handleOpenChange\(false\);\s+\}\}/')
+            ->and($read('-components/disable-two-factor-dialog.tsx'))
+            ->toMatch('/onStateConflict=\{\(\) => \{\s+onOpenChange\(false\);\s+\}\}/');
+    });
+
     it('keeps the challenge token out of the URL and out of persisted storage', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 

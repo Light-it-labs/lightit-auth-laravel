@@ -22,9 +22,6 @@ export const EnableTwoFactorDialog = ({ isOpen, onOpenChange }: EnableTwoFactorD
   const [enrollment, setEnrollment] = useState<TwoFactorEnrollment | null>(null);
   const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
 
-  const enableTwoFactorMutation = useEnableTwoFactor();
-  const { onPasswordError } = useTwoFactorAccountErrors();
-
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setEnrollment(null);
@@ -33,6 +30,13 @@ export const EnableTwoFactorDialog = ({ isOpen, onOpenChange }: EnableTwoFactorD
 
     onOpenChange(open);
   };
+
+  const closeDialog = () => {
+    handleOpenChange(false);
+  };
+
+  const enableTwoFactorMutation = useEnableTwoFactor();
+  const { onPasswordError } = useTwoFactorAccountErrors({ onStateConflict: closeDialog });
 
   const description = () => {
     if (recoveryCodes) {
@@ -69,7 +73,7 @@ export const EnableTwoFactorDialog = ({ isOpen, onOpenChange }: EnableTwoFactorD
           <>
             <AuthenticatorSecret qr={enrollment.qr} secret={enrollment.secret} />
 
-            <ConfirmTwoFactorForm onConfirmed={setRecoveryCodes} />
+            <ConfirmTwoFactorForm onConfirmed={setRecoveryCodes} onStateConflict={closeDialog} />
           </>
         ) : null}
 
