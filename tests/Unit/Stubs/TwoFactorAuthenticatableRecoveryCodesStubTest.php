@@ -187,4 +187,22 @@ describe('TwoFactorAuthenticatable stub, persisted', function (): void {
         expect(DB::table('users')->value(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME))
             ->toBe('JBSWY3DPEHPK3PXP');
     });
+
+    it('activateTwoFactorAuthentication() stamps and persists the activation time', function (): void {
+        $this->travelTo('2026-03-04 05:06:07');
+
+        $user = new ConsumerUser();
+        $user->email = 'user@example.com';
+        $user->saveOrFail();
+
+        expect($user->hasTwoFactorAuthenticationEnabled())->toBeFalse();
+
+        $user->activateTwoFactorAuthentication();
+
+        $stored = DB::table('users')->value(TwoFactorAuthenticatable::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME);
+
+        expect($stored)->toBe('2026-03-04 05:06:07')
+            ->and($user->isDirty())->toBeFalse()
+            ->and(ConsumerUser::query()->findOrFail($user->id)->hasTwoFactorAuthenticationEnabled())->toBeTrue();
+    });
 });
