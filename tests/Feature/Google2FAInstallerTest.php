@@ -51,12 +51,14 @@ describe('Google2FAInstaller', function (): void {
     });
 
     it(
-        'prints the constructor injection snippet for LoginAction, matching AUTH-2FA-TODO.md, without falling back to app()',
+        'prints the constructor injection snippet for LoginAction, matching AUTH-2FA-TODO.md, without a same-namespace import or app()',
         function (): void {
             Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
     
             $this->artisan('google2fa-installer-fake')
-                ->expectsOutputToContain('use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;')
+                ->doesntExpectOutputToContain(
+                    'use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;'
+                )
                 ->expectsOutputToContain(
                     'private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,'
                 )
@@ -66,7 +68,7 @@ describe('Google2FAInstaller', function (): void {
             $todo = file_get_contents($this->tempBase . '/AUTH-2FA-TODO.md');
     
             expect($todo)
-                ->toContain('use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;')
+                ->not->toContain('use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;')
                 ->toContain('private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,')
                 ->not->toContain('app(');
         }

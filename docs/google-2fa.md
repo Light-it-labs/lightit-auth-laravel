@@ -31,22 +31,11 @@ class User extends TwoFactorAuthenticatable
 }
 ```
 
-#### 3. Update casts
+`TwoFactorAuthenticatable` stores the TOTP secret with Laravel's `encrypted` cast, merged with your
+model's own `casts()`, so there is no cast to add. Encrypted values are tied to `APP_KEY`: rotating it
+without `APP_PREVIOUS_KEYS` leaves enrolled users unable to complete 2FA.
 
-Add the following casts to your model to ensure proper encryption and date handling:
-
-```php
-protected function casts(): array
-{
-    return [
-        // ...
-        self::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME => 'encrypted',
-        self::TWO_FACTOR_AUTH_ACTIVATED_AT_COLUMN_NAME => 'immutable_datetime',
-    ];
-}
-```
-
-#### 4. Ensure `UnauthorizedException` exists
+#### 3. Ensure `UnauthorizedException` exists
 
 The 2FA stubs depend on `Lightit\Shared\App\Exceptions\Http\UnauthorizedException`. If your app doesn't have it yet, create it:
 
@@ -71,18 +60,16 @@ class UnauthorizedException extends HttpException
 }
 ```
 
-#### 5. Configure the authentication guard
+#### 4. Configure the authentication guard
 
 Use the guard the boilerplate already configures for its own login flow; this package does not add one.
 
-#### 6. Wire the challenge action into `LoginAction`
+#### 5. Wire the challenge action into `LoginAction`
 
 This package cannot edit a login it does not generate, so `LoginAction` needs the
 challenge action injected through its constructor:
 
 ```php
-use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
-
 public function __construct(
     private readonly AuthFactory $authFactory,
     private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
@@ -101,7 +88,7 @@ throwing a challenge, so a user with 2FA configured gets a `200` with
 `token_type: "verification_required"` (or `"setup_required"`) instead of a
 session on login. See the generated `AUTH-2FA-TODO.md` for the full detail.
 
-#### 7. Define 2FA-related routes
+#### 6. Define 2FA-related routes
 
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
@@ -131,76 +118,78 @@ Route::prefix('2fa')->group(static function (): void {
 });
 ```
 
+> [!WARNING]
+> `google2fa.enabled=false` (`TWO_FACTOR_AUTHENTICATION_ENABLED`) stops challenging everyone, including
+> users who already enrolled: they sign in with their password alone until it is `true` again. Their
+> secret and recovery codes stay stored. To stop forcing enrollment but keep challenging enrolled
+> users, set `google2fa.mandatory=false` instead.
+
 ---
 
 ### Flow
 
-> [!WARNING]
-> Not offered by `auth:setup` yet. The `access_token` / `token_type: "Bearer"` shapes
-> below came from the removed Bearer driver. The sequence of calls still holds; the
-> response bodies are rewritten before the feature is exposed.
+Login stays the boilerplate's cookie-session login. The challenge token below is not
+a session: the frontend holds it in memory and sends it as `Authorization: Bearer`
+on the challenge endpoints (`setup`, `complete`, `verify-recovery-code`) and, with the
+reset token, on `2fa/reset`. Completing the challenge creates the session
+and returns the boilerplate's `UserResource`. The generated frontend screens follow
+this flow; see the generated `AUTH-2FA-FRONTEND-TODO.md`.
 
-**First-time setup (mandatory 2FA or user-initiated):**
+**First-time setup (mandatory 2FA, secret not configured yet):**
 
-1. `POST /login`
-   - Body: `{ "email": "...", "password": "..." }`
-   - Returns: `{ access_token, token_type: "setup_required", expires_in }`
+1. `POST /auth/login`
+   - Body: `{ "email_address": "...", "password": "..." }`
+   - Returns `200`: `{ data: { access_token, token_type: "setup_required", expires_in } }`, no session
 2. `POST /2fa/setup`
    - Bearer: setup token
-   - Returns: `{ qr, secret, recovery_codes[] }`
+   - Returns: `{ data: { qr, secret, recovery_codes[] } }`
 3. `POST /2fa/complete`
    - Bearer: setup token
    - Body: `{ "one_time_password": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
+   - Returns: `UserResource` + session cookie
 
 **Subsequent logins (2FA already configured):**
 
-1. `POST /login`
-   - Body: `{ "email": "...", "password": "..." }`
-   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
+1. `POST /auth/login`
+   - Body: `{ "email_address": "...", "password": "..." }`
+   - Returns `200`: `{ data: { access_token, token_type: "verification_required", expires_in } }`, no session
 2. `POST /2fa/complete`
    - Bearer: challenge token
    - Body: `{ "one_time_password": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in }`
+   - Returns: `UserResource` + session cookie
 
 **Login with a recovery code (lost authenticator):**
 
-1. `POST /login`
-   - Body: `{ "email": "...", "password": "..." }`
-   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
+1. `POST /auth/login`, same as above
 2. `POST /2fa/verify-recovery-code`
    - Bearer: challenge token
    - Body: `{ "recovery_code": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
+   - Returns: `UserResource` + session cookie
 
-**Reset 2FA (lost authenticator, using a recovery code to regain access):**
+A wrong code returns `422`, an expired or invalid token `401`, and too many failed
+attempts `429`.
 
-1. `POST /login`
-   - Body: `{ "email": "...", "password": "..." }`
-   - Returns: `{ access_token, token_type: "verification_required", expires_in }`
-2. `POST /2fa/verify-recovery-code`
-   - Bearer: challenge token
-   - Body: `{ "recovery_code": "..." }`
-   - Returns: `{ access_token, token_type: "Bearer", expires_in, remaining_recovery_codes }`
-3. `POST /2fa/request-reset`
-   - Bearer: real access token
+**Reset 2FA (while logged in):**
+
+1. `POST /2fa/request-reset`
+   - Auth: cookie session
    - Body: `{ "password": "..." }`
-   - Returns: `{ access_token, token_type: "reset_required", expires_in }`
-4. `POST /2fa/reset`
+   - Returns: `{ data: { access_token, token_type: "reset_required", expires_in } }`
+2. `POST /2fa/reset`
    - Bearer: reset token
    - Returns: `{ data: { message } }`
 
 **Regenerate recovery codes:**
 
 1. `POST /2fa/regenerate-recovery-codes`
-   - Bearer: real access token
+   - Auth: cookie session
    - Body: `{ "password": "..." }`
    - Returns: `{ data: { recovery_codes[] } }`
 
 **Disable 2FA:**
 
 1. `POST /2fa/disable`
-   - Bearer: real access token
+   - Auth: cookie session
    - Body: `{ "password": "..." }`
    - Returns: `{ data: { message } }`
    - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
@@ -209,15 +198,15 @@ Route::prefix('2fa')->group(static function (): void {
 
 ```mermaid
 flowchart TD
-    Login[POST /login] --> ValidateCreds{Valid credentials?}
+    Login[POST /auth/login] --> ValidateCreds{Valid credentials?}
     ValidateCreds -- no --> E401[401 Unauthorized]
     ValidateCreds -- yes --> AppHas2FA{2FA enabled?}
 
-    AppHas2FA -- no --> AccessToken[Access Token]
+    AppHas2FA -- no --> Session[Session cookie + user]
     AppHas2FA -- yes --> IsMandatory{2FA mandatory?}
 
     IsMandatory -- no --> UserHas2FA{User has 2FA enabled?}
-    UserHas2FA -- no --> AccessToken
+    UserHas2FA -- no --> Session
     UserHas2FA -- yes --> ChallengeToken[2FA Challenge Token]
 
     IsMandatory -- yes --> IsSetup{2FA configured?}
@@ -230,14 +219,14 @@ flowchart TD
     ChallengeToken --> Complete
     ChallengeToken --> RecoveryCode[POST /2fa/verify-recovery-code]
 
-    Complete -- invalid --> E401
-    Complete -- valid --> AccessToken
-    RecoveryCode -- invalid --> E401
-    RecoveryCode -- valid --> AccessToken
+    Complete -- invalid --> E422[422 Unprocessable]
+    Complete -- valid --> Session
+    RecoveryCode -- invalid --> E422
+    RecoveryCode -- valid --> Session
 ```
 
 **Managing 2FA once logged in.** These are separate requests made later, each
-authenticated with the access token above and confirmed with the account password.
+authenticated with the cookie session above and confirmed with the account password.
 
 ```mermaid
 flowchart TD

@@ -12,8 +12,7 @@ final readonly class IssueTwoFactorResetTokenAction
 {
     public function __construct(
         private PasswordValidatorAction $passwordValidatorAction,
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{access_token:string,token_type:string,expires_in:int}

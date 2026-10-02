@@ -14,8 +14,7 @@ final readonly class VerifyRecoveryCodeAction
 {
     public function __construct(
         private LoginByUserAction $loginByUserAction,
-    ) {
-    }
+    ) {}
 
     /**
      * Locks the user row for the whole check-then-consume sequence: reading
@@ -28,7 +27,7 @@ final readonly class VerifyRecoveryCodeAction
      */
     public function execute(User $user, string $suppliedCode): User
     {
-        TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());
+        TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);
 
         $lockedUser = DB::transaction(function () use ($user, $suppliedCode): User {
             /** @var User $lockedUser */
@@ -56,7 +55,7 @@ final readonly class VerifyRecoveryCodeAction
             return $lockedUser;
         });
 
-        TwoFactorAttemptLimiter::clear($user->getKey());
+        TwoFactorAttemptLimiter::clear($user->id);
 
         $this->loginByUserAction->executeAfterChallenge($lockedUser);
 

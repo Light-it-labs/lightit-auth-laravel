@@ -1,29 +1,49 @@
-import { api } from "@/config/api";
+import { deepSnakeKeys } from "string-ts";
+
+import { api, ensureCsrf } from "@/config/api";
+import type { LoginPayload } from "@/services/auth/types";
 import { {{ userSchemaFactory }} } from "{{ userSchemaImportPath }}";
 import type { User } from "{{ userTypeImportPath }}";
-import type {
-  MessageResult,
-  OneTimePasswordPayload,
-  PasswordPayload,
-  RecoveryCodePayload,
-  RegenerateRecoveryCodesResult,
-  TwoFactorResetChallengeResult,
-  TwoFactorSetupPayload,
+import { twoFactorSetupSchema } from "./schemas";
+import {
+  isTwoFactorChallenge,
+  type MessageResult,
+  type OneTimePasswordPayload,
+  type PasswordPayload,
+  type RecoveryCodePayload,
+  type RegenerateRecoveryCodesResult,
+  type TwoFactorChallengeResult,
+  type TwoFactorResetChallengeResult,
+  type TwoFactorSetupPayload,
 } from "./types";
 
 const withChallengeToken = (token: string) => {
-  return { headers: { Authorization: `Bearer ${token}` } };
+  return { headers: { Authorization: `Bearer ${token}` }, isAuthProbe: true };
 };
 
-export const setupTwoFactor = async ({ token }: { token: string }): Promise<TwoFactorSetupPayload> => {
+export const loginWithTwoFactorChallenge = async (
+  payload: LoginPayload,
+): Promise<TwoFactorChallengeResult | null> => {
+  await ensureCsrf();
+  const response = await api.post("{{ loginEndpoint }}", deepSnakeKeys(payload));
+  const body: unknown = {{ currentUserResponseAccessor }};
+
+  return isTwoFactorChallenge(body) ? body : null;
+};
+
+export const setupTwoFactor = async ({
+  token,
+}: {
+  token: string;
+}): Promise<TwoFactorSetupPayload> => {
   const response = await api.post("{{ twoFactorSetupEndpoint }}", undefined, withChallengeToken(token));
 
-  return {{ currentUserResponseAccessor }};
+  return twoFactorSetupSchema.parse({{ currentUserResponseAccessor }});
 };
 
 export const completeTwoFactor = async ({
-  token,
   oneTimePassword,
+  token,
 }: { token: string } & OneTimePasswordPayload): Promise<User> => {
   const response = await api.post(
     "{{ twoFactorCompleteEndpoint }}",
@@ -35,8 +55,8 @@ export const completeTwoFactor = async ({
 };
 
 export const verifyRecoveryCode = async ({
-  token,
   recoveryCode,
+  token,
 }: { token: string } & RecoveryCodePayload): Promise<User> => {
   const response = await api.post(
     "{{ twoFactorVerifyRecoveryCodeEndpoint }}",
@@ -47,7 +67,9 @@ export const verifyRecoveryCode = async ({
   return {{ userSchemaFactory }}().parse(response.data.data);
 };
 
-export const requestTwoFactorReset = async ({ password }: PasswordPayload): Promise<TwoFactorResetChallengeResult> => {
+export const requestTwoFactorReset = async ({
+  password,
+}: PasswordPayload): Promise<TwoFactorResetChallengeResult> => {
   const response = await api.post("{{ twoFactorRequestResetEndpoint }}", { password });
 
   return {{ currentUserResponseAccessor }};

@@ -1,5 +1,6 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
+import { queryClient } from "@/config/query-client";
 import type { UseMutationProps } from "@/services/types";
 import {
   completeTwoFactor,
@@ -11,8 +12,22 @@ import {
   verifyRecoveryCode,
 } from "./api";
 
-export const useSetupTwoFactor = (props?: UseMutationProps<typeof setupTwoFactor>) => {
-  return useMutation({ mutationFn: setupTwoFactor, ...props });
+const TWO_FACTOR_SETUP_QUERY_KEY = "twoFactorSetup";
+
+export const useTwoFactorSetup = (token: string) => {
+  return useQuery({
+    queryKey: [TWO_FACTOR_SETUP_QUERY_KEY, token],
+    queryFn: () => {
+      return setupTwoFactor({ token });
+    },
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+  });
+};
+
+export const removeTwoFactorSetupQueries = () => {
+  queryClient.removeQueries({ queryKey: [TWO_FACTOR_SETUP_QUERY_KEY] });
 };
 
 export const useCompleteTwoFactor = (props?: UseMutationProps<typeof completeTwoFactor>) => {
@@ -23,7 +38,9 @@ export const useVerifyRecoveryCode = (props?: UseMutationProps<typeof verifyReco
   return useMutation({ mutationFn: verifyRecoveryCode, ...props });
 };
 
-export const useRequestTwoFactorReset = (props?: UseMutationProps<typeof requestTwoFactorReset>) => {
+export const useRequestTwoFactorReset = (
+  props?: UseMutationProps<typeof requestTwoFactorReset>,
+) => {
   return useMutation({ mutationFn: requestTwoFactorReset, ...props });
 };
 
@@ -35,6 +52,8 @@ export const useDisableTwoFactor = (props?: UseMutationProps<typeof disableTwoFa
   return useMutation({ mutationFn: disableTwoFactor, ...props });
 };
 
-export const useRegenerateRecoveryCodes = (props?: UseMutationProps<typeof regenerateRecoveryCodes>) => {
+export const useRegenerateRecoveryCodes = (
+  props?: UseMutationProps<typeof regenerateRecoveryCodes>,
+) => {
   return useMutation({ mutationFn: regenerateRecoveryCodes, ...props });
 };

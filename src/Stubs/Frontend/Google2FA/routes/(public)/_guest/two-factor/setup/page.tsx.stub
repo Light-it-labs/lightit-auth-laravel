@@ -1,0 +1,92 @@
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+
+import { ErrorMessage } from "@/components/ui/error-message";
+import { useTranslation } from "@/i18n";
+import { useTwoFactorSetup } from "@/services/auth/two-factor/actions";
+import {
+  getPendingTwoFactorChallenge,
+  useTwoFactorChallengeStore,
+} from "@/stores/use-two-factor-challenge-store";
+import { OneTimePasswordForm } from "../-components/one-time-password-form";
+import { RecoveryCodes } from "../-components/recovery-codes";
+
+const DATA_URL_PREFIX = "data:";
+
+const toQrCodeImageSource = (qr: string) => {
+  return qr.startsWith(DATA_URL_PREFIX)
+    ? qr
+    : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qr)}`;
+};
+
+const TwoFactorSetupPage = () => {
+  const { t } = useTranslation();
+  const { challenge } = Route.useRouteContext();
+  const search = Route.useSearch();
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  const { data: setup, isError, isPending } = useTwoFactorSetup(challenge.token);
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center">
+      <div className="w-96 space-y-6 rounded-2xl p-5 shadow-sm">
+        <h1 className="text-xl font-semibold">{t("twoFactor.setup.title")}</h1>
+
+        {isPending ? <p className="text-sm">{t("twoFactor.setup.loading")}</p> : null}
+
+        {isError ? <ErrorMessage errorMessage={t("twoFactor.setup.loadError")} /> : null}
+
+        {setup ? (
+          <>
+            <section className="space-y-3">
+              <p className="text-sm">{t("twoFactor.setup.scanQrCode")}</p>
+
+              <img
+                alt={t("twoFactor.setup.qrCodeAlt")}
+                className="mx-auto size-48"
+                src={toQrCodeImageSource(setup.qr)}
+              />
+
+              <p className="text-sm">{t("twoFactor.setup.manualEntryKey")}</p>
+
+              <code className="block rounded-md border p-2 text-center font-mono text-sm break-all">
+                {setup.secret}
+              </code>
+            </section>
+
+            <RecoveryCodes recoveryCodes={setup.recoveryCodes} />
+
+            <section className="space-y-3">
+              <p className="text-sm">{t("twoFactor.setup.confirmDescription")}</p>
+
+              <OneTimePasswordForm token={challenge.token} />
+            </section>
+          </>
+        ) : null}
+
+        <p className="text-center text-sm">
+          <Link
+            className="underline underline-offset-4 hover:opacity-80"
+            search={{ redirect: search.redirect }}
+            to="/login"
+            onClick={clearChallenge}
+          >
+            {t("twoFactor.backToLogin")}
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/setup/")({
+  beforeLoad: ({ search }) => {
+    const challenge = getPendingTwoFactorChallenge("setup_required");
+
+    if (!challenge) {
+      throw redirect({ to: "/login", search: { redirect: search.redirect } });
+    }
+
+    return { challenge };
+  },
+  component: TwoFactorSetupPage,
+});

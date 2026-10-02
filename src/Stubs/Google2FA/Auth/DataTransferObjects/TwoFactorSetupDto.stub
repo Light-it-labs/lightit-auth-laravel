@@ -11,6 +11,5 @@ final readonly class TwoFactorSetupDto
         public string $secret,
         /** @var array<string> $recoveryCodes */
         public array $recoveryCodes,
-    ) {
-    }
+    ) {}
 }

@@ -1,0 +1,57 @@
+import { useNavigate, useSearch } from "@tanstack/react-router";
+import { HttpStatusCode, isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { queryClient } from "@/config/query-client";
+import { useTranslation } from "@/i18n";
+import { currentUserQuery } from "@/services/auth/actions";
+import { removeTwoFactorSetupQueries } from "@/services/auth/two-factor/actions";
+import { useTwoFactorChallengeStore } from "@/stores/use-two-factor-challenge-store";
+import { redirectTarget } from "@/utils";
+
+export const useTwoFactorCompletion = () => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/(public)/_guest" });
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  const endChallenge = () => {
+    clearChallenge();
+    removeTwoFactorSetupQueries();
+  };
+
+  const onCompleted = async () => {
+    toast.success(t("login.success"));
+    await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+    await navigate(redirectTarget(search.redirect));
+    endChallenge();
+  };
+
+  const onFailed = async (error: unknown, showCodeError: (message: string) => void) => {
+    const status = isAxiosError(error) ? error.response?.status : undefined;
+
+    if (status === HttpStatusCode.Unauthorized) {
+      toast.error(t("twoFactor.errors.expired"));
+      await navigate({ to: "/login", search: { redirect: search.redirect } });
+      endChallenge();
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      showCodeError(t("twoFactor.errors.invalidCode"));
+
+      return;
+    }
+
+    if (status === HttpStatusCode.TooManyRequests) {
+      showCodeError(t("twoFactor.errors.tooManyAttempts"));
+
+      return;
+    }
+
+    toast.error(t("twoFactor.errors.unexpected"));
+  };
+
+  return { onCompleted, onFailed };
+};

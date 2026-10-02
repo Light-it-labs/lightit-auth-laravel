@@ -25,3 +25,9 @@ export const getPasswordConfirmationSchema = () => {
     }),
   });
 };
+
+export const twoFactorSetupSchema = z.object({
+  qr: z.string(),
+  secret: z.string(),
+  recoveryCodes: z.array(z.string()),
+});

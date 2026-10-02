@@ -2,10 +2,17 @@
 
 declare(strict_types=1);
 
+use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
+use PragmaRX\Google2FALaravel\Support\Constants;
+
 return [
 
     /*
      * Enable / disable Google2FA.
+     *
+     * false stops challenging everyone, including users who already enrolled: they sign in with
+     * their password alone until this is true again (their secret and recovery codes stay stored).
+     * To stop forcing enrollment but keep challenging enrolled users, set 'mandatory' to false instead.
      */
     'enabled' => (bool) env('TWO_FACTOR_AUTHENTICATION_ENABLED', true),
 
@@ -56,7 +63,7 @@ return [
     /*
      * User's table column for google2fa secret.
      */
-    'otp_secret_column' => \Lightit\Authentication\Domain\TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME,
+    'otp_secret_column' => TwoFactorAuthenticatable::TWO_FACTOR_AUTH_SECRET_COLUMN_NAME,
 
     /*
      * One Time Password View.
@@ -82,6 +89,6 @@ return [
      *
      * Supports imagemagick, svg and eps
      */
-    'qrcode_image_backend' => \PragmaRX\Google2FALaravel\Support\Constants::QRCODE_IMAGE_BACKEND_SVG,
+    'qrcode_image_backend' => Constants::QRCODE_IMAGE_BACKEND_SVG,
 
 ];

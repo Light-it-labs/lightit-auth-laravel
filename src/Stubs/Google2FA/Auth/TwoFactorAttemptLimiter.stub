@@ -51,6 +51,6 @@ final class TwoFactorAttemptLimiter
 
     private static function key(int|string $userId): string
     {
-        return '2fa-user-attempts|'.$userId;
+        return '2fa-user-attempts|' . $userId;
     }
 }

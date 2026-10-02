@@ -1,0 +1,59 @@
+import { useCallback } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { loginWithTwoFactorChallenge } from "@/services/auth/two-factor/api";
+import { isSetupRequired } from "@/services/auth/two-factor/types";
+import { useTwoFactorChallengeStore } from "@/stores/use-two-factor-challenge-store";
+
+export const useTwoFactorLogin = () => {
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/(public)/_guest" });
+  const startChallenge = useTwoFactorChallengeStore.use.startChallenge();
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  const loginMutation = useMutation({ mutationFn: loginWithTwoFactorChallenge });
+  const { mutate: loginMutate, mutateAsync: loginMutateAsync } = loginMutation;
+
+  const withChallengeRouting = useCallback(
+    (options: Parameters<typeof loginMutate>[1]): Parameters<typeof loginMutate>[1] => {
+      return {
+        ...options,
+        onSuccess: async (challenge, ...rest) => {
+          if (challenge) {
+            startChallenge(challenge);
+            await navigate({
+              to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor",
+              search: { redirect: search.redirect },
+            });
+
+            return;
+          }
+
+          clearChallenge();
+          await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+          await options?.onSuccess?.(challenge, ...rest);
+        },
+      };
+    },
+    [clearChallenge, navigate, search.redirect, startChallenge],
+  );
+
+  const mutate = useCallback<typeof loginMutate>(
+    (payload, options) => {
+      loginMutate(payload, withChallengeRouting(options));
+    },
+    [loginMutate, withChallengeRouting],
+  );
+
+  const mutateAsync = useCallback<typeof loginMutateAsync>(
+    (payload, options) => {
+      return loginMutateAsync(payload, withChallengeRouting(options));
+    },
+    [loginMutateAsync, withChallengeRouting],
+  );
+
+  return { ...loginMutation, mutate, mutateAsync };
+};

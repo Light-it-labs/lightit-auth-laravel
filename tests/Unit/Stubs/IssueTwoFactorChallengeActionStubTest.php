@@ -13,8 +13,7 @@ use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\PlainUser;
 use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\TwoFactorChallengeException;
 
 /**
- * IssueTwoFactorChallengeAction.stub is a template for the consuming app - it hardcodes
- * `Lightit\Users\Domain\Models\User` and lives under `Lightit\` namespaces
+ * IssueTwoFactorChallengeAction.stub is a template for the consuming app - it lives under `Lightit\` namespaces
  * this package never loads directly. Rendered here into a private test
  * namespace (FakeUser stands in for the real User model) so its branching
  * logic is exercised without a full consumer app.
@@ -31,7 +30,6 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
             "use Lightit\Authentication\Domain\Enums\TwoFactorReason;\n",
             "use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;\n",
             'use Lightit\Authentication\Domain\TwoFactorAuthenticatable;',
-            'use Lightit\Users\Domain\Models\User;',
         ],
         [
             'namespace Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub;',
@@ -42,10 +40,6 @@ function renderIssueTwoFactorChallengeActionStub(string $relativePath): string
             // FakeUser stands in for TwoFactorAuthenticatable, so a FakeUser passes the
             // instanceof guard below and exercises the 2FA branching.
             'use Lightitlabs\Tests\Fixtures\IssueTwoFactorChallengeActionStub\FakeUser as TwoFactorAuthenticatable;',
-            // User is aliased to the plain Authenticatable contract instead of FakeUser, so
-            // PlainUser (Authenticatable but not TwoFactorAuthenticatable) can also satisfy
-            // execute()'s type-hint and exercise the fail-closed LogicException below.
-            'use Illuminate\Contracts\Auth\Authenticatable as User;',
         ],
         $contents,
     );
