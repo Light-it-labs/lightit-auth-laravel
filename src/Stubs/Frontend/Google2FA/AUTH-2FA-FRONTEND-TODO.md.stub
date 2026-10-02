@@ -98,7 +98,9 @@ token.
    its own message instead of the wrong-password one.
 5. After turning 2FA on or off, the status and current-user queries are invalidated.
 6. Each request is sent by a submit, never from an effect, so StrictMode's double
-   mount sends nothing twice.
+   mount sends nothing twice. The enable, confirm and regenerate mutations pass
+   `gcTime: 0`, so the secret and the recovery codes leave the mutation cache as soon
+   as the dialog clears them.
 7. A wrong password or code is a `422` and stays on the form: `invalid_password`
    marks the password field, anything else the code field, which is cleared. Wrong
    codes on regenerate and turn off count toward the same per-user lockout as login. A code that was already

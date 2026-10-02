@@ -59,7 +59,7 @@ export const useDisableTwoFactor = (props?: UseMutationProps<typeof disableTwoFa
 export const useRegenerateRecoveryCodes = (
   props?: UseMutationProps<typeof regenerateRecoveryCodes>,
 ) => {
-  return useMutation({ mutationFn: regenerateRecoveryCodes, ...props });
+  return useMutation({ mutationFn: regenerateRecoveryCodes, gcTime: 0, ...props });
 };
 
 export const twoFactorStatusQuery = {
@@ -79,9 +79,9 @@ export const refreshTwoFactorState = () => {
 };
 
 export const useEnableTwoFactor = (props?: UseMutationProps<typeof enableTwoFactor>) => {
-  return useMutation({ mutationFn: enableTwoFactor, ...props });
+  return useMutation({ mutationFn: enableTwoFactor, gcTime: 0, ...props });
 };
 
 export const useConfirmTwoFactor = (props?: UseMutationProps<typeof confirmTwoFactor>) => {
-  return useMutation({ mutationFn: confirmTwoFactor, ...props });
+  return useMutation({ mutationFn: confirmTwoFactor, gcTime: 0, ...props });
 };
