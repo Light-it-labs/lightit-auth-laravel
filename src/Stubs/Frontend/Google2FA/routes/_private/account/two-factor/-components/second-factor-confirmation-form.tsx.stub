@@ -27,18 +27,20 @@ type SecondFactorConfirmationFormProps = {
     payload: SecondFactorConfirmationPayload,
     onFailed: (error: unknown) => Promise<void>,
   ) => void;
+  onStateConflict: () => void;
 };
 
 export const SecondFactorConfirmationForm = ({
   isPending,
   onConfirm,
+  onStateConflict,
   submitLabel,
 }: SecondFactorConfirmationFormProps) => {
   const { t } = useTranslation();
 
   const [isUsingRecoveryCode, setIsUsingRecoveryCode] = useState(false);
 
-  const { onSecondFactorError } = useTwoFactorAccountErrors();
+  const { onSecondFactorError } = useTwoFactorAccountErrors({ onStateConflict });
 
   const {
     control,

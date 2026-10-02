@@ -18,15 +18,20 @@ const statusOf = (error: unknown) => {
   return isAxiosError(error) ? error.response?.status : undefined;
 };
 
-export const useTwoFactorAccountErrors = () => {
+type TwoFactorAccountErrorsOptions = {
+  onStateConflict: () => void;
+};
+
+export const useTwoFactorAccountErrors = ({ onStateConflict }: TwoFactorAccountErrorsOptions) => {
   const { t } = useTranslation();
 
-  const onStateConflict = async (error: unknown) => {
+  const handleStateConflict = async (error: unknown) => {
     toast.error(
       isTwoFactorUnavailable(error)
         ? t("twoFactor.account.unavailable")
         : t("twoFactor.account.errors.conflict"),
     );
+    onStateConflict();
     await refreshTwoFactorState();
   };
 
@@ -34,7 +39,7 @@ export const useTwoFactorAccountErrors = () => {
     const status = statusOf(error);
 
     if (status === HttpStatusCode.Conflict) {
-      await onStateConflict(error);
+      await handleStateConflict(error);
 
       return;
     }
@@ -59,7 +64,7 @@ export const useTwoFactorAccountErrors = () => {
     const status = statusOf(error);
 
     if (status === HttpStatusCode.Conflict) {
-      await onStateConflict(error);
+      await handleStateConflict(error);
 
       return;
     }
@@ -88,7 +93,7 @@ export const useTwoFactorAccountErrors = () => {
     const status = statusOf(error);
 
     if (status === HttpStatusCode.Conflict) {
-      await onStateConflict(error);
+      await handleStateConflict(error);
 
       return;
     }
