@@ -105,7 +105,8 @@ the same way before or after the 2FA login-hook step.
   "empty": "You haven't added a passkey yet.",
   "createdAt": "Added {date}",
   "signIn": {
-    "submit": "Sign in with passkey"
+    "submit": "Sign in with passkey",
+    "unsupported": "This browser or device can't sign in with a passkey."
   },
   "form": {
     "name": "Passkey name",
