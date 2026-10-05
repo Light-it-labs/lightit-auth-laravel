@@ -341,6 +341,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
             self::USER_MODEL_CLASS . ' must extend ' . self::TWO_FACTOR_AUTHENTICATABLE_CLASS
             . ' instead of Illuminate\\Foundation\\Auth\\User - see ' . self::TODO_FILE . '.',
         );
+
+        $this->command->line(
+            'Then run php artisan migrate and pick the mode with TWO_FACTOR_AUTHENTICATION_MANDATORY in .env.',
+        );
     }
 
     /**
