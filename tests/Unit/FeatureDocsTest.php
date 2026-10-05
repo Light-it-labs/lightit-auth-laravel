@@ -34,5 +34,6 @@ describe('feature docs', function (): void {
         }
     })->with([
         '2FA' => ['google-2fa.md', ['AUTH-2FA-TODO.md', 'AUTH-2FA-FRONTEND-TODO.md']],
+        'Passkeys' => ['passkeys.md', ['AUTH-PASSKEYS-TODO.md', 'AUTH-PASSKEYS-FRONTEND-TODO.md']],
     ]);
 });

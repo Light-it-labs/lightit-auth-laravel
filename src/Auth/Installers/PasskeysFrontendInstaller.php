@@ -15,6 +15,10 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
 {
     private const TODO_FILE = 'AUTH-PASSKEYS-FRONTEND-TODO.md';
 
+    private const SIDEBAR_FILE = 'src/routes/_private/-components/sidebar/sidebar.tsx';
+
+    private const SIDEBAR_LINK = '{ path: "/account/passkeys", label: t("navigation.links.passkeys"), icon: <Icons.Lock /> },';
+
     private const REQUIRED_DEPENDENCIES = [
         '@hookform/resolvers',
         '@simplewebauthn/browser',
@@ -81,5 +85,14 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         $this->command->warn(
             'Manual step: add the passkeys i18n block listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.'
         );
+
+        $this->printSidebarManualStep();
+    }
+
+    private function printSidebarManualStep(): void
+    {
+        $this->command->warn('Manual step: link the passkeys page from the sidebar.');
+        $this->command->line('In ' . self::SIDEBAR_FILE . ', add at the end of the links array:');
+        $this->command->line('  ' . self::SIDEBAR_LINK);
     }
 }
