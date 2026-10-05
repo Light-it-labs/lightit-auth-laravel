@@ -43,4 +43,30 @@ describe('Wrong-code vs. invalid-token status codes', function (): void {
 
         expect($exceptionStub)->toContain('int $status = 401');
     });
+
+    it('hands the status it was given to the HTTP exception it extends, not the default 401', function (): void {
+        $rendered = str_replace(
+            [
+                'namespace Lightit\\Authentication\\Domain\\Exceptions;',
+                "use Lightit\\Shared\\App\\Exceptions\\Http\\HttpException;\n",
+            ],
+            ['namespace Lightitlabs\\Tests\\Fixtures\\TwoFactorAuthExceptionStub;', ''],
+            (string) file_get_contents(
+                __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Exceptions/TwoFactorAuthException.stub'
+            ),
+        );
+        $tempFile = sys_get_temp_dir() . '/two-factor-auth-exception-stub-' . md5($rendered) . '.php';
+        file_put_contents($tempFile, $rendered);
+        require_once $tempFile;
+
+        $exception = new Lightitlabs\Tests\Fixtures\TwoFactorAuthExceptionStub\TwoFactorAuthException(
+            message: 'Invalid 2FA OTP.',
+            reason: 'invalid_otp',
+            status: 422,
+        );
+
+        expect($exception->getStatusCode())->toBe(422)
+            ->and($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('invalid_otp');
+    });
 });

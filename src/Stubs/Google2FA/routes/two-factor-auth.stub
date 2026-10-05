@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Route;
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\ConfirmTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\DisableTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\EnableTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\RegenerateRecoveryCodesController;
 use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\ShowTwoFactorAuthenticationStatusController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
 /*
@@ -31,8 +34,11 @@ Route::prefix('2fa')
 
         Route::middleware('auth:sanctum')
             ->group(static function (): void {
-                Route::post('disable', DisableTwoFactorAuthenticationController::class);
-                Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class);
-                Route::post('request-reset', RequestTwoFactorResetController::class);
+                Route::get('status', ShowTwoFactorAuthenticationStatusController::class);
+                Route::post('enable', EnableTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                Route::post('confirm', ConfirmTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                Route::post('disable', DisableTwoFactorAuthenticationController::class)->middleware('throttle:2fa');
+                Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class)->middleware('throttle:2fa');
+                Route::post('request-reset', RequestTwoFactorResetController::class)->middleware('throttle:2fa');
             });
     });

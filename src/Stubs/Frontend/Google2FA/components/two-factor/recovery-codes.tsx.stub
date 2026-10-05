@@ -1,0 +1,39 @@
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
+
+type RecoveryCodesProps = {
+  recoveryCodes: string[];
+};
+
+export const RecoveryCodes = ({ recoveryCodes }: RecoveryCodesProps) => {
+  const { t } = useTranslation();
+
+  const copyRecoveryCodes = async () => {
+    try {
+      await navigator.clipboard.writeText(recoveryCodes.join("\n"));
+      toast.success(t("twoFactor.setup.recoveryCodesCopied"));
+    } catch {
+      toast.error(t("twoFactor.setup.recoveryCodesNotCopied"));
+    }
+  };
+
+  return (
+    <section className="space-y-3">
+      <h2 className="font-semibold">{t("twoFactor.setup.recoveryCodesTitle")}</h2>
+
+      <p className="text-sm">{t("twoFactor.setup.recoveryCodesDescription")}</p>
+
+      <ul className="grid grid-cols-2 gap-2 rounded-md border p-3 font-mono text-sm">
+        {recoveryCodes.map((recoveryCode) => {
+          return <li key={recoveryCode}>{recoveryCode}</li>;
+        })}
+      </ul>
+
+      <Button className="w-full" variant="outlined" onClick={copyRecoveryCodes}>
+        {t("twoFactor.setup.copyRecoveryCodes")}
+      </Button>
+    </section>
+  );
+};

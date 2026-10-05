@@ -1,0 +1,78 @@
+import { useState } from "react";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+
+import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/i18n";
+import {
+  getPendingTwoFactorChallenge,
+  useTwoFactorChallengeStore,
+} from "@/stores/use-two-factor-challenge-store";
+import { OneTimePasswordForm } from "./-components/one-time-password-form";
+import { RecoveryCodeForm } from "./-components/recovery-code-form";
+
+const TwoFactorVerificationPage = () => {
+  const { t } = useTranslation();
+  const { challenge } = Route.useRouteContext();
+  const search = Route.useSearch();
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  const [isUsingRecoveryCode, setIsUsingRecoveryCode] = useState(false);
+
+  const toggleVerificationMethod = () => {
+    setIsUsingRecoveryCode((current) => {
+      return !current;
+    });
+  };
+
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center">
+      <div className="w-96 space-y-6 rounded-2xl p-5 shadow-sm">
+        <div className="space-y-2">
+          <h1 className="text-xl font-semibold">{t("twoFactor.verify.title")}</h1>
+
+          <p className="text-sm">
+            {isUsingRecoveryCode
+              ? t("twoFactor.verify.recoveryCodeDescription")
+              : t("twoFactor.verify.oneTimePasswordDescription")}
+          </p>
+        </div>
+
+        {isUsingRecoveryCode ? (
+          <RecoveryCodeForm token={challenge.token} />
+        ) : (
+          <OneTimePasswordForm token={challenge.token} autoFocus />
+        )}
+
+        <Button className="w-full" variant="plainText" onClick={toggleVerificationMethod}>
+          {isUsingRecoveryCode
+            ? t("twoFactor.verify.useOneTimePassword")
+            : t("twoFactor.verify.useRecoveryCode")}
+        </Button>
+
+        <p className="text-center text-sm">
+          <Link
+            className="underline underline-offset-4 hover:opacity-80"
+            search={{ redirect: search.redirect }}
+            to="/login"
+            onClick={clearChallenge}
+          >
+            {t("twoFactor.backToLogin")}
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export const Route = createFileRoute("/(public)/_guest/two-factor/")({
+  beforeLoad: ({ search }) => {
+    const challenge = getPendingTwoFactorChallenge("verification_required");
+
+    if (!challenge) {
+      throw redirect({ to: "/login", search: { redirect: search.redirect } });
+    }
+
+    return { challenge };
+  },
+  component: TwoFactorVerificationPage,
+});

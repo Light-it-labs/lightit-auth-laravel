@@ -1,0 +1,74 @@
+import { useState } from "react";
+
+import { RecoveryCodes } from "@/components/two-factor/recovery-codes";
+import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
+import { useTranslation } from "@/i18n";
+import { useRegenerateRecoveryCodes } from "@/services/auth/two-factor/actions";
+import { SecondFactorConfirmationForm } from "./second-factor-confirmation-form";
+
+type RegenerateRecoveryCodesDialogProps = {
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+export const RegenerateRecoveryCodesDialog = ({
+  isOpen,
+  onOpenChange,
+}: RegenerateRecoveryCodesDialogProps) => {
+  const { t } = useTranslation();
+
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+
+  const regenerateRecoveryCodesMutation = useRegenerateRecoveryCodes();
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setRecoveryCodes(null);
+    }
+
+    onOpenChange(open);
+  };
+
+  return (
+    <Dialog.Root open={isOpen} onOpenChange={handleOpenChange}>
+      <Dialog.Content isDismissible={!regenerateRecoveryCodesMutation.isPending && !recoveryCodes}>
+        <Dialog.Header>
+          <Dialog.Title>{t("twoFactor.account.regenerate.title")}</Dialog.Title>
+
+          <Dialog.Description>{t("twoFactor.account.regenerate.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        {recoveryCodes ? (
+          <>
+            <RecoveryCodes recoveryCodes={recoveryCodes} />
+
+            <Dialog.Footer>
+              <Dialog.Close asChild>
+                <Button>{t("twoFactor.account.recoveryCodesSaved")}</Button>
+              </Dialog.Close>
+            </Dialog.Footer>
+          </>
+        ) : (
+          <SecondFactorConfirmationForm
+            isPending={regenerateRecoveryCodesMutation.isPending}
+            submitLabel={t("twoFactor.account.regenerate.submit")}
+            onConfirm={(payload, onFailed) => {
+              regenerateRecoveryCodesMutation.mutate(payload, {
+                onSuccess: (result) => {
+                  setRecoveryCodes(result.recoveryCodes);
+                },
+                onError: (error) => {
+                  return onFailed(error);
+                },
+              });
+            }}
+            onStateConflict={() => {
+              handleOpenChange(false);
+            }}
+          />
+        )}
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

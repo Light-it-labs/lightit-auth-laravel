@@ -35,7 +35,7 @@ final class CompleteTwoFactorAuthenticationRequest extends FormRequest
             if (! $user->hasTwoFactorAuthenticationSecretStored()) {
                 throw new TwoFactorAuthException(
                     message: __('google2fa.2fa_not_configured'),
-                    reason: TwoFactorReason::SetupRequired->value
+                    reason: TwoFactorReason::SetupRequired->value,
                 );
             }
 

@@ -13,7 +13,7 @@ use Lightit\Users\Domain\Models\User;
 
 final readonly class VerifyTwoFactorToken
 {
-    public function execute(string $token, ?TwoFactorReason $expectedReason = null): User
+    public function execute(string $token, TwoFactorReason|null $expectedReason = null): User
     {
         $payload = $this->decrypt($token);
 
@@ -27,7 +27,7 @@ final readonly class VerifyTwoFactorToken
 
         if (! $user instanceof User) {
             throw new TwoFactorAuthException(
-                'The token does not contain a valid user identifier.'
+                'The token does not contain a valid user identifier.',
             );
         }
 
@@ -43,7 +43,7 @@ final readonly class VerifyTwoFactorToken
         if (! in_array($payload['reason'], array_map(static fn (TwoFactorReason $reason): string => $reason->value, $expected), true)) {
             throw new TwoFactorAuthException(
                 message: __('This token cannot be used for this action.'),
-                reason: 'invalid_token_reason'
+                reason: 'invalid_token_reason',
             );
         }
 
@@ -55,7 +55,7 @@ final readonly class VerifyTwoFactorToken
 
         if (! $user instanceof User) {
             throw new TwoFactorAuthException(
-                'The token does not contain a valid user identifier.'
+                'The token does not contain a valid user identifier.',
             );
         }
 
@@ -81,33 +81,33 @@ final readonly class VerifyTwoFactorToken
         return $decrypted;
     }
 
-    private function assertIs2faToken(array $payload, ?TwoFactorReason $expectedReason = null): void
+    private function assertIs2faToken(array $payload, TwoFactorReason|null $expectedReason = null): void
     {
         if (($payload['typ'] ?? null) !== '2fa') {
             throw new TwoFactorAuthException(
                 message: __('This token is not a valid 2FA token.'),
-                reason: 'invalid_token_type'
+                reason: 'invalid_token_type',
             );
         }
 
         if (! isset($payload['reason']) || ! is_string($payload['reason']) || $payload['reason'] === '') {
             throw new TwoFactorAuthException(
                 message: __('The token does not contain a valid 2FA reason.'),
-                reason: 'missing_2fa_reason'
+                reason: 'missing_2fa_reason',
             );
         }
 
         if (! array_key_exists('mandatory', $payload) || ! is_bool($payload['mandatory'])) {
             throw new TwoFactorAuthException(
                 message: __('The token does not contain a valid 2FA configuration.'),
-                reason: 'invalid_2fa_configuration'
+                reason: 'invalid_2fa_configuration',
             );
         }
 
-        if ($expectedReason !== null && $payload['reason'] !== $expectedReason->value) {
+        if ($expectedReason instanceof TwoFactorReason && $payload['reason'] !== $expectedReason->value) {
             throw new TwoFactorAuthException(
                 message: __('This token cannot be used for this action.'),
-                reason: 'invalid_token_reason'
+                reason: 'invalid_token_reason',
             );
         }
     }
@@ -117,7 +117,7 @@ final readonly class VerifyTwoFactorToken
         if (now()->timestamp > $payload->exp) {
             throw new TwoFactorAuthException(
                 message: __('The token has expired. Please sign in again.'),
-                reason: '2fa_expired'
+                reason: '2fa_expired',
             );
         }
     }

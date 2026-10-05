@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Config;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * @mixin User
+ */
+#[SchemaName('TwoFactorStatus')]
+final class TwoFactorStatusResource extends JsonResource
+{
+    /**
+     * @return array{available: bool, enabled: bool, mandatory: bool}
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'available' => Config::boolean('google2fa.enabled', false),
+            'enabled' => $this->hasTwoFactorAuthenticationConfigured(),
+            'mandatory' => Config::boolean('google2fa.mandatory', true),
+        ];
+    }
+}

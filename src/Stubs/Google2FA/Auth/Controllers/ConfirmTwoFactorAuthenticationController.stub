@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\ConfirmTwoFactorAuthenticationRequest;
+use Lightit\Authentication\App\Resources\TwoFactorRecoveryCodesResource;
+use Lightit\Authentication\Domain\Actions\ConfirmTwoFactorAuthenticationAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class ConfirmTwoFactorAuthenticationController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        ConfirmTwoFactorAuthenticationRequest $request,
+        ConfirmTwoFactorAuthenticationAction $confirmTwoFactorAuthenticationAction,
+    ): JsonResponse {
+        $recoveryCodes = $confirmTwoFactorAuthenticationAction->execute($user, $request->getOneTimePassword());
+
+        return TwoFactorRecoveryCodesResource::make($recoveryCodes)->response();
+    }
+}

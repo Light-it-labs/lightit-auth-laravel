@@ -1,0 +1,92 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Authentication\Domain\TwoFactorAttemptLimiter;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class ConfirmTwoFactorAuthenticationAction
+{
+    public function __construct(
+        private VerifyOtpAction $verifyOtpAction,
+        private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
+    ) {}
+
+    /**
+     * The attempt count and the code check stay outside the transaction: with a
+     * database cache store on the same connection, a rejected code would
+     * otherwise roll its lockout hit back. The transaction only re-checks and
+     * activates the locked row, so an enable from another tab can't swap the
+     * secret that was just checked, and two concurrent confirms can't both
+     * hand out recovery codes.
+     *
+     * @return array<string>
+     *
+     * @throws TwoFactorAuthException
+     */
+    public function execute(User $user, string $oneTimePassword): array
+    {
+        if (! Config::boolean('google2fa.enabled', false)) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_unavailable'),
+                reason: '2fa_unavailable',
+                status: 409,
+            );
+        }
+
+        $secret = $this->pendingSecret($user);
+
+        TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);
+
+        $this->verifyOtpAction->execute($user->id, $secret, $oneTimePassword);
+
+        $recoveryCodes = $this->generateRecoveryCodesAction->generate();
+
+        DB::transaction(function () use ($user, $secret, $recoveryCodes): void {
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($this->pendingSecret($lockedUser) !== $secret) {
+                throw new TwoFactorAuthException(message: __('google2fa.invalid_otp'), reason: 'invalid_otp', status: 422);
+            }
+
+            $lockedUser->activateTwoFactorAuthentication();
+            $lockedUser->replaceRecoveryCodes($recoveryCodes['hashes']);
+        });
+
+        TwoFactorAttemptLimiter::clear($user->id);
+
+        return $recoveryCodes['codes'];
+    }
+
+    /**
+     * @throws TwoFactorAuthException
+     */
+    private function pendingSecret(User $user): string
+    {
+        if ($user->hasTwoFactorAuthenticationConfigured()) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_already_configured'),
+                reason: '2fa_already_configured',
+                status: 409,
+            );
+        }
+
+        $secret = $user->getTwoFactorAuthSecret();
+
+        if (is_null($secret)) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.2fa_not_started'),
+                reason: '2fa_not_started',
+                status: 409,
+            );
+        }
+
+        return $secret;
+    }
+}

@@ -11,8 +11,7 @@ final readonly class GenerateQRCodeAction
 {
     public function __construct(
         private Google2FA $google2FA,
-    ) {
-    }
+    ) {}
 
     public function execute(string $holderIdentifier, string $secret): string
     {

@@ -14,6 +14,21 @@ final readonly class GenerateRecoveryCodesAction
     /** @return array<string> */
     public function execute(User $user): array
     {
+        $recoveryCodes = $this->generate();
+
+        $user->replaceRecoveryCodes($recoveryCodes['hashes']);
+
+        return $recoveryCodes['codes'];
+    }
+
+    /**
+     * Hashing costs one bcrypt per code, so a caller that stores the codes
+     * under a row lock generates them before taking it.
+     *
+     * @return array{codes: array<string>, hashes: array<string>}
+     */
+    public function generate(): array
+    {
         $recoveryCodes = Collection::times(8, static function (): string {
             return Str::random(10) . '-' . Str::random(10);
         })->all();
@@ -22,8 +37,6 @@ final readonly class GenerateRecoveryCodesAction
             return Hash::make($code);
         }, $recoveryCodes);
 
-        $user->replaceRecoveryCodes($hashedCodes);
-
-        return $recoveryCodes;
+        return ['codes' => $recoveryCodes, 'hashes' => $hashedCodes];
     }
 }

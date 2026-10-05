@@ -30,7 +30,7 @@ final class SetupTwoFactorAuthenticationRequest extends FormRequest
         if ($user->hasTwoFactorAuthenticationConfigured()) {
             throw new TwoFactorAuthException(
                 message: __('google2fa.2fa_already_configured'),
-                reason: '2fa_already_configured'
+                reason: '2fa_already_configured',
             );
         }
 

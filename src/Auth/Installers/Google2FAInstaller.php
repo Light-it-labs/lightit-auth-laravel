@@ -6,6 +6,7 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -24,6 +25,12 @@ final class Google2FAInstaller implements AuthInstallerInterface
         'Authentication/App/Resources',
     ];
 
+    private const PACKAGES = [
+        'pragmarx/google2fa-laravel',
+        'pragmarx/google2fa-qrcode',
+        'bacon/bacon-qr-code',
+    ];
+
     private const ROUTES_LABEL = 'two-factor authentication';
 
     private const ROUTES_FILE_NAME = 'two-factor-auth.php';
@@ -35,11 +42,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
     private const LOGIN_ACTION_PATH = 'src/Authentication/Domain/Actions/LoginAction.php';
 
     /**
-     * The import + constructor injection a consumer must add to their own login.
+     * The constructor injection a consumer must add to their own login. `LoginAction` lives in
+     * the challenge action's namespace, so no `use` line: the app's Pint would delete it.
      */
     private const GATE_CONSTRUCTOR_SNIPPET = <<<'PHP'
-        use Lightit\Authentication\Domain\Actions\IssueTwoFactorChallengeAction;
-
         public function __construct(
             private readonly AuthFactory $authFactory,
             private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
@@ -69,16 +75,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
     ) {
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function install(): void
     {
-        if (! $this->composerInstaller->requirePackages([
-            'pragmarx/google2fa-laravel',
-            'pragmarx/google2fa-qrcode',
-            'bacon/bacon-qr-code',
-        ])) {
-            $this->command->error('Installing Google 2FA laravel and QR Code');
-
-            return;
+        if (! $this->composerInstaller->requirePackages(self::PACKAGES)) {
+            throw new SetupAbortedException('Failed to install ' . implode(', ', self::PACKAGES));
         }
 
         $this->createAuthFiles();
@@ -160,6 +163,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/PasswordValidatorAction.stub' => 'Domain/Actions/PasswordValidatorAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
+            '/Actions/ConsumeRecoveryCodeAction.stub' => 'Domain/Actions/ConsumeRecoveryCodeAction.php',
+            '/Actions/VerifyTwoFactorCodeAction.stub' => 'Domain/Actions/VerifyTwoFactorCodeAction.php',
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
@@ -179,6 +184,18 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Requests/VerifyRecoveryCodeRequest.stub' => 'App/Requests/VerifyRecoveryCodeRequest.php',
             '/Requests/RequestTwoFactorResetRequest.stub' => 'App/Requests/RequestTwoFactorResetRequest.php',
             '/Requests/ResetTwoFactorAuthenticationRequest.stub' => 'App/Requests/ResetTwoFactorAuthenticationRequest.php',
+            '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
+            '/Actions/ConfirmTwoFactorAuthenticationAction.stub' => 'Domain/Actions/ConfirmTwoFactorAuthenticationAction.php',
+            '/Actions/RegenerateRecoveryCodesAction.stub' => 'Domain/Actions/RegenerateRecoveryCodesAction.php',
+            '/DataTransferObjects/TwoFactorEnrollmentDto.stub' => 'Domain/DataTransferObjects/TwoFactorEnrollmentDto.php',
+            '/Resources/TwoFactorEnrollmentResource.stub' => 'App/Resources/TwoFactorEnrollmentResource.php',
+            '/Resources/TwoFactorRecoveryCodesResource.stub' => 'App/Resources/TwoFactorRecoveryCodesResource.php',
+            '/Resources/TwoFactorStatusResource.stub' => 'App/Resources/TwoFactorStatusResource.php',
+            '/Requests/EnableTwoFactorAuthenticationRequest.stub' => 'App/Requests/EnableTwoFactorAuthenticationRequest.php',
+            '/Requests/ConfirmTwoFactorAuthenticationRequest.stub' => 'App/Requests/ConfirmTwoFactorAuthenticationRequest.php',
+            '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',
+            '/Controllers/ConfirmTwoFactorAuthenticationController.stub' => 'App/Controllers/ConfirmTwoFactorAuthenticationController.php',
+            '/Controllers/ShowTwoFactorAuthenticationStatusController.stub' => 'App/Controllers/ShowTwoFactorAuthenticationStatusController.php',
         ];
 
         foreach ($files as $stub => $destination) {
@@ -337,6 +354,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
         $this->command->line(
             self::USER_MODEL_CLASS . ' must extend ' . self::TWO_FACTOR_AUTHENTICATABLE_CLASS
             . ' instead of Illuminate\\Foundation\\Auth\\User - see ' . self::TODO_FILE . '.',
+        );
+
+        $this->command->line(
+            'Then run php artisan migrate and pick the mode with TWO_FACTOR_AUTHENTICATION_MANDATORY in .env.',
         );
     }
 

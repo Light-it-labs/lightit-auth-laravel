@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * VerifyRecoveryCodeAction.stub becomes Eloquent code in the consuming
+ * VerifyRecoveryCodeAction.stub (through ConsumeRecoveryCodeAction.stub) becomes Eloquent code in the consuming
  * project (it locks and persists the real `User` row), so it cannot be
  * exercised against a database from this package - see
  * laravel-package-testing: no Eloquent, no database here. These assertions
@@ -13,10 +13,10 @@ declare(strict_types=1);
 describe('VerifyRecoveryCodeAction stub', function (): void {
     it('locks and consumes the recovery code inside a single transaction', function (): void {
         $stub = (string) file_get_contents(
-            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
+            __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/ConsumeRecoveryCodeAction.stub'
         );
 
-        expect($stub)->toContain('DB::transaction(function ()')
+        expect($stub)->toContain('DB::transaction(static function ()')
             ->and($stub)->toContain('->lockForUpdate()')
             ->and($stub)->toContain('replaceRecoveryCodes(array_values($hashedCodes))');
     });
@@ -26,8 +26,8 @@ describe('VerifyRecoveryCodeAction stub', function (): void {
             __DIR__ . '/../../../src/Stubs/Google2FA/Auth/Actions/VerifyRecoveryCodeAction.stub'
         );
 
-        expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->getKey());')
-            ->and($stub)->toContain('TwoFactorAttemptLimiter::clear($user->getKey());')
+        expect($stub)->toContain('TwoFactorAttemptLimiter::ensureNotLockedOut($user->id);')
+            ->and($stub)->toContain('TwoFactorAttemptLimiter::clear($user->id);')
             ->and($stub)->not->toContain('TwoFactorAttemptLimiter::recordFailure');
     });
 });

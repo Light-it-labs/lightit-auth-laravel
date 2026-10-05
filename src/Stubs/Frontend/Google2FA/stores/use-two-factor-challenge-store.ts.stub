@@ -1,0 +1,59 @@
+import { create } from "zustand";
+
+import type { TwoFactorChallengeResult } from "@/services/auth/two-factor/types";
+import { createSelectors } from "@/stores/create-selectors";
+
+type TwoFactorChallengeType = TwoFactorChallengeResult["tokenType"];
+
+export type TwoFactorChallenge = {
+  token: string;
+  tokenType: TwoFactorChallengeType;
+  expiresAt: number;
+};
+
+type TwoFactorChallengeStoreState = {
+  challenge: TwoFactorChallenge | null;
+};
+
+type TwoFactorChallengeStoreActions = {
+  startChallenge: (result: TwoFactorChallengeResult) => void;
+  clearChallenge: () => void;
+};
+
+type TwoFactorChallengeStore = TwoFactorChallengeStoreState & TwoFactorChallengeStoreActions;
+
+const MILLISECONDS_PER_SECOND = 1000;
+
+const useTwoFactorChallengeStoreBase = create<TwoFactorChallengeStore>()((set) => {
+  return {
+    challenge: null,
+
+    startChallenge: (result) => {
+      return set({
+        challenge: {
+          token: result.accessToken,
+          tokenType: result.tokenType,
+          expiresAt: Date.now() + result.expiresIn * MILLISECONDS_PER_SECOND,
+        },
+      });
+    },
+
+    clearChallenge: () => {
+      return set({ challenge: null });
+    },
+  };
+});
+
+export const useTwoFactorChallengeStore = createSelectors(useTwoFactorChallengeStoreBase);
+
+export const getPendingTwoFactorChallenge = (tokenType: TwoFactorChallengeType) => {
+  const { challenge, clearChallenge } = useTwoFactorChallengeStoreBase.getState();
+
+  if (challenge && challenge.expiresAt <= Date.now()) {
+    clearChallenge();
+
+    return null;
+  }
+
+  return challenge?.tokenType === tokenType ? challenge : null;
+};

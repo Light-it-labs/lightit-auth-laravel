@@ -1,16 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 return [
     'invalid_credentials' => 'Invalid credentials.',
     'invalid_otp' => 'Invalid 2FA OTP.',
+    'otp_already_used' => 'This code has already been used. Wait for the next one and try again.',
     '2fa_not_configured' => 'Two-factor authentication is not configured.',
     '2fa_expired' => 'Two-factor authentication is expired.',
     '2fa_already_configured' => 'Two-factor authentication is already configured.',
+    '2fa_not_started' => 'Start enabling two-factor authentication before confirming it.',
+    'invalid_password' => 'The provided password is incorrect.',
     '2fa_disabled' => 'Successfully disabled two-factor authentication.',
     'secret_not_configured' => 'Two-factor authentication secret is not configured.',
     'invalid_recovery_code' => 'The provided recovery code is invalid.',
+    'invalid_two_factor_code' => 'The provided authenticator or recovery code is invalid.',
     'disable_forbidden' => 'Cannot disable 2FA because it is mandatory.',
     'cannot_disable_2fa_unconfigured' => 'Cannot disable 2FA because it is not configured.',
+    'cannot_regenerate_2fa_unconfigured' => 'Cannot regenerate recovery codes because 2FA is not configured.',
+    '2fa_unavailable' => 'Two-factor authentication is not available.',
     '2fa_reset' => 'Two-factor authentication has been reset.',
     'too_many_attempts' => 'Too many failed attempts. Please try again later.',
 ];

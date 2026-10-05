@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Authentication\Domain\Actions;
 
+use Illuminate\Support\Facades\Cache;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
 use PragmaRX\Google2FA\Exceptions\IncompatibleWithGoogleAuthenticatorException;
 use PragmaRX\Google2FA\Exceptions\InvalidCharactersException;
@@ -14,18 +15,39 @@ final readonly class VerifyOtpAction
 {
     public function __construct(
         private Google2FA $google2FA,
-    ) {
-    }
+    ) {}
 
     /**
+     * A code is accepted once per user: the timestep it matched is claimed
+     * with an atomic Cache::add(), so a replayed or concurrent request with
+     * the same code finds the claim taken for as long as the code is valid.
+     *
      * @throws IncompatibleWithGoogleAuthenticatorException
      * @throws InvalidCharactersException
      * @throws SecretKeyTooShortException
+     * @throws TwoFactorAuthException
      */
-    public function execute(string $secret, string $oneTimePassword): void
+    public function execute(int|string $userId, string $secret, string $oneTimePassword): void
     {
-        if (! $this->google2FA->verifyKey($secret, $oneTimePassword)) {
+        // verifyKeyNewer() only returns the matched timestep (instead of true)
+        // when it is given a previous one; 0 keeps the whole window open.
+        $timestep = $this->google2FA->verifyKeyNewer($secret, $oneTimePassword, 0);
+
+        if ($timestep === false) {
             throw new TwoFactorAuthException(message: __('google2fa.invalid_otp'), reason: 'invalid_otp', status: 422);
         }
+
+        if (! Cache::add("2fa-used-otp|{$userId}|{$timestep}", true, $this->codeValiditySeconds())) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.otp_already_used'),
+                reason: 'otp_already_used',
+                status: 422,
+            );
+        }
+    }
+
+    private function codeValiditySeconds(): int
+    {
+        return (2 * $this->google2FA->getWindow() + 1) * $this->google2FA->getKeyRegeneration();
     }
 }

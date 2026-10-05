@@ -1,0 +1,105 @@
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { useTranslation } from "@/i18n";
+import { useTwoFactorStatus } from "@/services/auth/two-factor/actions";
+import { DisableTwoFactorDialog } from "./-components/disable-two-factor-dialog";
+import { EnableTwoFactorDialog } from "./-components/enable-two-factor-dialog";
+import { RegenerateRecoveryCodesDialog } from "./-components/regenerate-recovery-codes-dialog";
+
+type TwoFactorAccountDialog = "enable" | "regenerate" | "disable";
+
+const TwoFactorAccountPage = () => {
+  const { t } = useTranslation();
+
+  const { data: status, isError, isPending } = useTwoFactorStatus();
+  const [openDialog, setOpenDialog] = useState<TwoFactorAccountDialog | null>(null);
+
+  const dialogOpenChange = (dialog: TwoFactorAccountDialog) => {
+    return (open: boolean) => {
+      setOpenDialog(open ? dialog : null);
+    };
+  };
+
+  return (
+    <section className="flex max-w-xl flex-col gap-4">
+      <h1 className="text-xl font-semibold">{t("twoFactor.account.title")}</h1>
+
+      {isPending ? <p className="text-sm">{t("twoFactor.account.loading")}</p> : null}
+
+      {isError ? <ErrorMessage errorMessage={t("twoFactor.account.loadError")} /> : null}
+
+      {status && !status.available ? (
+        <p className="text-sm">{t("twoFactor.account.unavailable")}</p>
+      ) : null}
+
+      {status?.available && !status.enabled ? (
+        <>
+          <p className="text-sm">{t("twoFactor.account.disabledDescription")}</p>
+
+          <Button
+            className="self-start"
+            onClick={() => {
+              setOpenDialog("enable");
+            }}
+          >
+            {t("twoFactor.account.enable.open")}
+          </Button>
+        </>
+      ) : null}
+
+      {status?.available && status.enabled ? (
+        <>
+          <p className="text-sm">{t("twoFactor.account.enabledDescription")}</p>
+
+          {status.mandatory ? (
+            <p className="text-sm">{t("twoFactor.account.mandatoryDescription")}</p>
+          ) : null}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setOpenDialog("regenerate");
+              }}
+            >
+              {t("twoFactor.account.regenerate.open")}
+            </Button>
+
+            {status.mandatory ? null : (
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setOpenDialog("disable");
+                }}
+              >
+                {t("twoFactor.account.disable.open")}
+              </Button>
+            )}
+          </div>
+        </>
+      ) : null}
+
+      <EnableTwoFactorDialog
+        isOpen={openDialog === "enable"}
+        onOpenChange={dialogOpenChange("enable")}
+      />
+
+      <RegenerateRecoveryCodesDialog
+        isOpen={openDialog === "regenerate"}
+        onOpenChange={dialogOpenChange("regenerate")}
+      />
+
+      <DisableTwoFactorDialog
+        isOpen={openDialog === "disable"}
+        onOpenChange={dialogOpenChange("disable")}
+      />
+    </section>
+  );
+};
+
+export const Route = createFileRoute("/_private/account/two-factor/")({
+  component: TwoFactorAccountPage,
+});

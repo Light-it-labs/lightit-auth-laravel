@@ -21,8 +21,7 @@ final class LoginByUserAction
         private readonly AuthFactory $auth,
         private readonly Request $request,
         private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user): void
     {

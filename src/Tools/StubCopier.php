@@ -15,7 +15,15 @@ final class StubCopier
      */
     private const PHP_OPEN_TAG_LINE_PATTERN = '/^<\?php[^\r\n]*\r?\n/';
 
-    public function __construct(private readonly OriginMarker $originMarker) {}
+    /**
+     * A bare `<?php` tag is followed by a blank line before the marker, as Pint's
+     * `blank_line_after_opening_tag` (Laravel preset) expects in the consuming app.
+     */
+    private const BARE_PHP_OPEN_TAG_LINE_PATTERN = '/^<\?php\r?\n/';
+
+    public function __construct(private readonly OriginMarker $originMarker)
+    {
+    }
 
     public function copy(string $source, string $destination): StubCopyOutcome
     {
@@ -31,9 +39,25 @@ final class StubCopier
 
         $marker = $this->originMarker->forStub($source);
 
-        $withMarker = preg_match(self::PHP_OPEN_TAG_LINE_PATTERN, $contents, $matches) === 1
-            ? $matches[0]."// {$marker}\n".substr($contents, strlen($matches[0]))
-            : "// {$marker}\n".$contents;
+        $withMarker = match (true) {
+            preg_match(
+                self::BARE_PHP_OPEN_TAG_LINE_PATTERN,
+                $contents,
+                $matches
+            ) === 1 => $matches[0] . "\n// {$marker}\n" . substr(
+                $contents,
+                strlen($matches[0])
+            ),
+            preg_match(
+                self::PHP_OPEN_TAG_LINE_PATTERN,
+                $contents,
+                $matches
+            ) === 1 => $matches[0] . "// {$marker}\n" . substr(
+                $contents,
+                strlen($matches[0])
+            ),
+            default => "// {$marker}\n" . $contents,
+        };
 
         if (@file_put_contents($destination, $withMarker) === false) {
             throw new RuntimeException("Unable to write file: {$destination}");

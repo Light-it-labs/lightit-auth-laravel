@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Illuminate\Auth\SessionGuard;
+use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Lightit\Authentication\Domain\Enums\TwoFactorReason;
 use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
 use Lightit\Authentication\Domain\TwoFactorAuthenticatable;
-use Lightit\Users\Domain\Models\User;
 use LogicException;
 
 /**
@@ -22,14 +22,13 @@ final class IssueTwoFactorChallengeAction
     public function __construct(
         private readonly AuthFactory $auth,
         private readonly Request $request,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws TwoFactorChallengeException
      * @throws LogicException
      */
-    public function execute(User $user): void
+    public function execute(Authenticatable $user): void
     {
         if (! Config::boolean('google2fa.enabled', false)) {
             return;
@@ -41,8 +40,8 @@ final class IssueTwoFactorChallengeAction
         // so this fails closed instead of silently never challenging anyone.
         if (! $user instanceof TwoFactorAuthenticatable) {
             throw new LogicException(
-                'google2fa.enabled is true but '.$user::class.' does not extend '
-                .TwoFactorAuthenticatable::class.'. Extend it on your User model before enabling 2FA.'
+                'google2fa.enabled is true but ' . $user::class . ' does not extend '
+                . TwoFactorAuthenticatable::class . '. Extend it on your User model before enabling 2FA.',
             );
         }
 
