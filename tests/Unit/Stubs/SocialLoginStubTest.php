@@ -7,7 +7,9 @@ use Illuminate\Cache\ArrayStore;
 use Illuminate\Cache\Repository;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Session\ArraySessionHandler;
 use Illuminate\Session\Store;
 use Illuminate\Support\Facades\Config;
@@ -22,7 +24,9 @@ use Lightitlabs\Tests\Fixtures\SocialLoginStub\LoginByUserAction;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialAccount;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialEmailNotVerifiedException;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginAction;
+use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginController;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginDto;
+use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginRequest;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialProviderRegistry;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialProviderUnavailableException;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialProviderUnknownException;
@@ -44,6 +48,8 @@ StubLoader::load(
     'SocialProviders/GoogleProvider.stub',
     'SocialProviderRegistry.stub',
     'Actions/SocialLoginAction.stub',
+    'Requests/SocialLoginRequest.stub',
+    'Controllers/SocialLoginController.stub',
 );
 
 /**
@@ -429,6 +435,42 @@ describe('SocialLoginAction stub', function (): void {
         'without 2FA' => [false],
         'with 2FA' => [true],
     ]);
+
+    it(
+        'answers 201 with the user when the sign-in created them, and 200 for a returning or linked user',
+        function (): void {
+            $respond = function (array $claims): JsonResponse {
+                $request = SocialLoginRequest::create('/auth/social/google', 'POST', [
+                    'token' => $this->tokens->sign($claims),
+                ]);
+                $request->setRouteResolver(
+                    static fn () => (new Route('POST', 'auth/social/{provider}', []))->bind($request)
+                );
+
+                return (new SocialLoginController())($request, new SocialLoginAction(
+                    $this->request,
+                    $this->app->make(SocialProviderRegistry::class),
+                    new LoginByUserAction(),
+                ));
+            };
+            User::make('existing@example.com', 'Existing Demo');
+
+            $created = $respond([]);
+            $returning = $respond([]);
+            $linked = $respond(['sub' => '100000000000000000002', 'email' => 'existing@example.com']);
+
+            expect($created->getStatusCode())->toBe(201)
+                ->and($created->getData(true))->toBe(['data' => [
+                    'id' => 2,
+                    'name' => 'Demo User',
+                    'email_address' => 'demo@example.com',
+                ]])
+                ->and($returning->getStatusCode())->toBe(200)
+                ->and($returning->getData(true)['data']['id'])->toBe(2)
+                ->and($linked->getStatusCode())->toBe(200)
+                ->and($linked->getData(true)['data']['id'])->toBe(1);
+        }
+    );
 
     it('verifies nothing for an unknown provider', function () use ($signIn): void {
         socialLoginFailure(

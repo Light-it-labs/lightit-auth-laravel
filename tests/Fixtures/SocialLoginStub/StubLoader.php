@@ -9,8 +9,8 @@ use Lightitlabs\Auth\Installers\SocialLoginInstaller;
 /**
  * Renders the social login stubs into this fixture namespace so the Google token check and
  * the user linking run for real against firebase/php-jwt and an in-memory SQLite database.
- * The boilerplate's User, HttpException and UnauthenticatedException, and the shared
- * LoginByUserAction, are swapped for the fakes next to this loader.
+ * The boilerplate's User, UserResource, HttpException and UnauthenticatedException, and the
+ * shared LoginByUserAction, are swapped for the fakes next to this loader.
  */
 final class StubLoader
 {
@@ -56,11 +56,13 @@ final class StubLoader
         return str_replace(
             [
                 'use Lightit\Users\Domain\Models\User;',
+                'use Lightit\Users\App\Resources\UserResource;',
                 'use Lightit\Shared\App\Exceptions\Http\HttpException;',
                 'use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;',
             ],
             [
                 'use ' . self::FIXTURE_NAMESPACE . '\User;',
+                'use ' . self::FIXTURE_NAMESPACE . '\UserResource;',
                 'use Lightitlabs\Tests\Fixtures\TwoFactorAccountStub\FakeHttpException as HttpException;',
                 'use ' . self::FIXTURE_NAMESPACE . '\UnauthenticatedException;',
             ],
