@@ -65,6 +65,9 @@ describe('PasskeysFrontendInstaller', function (): void {
             ->toContain('then **delete this file**')
             ->toContain('`docs/passkeys.md`')
             ->toContain("\n- [ ] **Install dependencies** (`pnpm`): Missing dependencies. Run:\n")
+            ->toContain(
+                "\n- [ ] **Add the \"Sign in with passkey\" button** in `src/routes/(public)/_guest/login/-components/login-form.tsx`"
+            )
             ->toContain("\n- [ ] **Add the i18n keys**")
             ->toContain('Check it worked: ')
             ->not->toContain('lightit');
