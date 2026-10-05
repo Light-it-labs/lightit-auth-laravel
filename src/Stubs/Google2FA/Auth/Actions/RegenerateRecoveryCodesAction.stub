@@ -1,0 +1,39 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\Exceptions\TwoFactorAuthException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class RegenerateRecoveryCodesAction
+{
+    public function __construct(
+        private PasswordValidatorAction $passwordValidatorAction,
+        private VerifyTwoFactorCodeAction $verifyTwoFactorCodeAction,
+        private GenerateRecoveryCodesAction $generateRecoveryCodesAction,
+    ) {}
+
+    /**
+     * @return array<string>
+     *
+     * @throws TwoFactorAuthException
+     */
+    public function execute(User $user, string $password, string $code): array
+    {
+        if (! $user->hasTwoFactorAuthenticationConfigured()) {
+            throw new TwoFactorAuthException(
+                message: __('google2fa.cannot_regenerate_2fa_unconfigured'),
+                reason: 'cannot_regenerate_2fa_unconfigured',
+                status: 409,
+            );
+        }
+
+        $this->passwordValidatorAction->execute($user, $password);
+
+        $this->verifyTwoFactorCodeAction->execute($user, $code);
+
+        return $this->generateRecoveryCodesAction->execute($user);
+    }
+}

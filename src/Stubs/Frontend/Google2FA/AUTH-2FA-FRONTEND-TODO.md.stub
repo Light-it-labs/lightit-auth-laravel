@@ -12,7 +12,8 @@
      `import { handleAxiosFieldErrors, redirectTarget } from "@/utils";`
   3. Replace `const loginMutation = useLogin();` with `const loginMutation = useTwoFactorLogin();`
 - [ ] **Add the i18n keys** to `src/i18n/locales/en.json` (and translate them in `es.json`):
-  `form.otp` and `form.recoveryCode` under `form`, and the `twoFactor` block at the top level.
+  `form.otp` and `form.recoveryCode` under `form`, the `twoFactor` block at the top level and
+  `navigation.links.twoFactor` next to the existing `navigation.links` keys.
 
 Under `form`:
 
@@ -50,13 +51,60 @@ At the top level:
   },
   "errors": {
     "invalidCode": "That code didn't work. Try again.",
+    "codeAlreadyUsed": "That code was already used. Wait for the next one and try again.",
     "tooManyAttempts": "Too many attempts. Wait a few minutes and try again.",
     "expired": "Your verification expired. Sign in again.",
     "unexpected": "Something went wrong. Try again in a moment."
+  },
+  "account": {
+    "title": "Two-factor authentication",
+    "loading": "Loading your two-factor settings...",
+    "loadError": "We couldn't load your two-factor settings. Reload the page to retry.",
+    "disabledDescription": "Two-factor authentication is off. Turn it on to be asked for a code from your authenticator app when you sign in.",
+    "enabledDescription": "Two-factor authentication is on. Signing in asks for a code from your authenticator app.",
+    "mandatoryDescription": "Two-factor authentication is required for every account, so it can't be turned off.",
+    "unavailable": "Two-factor authentication isn't available in this app.",
+    "passwordDescription": "Enter your password to continue.",
+    "recoveryCodesSaved": "I've saved my recovery codes",
+    "enable": {
+      "open": "Turn on two-factor authentication",
+      "title": "Turn on two-factor authentication",
+      "continue": "Continue",
+      "submit": "Turn on",
+      "success": "Two-factor authentication is on"
+    },
+    "regenerate": {
+      "open": "Regenerate recovery codes",
+      "title": "Regenerate recovery codes",
+      "description": "Your current recovery codes stop working as soon as the new ones are created.",
+      "submit": "Regenerate"
+    },
+    "disable": {
+      "open": "Turn off two-factor authentication",
+      "title": "Turn off two-factor authentication",
+      "description": "Signing in will only ask for your password.",
+      "submit": "Turn off",
+      "success": "Two-factor authentication is off",
+      "mandatory": "Two-factor authentication is required for every account, so it can't be turned off."
+    },
+    "errors": {
+      "invalidPassword": "That password is incorrect.",
+      "conflict": "Your two-factor settings changed in another window. They've been reloaded."
+    }
   }
 }
 ```
 
-Check it worked: run `vite` once (`dev` or `build`) so the router adds the `/two-factor`
-routes, then `{{ packageManager }} exec tsc --noEmit` passes and signing in with a 2FA
-user asks for the code.
+Next to the existing `navigation.links` keys:
+
+```json
+"navigation": { "links": { "twoFactor": "Two-factor" } }
+```
+
+- [ ] **Link the account page from the sidebar** in `src/routes/_private/-components/sidebar/sidebar.tsx`,
+  at the end of `links`:
+  `{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },`
+
+Check it worked: run `vite` once (`dev` or `build`) so the router adds the 2FA
+routes, then `{{ packageManager }} exec tsc --noEmit` passes, signing in with a 2FA user asks
+for the code, and **Two-factor** shows in the sidebar.

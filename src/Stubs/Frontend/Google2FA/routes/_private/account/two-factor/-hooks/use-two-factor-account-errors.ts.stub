@@ -1,0 +1,125 @@
+import type { UseFormSetError } from "react-hook-form";
+import { HttpStatusCode, isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { useTranslation } from "@/i18n";
+import { refreshTwoFactorState } from "@/services/auth/two-factor/actions";
+import {
+  isInvalidPassword,
+  isOneTimePasswordAlreadyUsed,
+  isTwoFactorUnavailable,
+  type OneTimePasswordPayload,
+  type PasswordPayload,
+  type SecondFactorConfirmationPayload,
+} from "@/services/auth/two-factor/types";
+import { handleAxiosFieldErrors } from "@/utils";
+
+const statusOf = (error: unknown) => {
+  return isAxiosError(error) ? error.response?.status : undefined;
+};
+
+type TwoFactorAccountErrorsOptions = {
+  onStateConflict: () => void;
+};
+
+export const useTwoFactorAccountErrors = ({ onStateConflict }: TwoFactorAccountErrorsOptions) => {
+  const { t } = useTranslation();
+
+  const handleStateConflict = async (error: unknown) => {
+    toast.error(
+      isTwoFactorUnavailable(error)
+        ? t("twoFactor.account.unavailable")
+        : t("twoFactor.account.errors.conflict"),
+    );
+    onStateConflict();
+    await refreshTwoFactorState();
+  };
+
+  const onPasswordError = async (error: unknown, setError: UseFormSetError<PasswordPayload>) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await handleStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("password", { message: t("twoFactor.account.errors.invalidPassword") });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  const onOneTimePasswordError = async (
+    error: unknown,
+    setError: UseFormSetError<OneTimePasswordPayload>,
+  ) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await handleStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("oneTimePassword", {
+        message: isOneTimePasswordAlreadyUsed(error)
+          ? t("twoFactor.errors.codeAlreadyUsed")
+          : t("twoFactor.errors.invalidCode"),
+      });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  const onSecondFactorError = async (
+    error: unknown,
+    setError: UseFormSetError<SecondFactorConfirmationPayload>,
+  ) => {
+    const status = statusOf(error);
+
+    if (status === HttpStatusCode.Conflict) {
+      await handleStateConflict(error);
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity && isInvalidPassword(error)) {
+      setError("password", { message: t("twoFactor.account.errors.invalidPassword") });
+
+      return;
+    }
+
+    if (status === HttpStatusCode.UnprocessableEntity) {
+      setError("code", {
+        message: isOneTimePasswordAlreadyUsed(error)
+          ? t("twoFactor.errors.codeAlreadyUsed")
+          : t("twoFactor.errors.invalidCode"),
+      });
+
+      return;
+    }
+
+    handleAxiosFieldErrors(
+      error,
+      setError,
+      status === HttpStatusCode.TooManyRequests ? t("twoFactor.errors.tooManyAttempts") : undefined,
+    );
+  };
+
+  return { onOneTimePasswordError, onPasswordError, onSecondFactorError };
+};

@@ -1,0 +1,95 @@
+import { Controller, type SubmitHandler, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { InputOtp } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n";
+import { refreshTwoFactorState, useConfirmTwoFactor } from "@/services/auth/two-factor/actions";
+import { getOneTimePasswordSchema } from "@/services/auth/two-factor/schemas";
+import type { OneTimePasswordPayload } from "@/services/auth/two-factor/types";
+import { useTwoFactorAccountErrors } from "../-hooks/use-two-factor-account-errors";
+
+const ONE_TIME_PASSWORD_LENGTH = 6;
+
+const ONE_TIME_PASSWORD_SLOTS = Array.from({ length: ONE_TIME_PASSWORD_LENGTH }, (_, index) => {
+  return index;
+});
+
+type ConfirmTwoFactorFormProps = {
+  onConfirmed: (recoveryCodes: string[]) => void;
+  onStateConflict: () => void;
+};
+
+export const ConfirmTwoFactorForm = ({
+  onConfirmed,
+  onStateConflict,
+}: ConfirmTwoFactorFormProps) => {
+  const { t } = useTranslation();
+
+  const confirmTwoFactorMutation = useConfirmTwoFactor();
+  const { onOneTimePasswordError } = useTwoFactorAccountErrors({ onStateConflict });
+
+  const {
+    control,
+    formState: { errors },
+    handleSubmit,
+    resetField,
+    setError,
+  } = useForm({
+    defaultValues: { oneTimePassword: "" },
+    mode: "onTouched",
+    resolver: zodResolver(getOneTimePasswordSchema()),
+  });
+
+  const onSubmit: SubmitHandler<OneTimePasswordPayload> = (data) => {
+    confirmTwoFactorMutation.mutate(data, {
+      onSuccess: async ({ recoveryCodes }) => {
+        onConfirmed(recoveryCodes);
+        await refreshTwoFactorState();
+      },
+      onError: (error) => {
+        resetField("oneTimePassword");
+
+        return onOneTimePasswordError(error, setError);
+      },
+    });
+  };
+
+  return (
+    <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="oneTimePassword">{t("form.otp")}</Label>
+
+        <Controller
+          control={control}
+          name="oneTimePassword"
+          render={({ field }) => {
+            return (
+              <InputOtp.Root
+                autoComplete="one-time-code"
+                id="oneTimePassword"
+                maxLength={ONE_TIME_PASSWORD_LENGTH}
+                autoFocus
+                {...field}
+              >
+                <InputOtp.Group>
+                  {ONE_TIME_PASSWORD_SLOTS.map((index) => {
+                    return <InputOtp.Slot key={index} index={index} />;
+                  })}
+                </InputOtp.Group>
+              </InputOtp.Root>
+            );
+          }}
+        />
+
+        <ErrorMessage errorMessage={errors.oneTimePassword?.message} />
+      </div>
+
+      <Button className="w-full" isLoading={confirmTwoFactorMutation.isPending} type="submit">
+        {t("twoFactor.account.enable.submit")}
+      </Button>
+    </form>
+  );
+};

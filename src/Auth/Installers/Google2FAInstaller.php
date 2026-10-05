@@ -163,6 +163,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Actions/PasswordValidatorAction.stub' => 'Domain/Actions/PasswordValidatorAction.php',
             '/Actions/CompleteTwoFactorAuthenticationAction.stub' => 'Domain/Actions/CompleteTwoFactorAuthenticationAction.php',
             '/Actions/VerifyRecoveryCodeAction.stub' => 'Domain/Actions/VerifyRecoveryCodeAction.php',
+            '/Actions/ConsumeRecoveryCodeAction.stub' => 'Domain/Actions/ConsumeRecoveryCodeAction.php',
+            '/Actions/VerifyTwoFactorCodeAction.stub' => 'Domain/Actions/VerifyTwoFactorCodeAction.php',
             '/DataTransferObjects/TwoFactorSetupDto.stub' => 'Domain/DataTransferObjects/TwoFactorSetupDto.php',
             '/Exceptions/TwoFactorAuthException.stub' => 'Domain/Exceptions/TwoFactorAuthException.php',
             '/Resources/TwoFactorAuthenticationSetUpResource.stub' => 'App/Resources/TwoFactorAuthenticationSetUpResource.php',
@@ -182,6 +184,18 @@ final class Google2FAInstaller implements AuthInstallerInterface
             '/Requests/VerifyRecoveryCodeRequest.stub' => 'App/Requests/VerifyRecoveryCodeRequest.php',
             '/Requests/RequestTwoFactorResetRequest.stub' => 'App/Requests/RequestTwoFactorResetRequest.php',
             '/Requests/ResetTwoFactorAuthenticationRequest.stub' => 'App/Requests/ResetTwoFactorAuthenticationRequest.php',
+            '/Actions/EnableTwoFactorAuthenticationAction.stub' => 'Domain/Actions/EnableTwoFactorAuthenticationAction.php',
+            '/Actions/ConfirmTwoFactorAuthenticationAction.stub' => 'Domain/Actions/ConfirmTwoFactorAuthenticationAction.php',
+            '/Actions/RegenerateRecoveryCodesAction.stub' => 'Domain/Actions/RegenerateRecoveryCodesAction.php',
+            '/DataTransferObjects/TwoFactorEnrollmentDto.stub' => 'Domain/DataTransferObjects/TwoFactorEnrollmentDto.php',
+            '/Resources/TwoFactorEnrollmentResource.stub' => 'App/Resources/TwoFactorEnrollmentResource.php',
+            '/Resources/TwoFactorRecoveryCodesResource.stub' => 'App/Resources/TwoFactorRecoveryCodesResource.php',
+            '/Resources/TwoFactorStatusResource.stub' => 'App/Resources/TwoFactorStatusResource.php',
+            '/Requests/EnableTwoFactorAuthenticationRequest.stub' => 'App/Requests/EnableTwoFactorAuthenticationRequest.php',
+            '/Requests/ConfirmTwoFactorAuthenticationRequest.stub' => 'App/Requests/ConfirmTwoFactorAuthenticationRequest.php',
+            '/Controllers/EnableTwoFactorAuthenticationController.stub' => 'App/Controllers/EnableTwoFactorAuthenticationController.php',
+            '/Controllers/ConfirmTwoFactorAuthenticationController.stub' => 'App/Controllers/ConfirmTwoFactorAuthenticationController.php',
+            '/Controllers/ShowTwoFactorAuthenticationStatusController.stub' => 'App/Controllers/ShowTwoFactorAuthenticationStatusController.php',
         ];
 
         foreach ($files as $stub => $destination) {

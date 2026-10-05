@@ -10,15 +10,23 @@ final class GenerateRecoveryCodesRequest extends FormRequest
 {
     public const string PASSWORD = 'password';
 
+    public const string CODE = 'code';
+
     public function rules(): array
     {
         return [
             self::PASSWORD => ['required', 'string'],
+            self::CODE => ['required', 'string', 'max:255'],
         ];
     }
 
     public function getPassword(): string
     {
         return $this->string(self::PASSWORD)->toString();
+    }
+
+    public function getCode(): string
+    {
+        return $this->string(self::CODE)->toString();
     }
 }

@@ -12,15 +12,28 @@ describe('Google2FAFrontendInstaller', function (): void {
         $this->root = sys_get_temp_dir() . '/lightit-2fa-frontend-' . bin2hex(random_bytes(6));
         File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->root);
 
+        $this->accountFiles = [
+            'src/routes/_private/account/two-factor/page.tsx',
+            'src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx',
+            'src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx',
+            'src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx',
+            'src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx',
+            'src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx',
+            'src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx',
+            'src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts',
+        ];
+
         $this->screenFiles = [
             'src/stores/use-two-factor-challenge-store.ts',
             'src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts',
             'src/routes/(public)/_guest/two-factor/-hooks/use-two-factor-completion.ts',
             'src/routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx',
             'src/routes/(public)/_guest/two-factor/-components/recovery-code-form.tsx',
-            'src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx',
             'src/routes/(public)/_guest/two-factor/page.tsx',
             'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+            'src/components/two-factor/authenticator-secret.tsx',
+            'src/components/two-factor/recovery-codes.tsx',
+            ...$this->accountFiles,
         ];
 
         $this->writtenFiles = [
@@ -94,6 +107,31 @@ describe('Google2FAFrontendInstaller', function (): void {
             ->not->toContain('auth/regenerate-recovery-codes');
     });
 
+    it('calls the account enrollment endpoints over the cookie session, with no challenge token', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/two-factor/api.ts');
+
+        expect($api)
+            ->toContain('api.get("2fa/status")')
+            ->toContain('api.post("2fa/enable", { password })')
+            ->toContain('api.post("2fa/confirm", {');
+
+        preg_match_all(
+            '/export const (getTwoFactorStatus|enableTwoFactor|confirmTwoFactor) = [^;]+;/s',
+            $api,
+            $functions
+        );
+
+        expect($functions[0])->toHaveCount(3);
+
+        foreach ($functions[0] as $function) {
+            expect($function)->not->toContain('token')->not->toContain('withChallengeToken');
+        }
+    });
+
     it('attaches a manual Authorization header per call instead of a shared authenticated client', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
@@ -141,6 +179,65 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     );
 
+    it('drops the TOTP secret and the recovery codes from the mutation cache of every account call', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $actions = (string) file_get_contents($this->root . '/src/services/auth/two-factor/actions.ts');
+
+        foreach (['enableTwoFactor', 'confirmTwoFactor', 'regenerateRecoveryCodes'] as $mutation) {
+            expect($actions)->toContain("useMutation({ mutationFn: {$mutation}, gcTime: 0, ...props })");
+        }
+    });
+
+    it('validates the enrollment QR code and secret instead of trusting the response shape', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/two-factor/api.ts');
+        preg_match('/export const enableTwoFactor = .+?\n};\n/s', $api, $enableTwoFactor);
+
+        expect($enableTwoFactor[0] ?? '')->toContain('return twoFactorEnrollmentSchema.parse(response.data.data);')
+            ->and(file_get_contents($this->root . '/src/services/auth/two-factor/schemas.ts'))
+            ->toContain(
+                'export const twoFactorEnrollmentSchema = twoFactorSetupSchema.pick({ qr: true, secret: true });'
+            );
+    });
+
+    it('closes the enable, regenerate and disable dialogs when the server answers 409', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        $read = fn (string $file): string => (string) file_get_contents(
+            $this->root . '/src/routes/_private/account/two-factor/' . $file
+        );
+
+        expect($read('-hooks/use-two-factor-account-errors.ts'))
+            ->toContain(
+                'export const useTwoFactorAccountErrors = ({ onStateConflict }: TwoFactorAccountErrorsOptions) => {'
+            )
+            ->toMatch(
+                '/const handleStateConflict = async \(error: unknown\) => \{.+?onStateConflict\(\);\n\s+await refreshTwoFactorState\(\);/s'
+            )
+            ->not->toContain('useTwoFactorAccountErrors()');
+
+        expect($read('-components/enable-two-factor-dialog.tsx'))
+            ->toMatch('/const closeDialog = \(\) => \{\s+handleOpenChange\(false\);\s+\};/')
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict: closeDialog })')
+            ->toContain('<ConfirmTwoFactorForm onConfirmed={setRecoveryCodes} onStateConflict={closeDialog} />')
+            ->and($read('-components/confirm-two-factor-form.tsx'))
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict })')
+            ->and($read('-components/second-factor-confirmation-form.tsx'))
+            ->toContain('useTwoFactorAccountErrors({ onStateConflict })')
+            ->and($read('-components/regenerate-recovery-codes-dialog.tsx'))
+            ->toMatch('/onStateConflict=\{\(\) => \{\s+handleOpenChange\(false\);\s+\}\}/')
+            ->and($read('-components/disable-two-factor-dialog.tsx'))
+            ->toMatch('/onStateConflict=\{\(\) => \{\s+onOpenChange\(false\);\s+\}\}/');
+    });
+
     it('keeps the challenge token out of the URL and out of persisted storage', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
@@ -173,6 +270,146 @@ describe('Google2FAFrontendInstaller', function (): void {
                 ->not->toMatch('#^\s*//#m')
                 ->not->toContain('/*')
                 ->not->toContain('eslint-disable');
+        }
+    });
+
+    it('registers the account page as a file route under the private layout', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/routes/_private/account/two-factor/page.tsx'))
+            ->toContain('export const Route = createFileRoute("/_private/account/two-factor/")')
+            ->not->toContain('export default');
+    });
+
+    it(
+        'builds the account screens from the template\'s real UI and a session with no challenge token',
+        function (): void {
+            Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+    
+            $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+    
+            foreach ($this->accountFiles as $relative) {
+                $contents = (string) file_get_contents($this->root . '/' . $relative);
+    
+                expect($contents)
+                    ->not->toContain('token')
+                    ->not->toContain('@/components/ui/alert')
+                    ->not->toContain('@/components/ui/form')
+                    ->not->toMatch('/import \{[^}]*Dialog(Content|Header|Footer|Title|Description)/')
+                    ->not->toMatch('#\.\./\.\./\.\./#');
+    
+                preg_match_all('/variant="([a-zA-Z]+)"/', $contents, $variants);
+    
+                foreach ($variants[1] as $variant) {
+                    expect(['primary', 'secondary', 'tertiary', 'outlined', 'elevated', 'plainText'])->toContain(
+                        $variant
+                    );
+                }
+            }
+        }
+    );
+
+    it('shares the recovery-code list and the QR panel through @/ imports', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        foreach ([
+            'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+            'src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx',
+        ] as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->toContain('from "@/components/two-factor/recovery-codes"')
+                ->toContain('from "@/components/two-factor/authenticator-secret"');
+        }
+    });
+
+    it('refreshes the 2FA status and the current user after turning 2FA on or off', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/services/auth/two-factor/actions.ts'))
+            ->toContain('queryClient.invalidateQueries({ queryKey: twoFactorStatusQuery.queryKey })')
+            ->toContain('queryClient.invalidateQueries({ queryKey: currentUserQuery.queryKey })');
+
+        foreach ([
+            'src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx',
+            'src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx',
+        ] as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))->toContain('await refreshTwoFactorState();');
+        }
+    });
+
+    it('gives a 403 on disable its own message instead of the wrong-password one', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents(
+            $this->root . '/src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx'
+        ))
+            ->toContain('error.response?.status === HttpStatusCode.Forbidden')
+            ->toContain('t("twoFactor.account.disable.mandatory")');
+    });
+
+    it('sends the password and a second-factor code to disable and regenerate', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/src/services/auth/two-factor/api.ts'))
+            ->toContain('api.post("2fa/disable", { password, code })')
+            ->toMatch('/api\.post\("2fa\/regenerate-recovery-codes", \{\s+password,\s+code,\s+\}\)/');
+
+        foreach ([
+            'src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx',
+            'src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx',
+        ] as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))
+                ->toContain('<SecondFactorConfirmationForm')
+                ->not->toContain('PasswordConfirmationForm');
+        }
+    });
+
+    it(
+        'prints the sidebar link as a manual step, labelled with a short navigation key the TODO documents',
+        function (): void {
+            $link = '{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },';
+    
+            Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+    
+            $this->artisan('google2fa-frontend-fake')
+                ->expectsOutputToContain('Manual step: link the account page from the sidebar.')
+                ->expectsOutputToContain(
+                    'In src/routes/_private/-components/sidebar/sidebar.tsx, add at the end of the links array:'
+                )
+                ->expectsOutputToContain($link)
+                ->assertSuccessful();
+    
+            $todo = (string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md');
+    
+            preg_match_all('/```json\n(.*?)```/s', $todo, $blocks);
+            $documented = json_decode('{' . $blocks[1][2] . '}', true, flags: JSON_THROW_ON_ERROR);
+    
+            expect($todo)
+                ->toContain(
+                    "\n- [ ] **Link the account page from the sidebar** in `src/routes/_private/-components/sidebar/sidebar.tsx`"
+                )
+                ->toContain('`' . $link . '`')
+                ->and(Arr::get($documented, 'navigation.links.twoFactor'))->toBe('Two-factor');
+        }
+    );
+
+    it('never posts from an effect, so StrictMode cannot send an account request twice', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
+
+        foreach ($this->accountFiles as $relative) {
+            expect(file_get_contents($this->root . '/' . $relative))->not->toContain('useEffect');
         }
     });
 

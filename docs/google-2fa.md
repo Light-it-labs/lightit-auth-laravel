@@ -100,13 +100,13 @@ php artisan migrate
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `TWO_FACTOR_AUTHENTICATION_ENABLED` | `true` | Turns the challenge on or off for everyone |
-| `TWO_FACTOR_AUTHENTICATION_MANDATORY` | `true` | `true`: every user sets 2FA up at login. `false`: only users who already set it up are challenged |
+| `TWO_FACTOR_AUTHENTICATION_MANDATORY` | `true` | `true`: every user sets 2FA up at login. `false`: only users who already set it up are challenged; the others turn it on from their account page |
 | `TWO_FACTOR_CHALLENGE_TTL_MINUTES` | `15` | How long a challenge token lives |
 
 With `mandatory=false`, the challenge action only ever challenges a user who has already set
 2FA up (see `IssueTwoFactorChallengeAction::execute()`); it never hands a `setup_required`
-token to a user who hasn't enrolled yet. Self-service enrollment from a signed-in session is
-not part of this layer.
+token to a user who hasn't enrolled yet. That user turns 2FA on from `/account/two-factor`
+instead (see [Account page](#account-page)).
 
 > [!WARNING]
 > `google2fa.enabled=false` (`TWO_FACTOR_AUTHENTICATION_ENABLED`) stops challenging everyone, including
@@ -130,11 +130,13 @@ its callbacks.
 #### 6. Frontend: add the i18n keys
 
 `t()` keys are type-checked against `src/i18n/locales/en.json`, and none of these exist in the
-template yet. Add `form.otp` and `form.recoveryCode` under `form`, and the `twoFactor` block at
-the top level (then translate them in `es.json`). The exact English strings are the JSON blocks
+template yet. Add `form.otp` and `form.recoveryCode` under `form`, the `twoFactor` block at
+the top level and `navigation.links.twoFactor` (the sidebar link's label), then translate them
+in `es.json`. The exact English strings are the JSON blocks
 in `AUTH-2FA-FRONTEND-TODO.md`; this repository keeps them in
 `src/Stubs/Frontend/Google2FA/AUTH-2FA-FRONTEND-TODO.md.stub`. The screens also reuse
-`login.success`, which the template already has.
+`login.success`, `form.password`, `buttons.cancel` and `common.requestError`, which the
+template already has.
 
 #### 7. Frontend: install the dependencies
 
@@ -143,22 +145,37 @@ The screens import `@hookform/resolvers`, `@tanstack/react-query`, `@tanstack/re
 a package manager: the checklist names the missing ones with the add command for the package
 manager it detected.
 
+#### 8. Frontend: link the account page from the sidebar
+
+The package does not edit your navigation. In `src/routes/_private/-components/sidebar/sidebar.tsx`,
+add this entry at the end of the `links` array:
+
+```tsx
+{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },
+```
+
+Its label is the short `navigation.links.twoFactor` key from step 6, like the other links; the
+screen title does not fit the sidebar's fixed width.
+
 #### Routes
 
 `routes/two-factor-auth.php` registers these; it is written for you.
 
 ```php
 use Lightit\Authentication\App\Controllers\CompleteTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\ConfirmTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\DisableTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\EnableTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\RegenerateRecoveryCodesController;
 use Lightit\Authentication\App\Controllers\ResetTwoFactorAuthenticationController;
 use Lightit\Authentication\App\Controllers\SetupTwoFactorAuthenticationController;
+use Lightit\Authentication\App\Controllers\ShowTwoFactorAuthenticationStatusController;
 use Lightit\Authentication\App\Controllers\RequestTwoFactorResetController;
 use Lightit\Authentication\App\Controllers\VerifyRecoveryCodeController;
 
 // Note: apply rate limiting to `complete`, `verify-recovery-code`, and your login route to prevent brute-force attacks.
-// The generated routes/two-factor-auth.php already throttles setup/complete/verify-recovery-code/reset with
-// `throttle:2fa`; that named limiter is registered by lightit-auth-laravel's own service provider on boot,
+// The generated routes/two-factor-auth.php already throttles every route except status with `throttle:2fa`;
+// that named limiter is registered by lightit-auth-laravel's own service provider on boot,
 // not by the routes file, so it keeps working under `php artisan route:cache`. This is why the package must
 // stay a runtime dependency (`composer require`, never `--dev`) - its provider has to boot in production.
 Route::prefix('2fa')->group(static function (): void {
@@ -168,6 +185,9 @@ Route::prefix('2fa')->group(static function (): void {
     Route::post('reset', ResetTwoFactorAuthenticationController::class);
 
     Route::middleware('auth:sanctum')->group(static function (): void {
+        Route::get('status', ShowTwoFactorAuthenticationStatusController::class);
+        Route::post('enable', EnableTwoFactorAuthenticationController::class);
+        Route::post('confirm', ConfirmTwoFactorAuthenticationController::class);
         Route::post('disable', DisableTwoFactorAuthenticationController::class);
         Route::post('regenerate-recovery-codes', RegenerateRecoveryCodesController::class);
         Route::post('request-reset', RequestTwoFactorResetController::class);
@@ -182,7 +202,7 @@ Route::prefix('2fa')->group(static function (): void {
 | File | Where | What it lists |
 | --- | --- | --- |
 | `AUTH-2FA-TODO.md` | backend root | Inject the challenge action in `LoginAction`, extend `TwoFactorAuthenticatable`, run `migrate`, pick the mode |
-| `AUTH-2FA-FRONTEND-TODO.md` | frontend root | Install dependencies, swap the login hook, add the i18n keys |
+| `AUTH-2FA-FRONTEND-TODO.md` | frontend root | Install dependencies, swap the login hook, add the i18n keys, add the sidebar link |
 
 The command also prints the same steps when it finishes. Each checklist is generated
 for your install (your endpoints, your package manager). Work through it, tick the
@@ -236,6 +256,86 @@ this flow; see [Login screens](#login-screens).
 A wrong code returns `422`, an expired or invalid token `401`, and too many failed
 attempts `429`.
 
+**Replay protection.** A one-time password is accepted once per user. `VerifyOtpAction`
+claims the timestep the code matched with an atomic `Cache::add()` keyed by user and
+timestep, kept for as long as the code stays valid (`(2 * window + 1) * 30` seconds). A
+second request with the same code - a replay, or two tabs racing - gets `422` with
+`error.code` `otp_already_used`; the user waits for the next code, and the generated
+2FA screens say so instead of "wrong code". This applies to login
+verification, the challenge setup confirmation, the account activation below and the
+code that `disable` and `regenerate-recovery-codes` ask for. It needs
+a cache store shared by every app server (not `array`), the same store the per-user
+lockout already relies on. No schema change.
+
+**Enable 2FA from the account (optional 2FA, `google2fa.mandatory=false`):**
+
+With `mandatory=false` nobody is sent through setup at login, so a signed-in user
+enables 2FA from their account page. These requests use the cookie session, no
+challenge token.
+
+2FA counts as on when the user has both a secret and `two_factor_auth_activated_at`
+(`hasTwoFactorAuthenticationConfigured()`), the same check the login gate uses. `status`,
+`enable`, `confirm`, `disable` and `regenerate-recovery-codes` all use that one check.
+
+1. `GET /2fa/status`
+   - Auth: cookie session
+   - Returns: `{ data: { available, enabled, mandatory } }` (the boilerplate's `UserResource` has no 2FA flag)
+   - `available` is `google2fa.enabled`: when it is `false`, login never challenges anyone, so there is nothing to turn on
+2. `POST /2fa/enable`
+   - Auth: cookie session
+   - Body: `{ "password": "..." }`
+   - Stores a new secret, not active yet, and returns: `{ data: { qr, secret } }`. A secret that was never confirmed is replaced
+   - Returns `409` (`2fa_already_configured`) if 2FA is already on: an active secret is never overwritten
+   - Returns `409` (`2fa_unavailable`) if `google2fa.enabled` is `false`
+3. `POST /2fa/confirm`
+   - Auth: cookie session
+   - Body: `{ "one_time_password": "..." }`
+   - Sets `two_factor_auth_activated_at` and returns: `{ data: { recovery_codes[] } }`, shown once
+   - Returns `422` for a wrong or already-used code, `429` after 5 attempts, `409` if 2FA is already on or `enable` was never called, and `409` (`2fa_unavailable`) if `google2fa.enabled` is `false`
+
+`enable` and `confirm` re-check and write the user row under a row lock (`lockForUpdate()`),
+so an `enable` from another tab can't swap the secret while `confirm` activates it (`confirm`
+then answers `422`), and two concurrent `confirm`s can't both hand out recovery codes. The
+lockout count and the code check run before the transaction, so a `database` cache store on
+the same connection doesn't roll a failed attempt back.
+
+A code accepted by `confirm` stays claimed for the rest of its validity window (replay
+protection above), so signing in right after with that same code gets `422`
+`otp_already_used` on `complete`: wait for the next code.
+
+`enable`, `confirm`, `disable`, `regenerate-recovery-codes` and `request-reset` are
+throttled with `throttle:2fa`, keyed by the signed-in user: they share one bucket of 5
+requests a minute per user (plus 30 a minute per IP), so a user's `enable` and `confirm`
+count against the same 5. A bearer token sent to these routes does not change the key:
+the session authenticates them, so a made-up `Authorization` header can't open a fresh
+bucket. Only the challenge routes, which have no signed-in user, are keyed by their
+challenge token.
+
+The generated frontend drives these calls from `/account/two-factor`, a page under the
+`_private` layout: turn on (password, QR code, first code, recovery codes shown once),
+regenerate recovery codes (password and a code, new codes) and turn off (password and a
+code; hidden while
+`mandatory` is `true`, and a `403` gets its own message). When `status` says 2FA is not
+`available`, the page only says so and offers no action. The dialogs that show recovery
+codes can only be closed with their "I've saved my recovery codes" button. It writes:
+
+- `src/routes/_private/account/two-factor/page.tsx`
+- `src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx`
+- `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx`
+- `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx`
+- `src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx`
+- `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts`
+- `src/components/two-factor/authenticator-secret.tsx` and `src/components/two-factor/recovery-codes.tsx`, shared with the login setup screen
+
+[Account page](#account-page) below explains how the page works; step 8 of [Setup](#setup)
+links it from the sidebar.
+
+A wrong password on any password-confirmed request below (and on `enable`) returns
+`422` (`invalid_password`), not `401`: the user is still signed in, and the frontend
+sends every `401` back to the login screen.
+
 **Reset 2FA (while logged in):**
 
 1. `POST /2fa/request-reset`
@@ -246,20 +346,33 @@ attempts `429`.
    - Bearer: reset token
    - Returns: `{ data: { message } }`
 
+**Second factor on regenerate and disable.** Both take the password and a `code`, so a
+password and a signed-in session alone can't strip or replace the second factor. A
+6-digit `code` is checked as a live one-time password, with the replay protection above;
+anything else is checked as a recovery code, and a matching one is spent. The password is
+checked first. A wrong code returns `422` with `error.code` `invalid_otp` (`otp_already_used`
+for a replayed one) and counts toward the same per-user lockout as login: `429` after 5
+failed attempts, cleared by a valid code. The attempt is counted before, and outside, the
+transaction that spends a recovery code, so a `database` cache store keeps the count.
+
 **Regenerate recovery codes:**
 
 1. `POST /2fa/regenerate-recovery-codes`
    - Auth: cookie session
-   - Body: `{ "password": "..." }`
+   - Body: `{ "password": "...", "code": "..." }`
    - Returns: `{ data: { recovery_codes[] } }`
+   - Returns `422` for a wrong password or code, `429` after 5 failed codes
+   - Returns `409` (`cannot_regenerate_2fa_unconfigured`) if 2FA is not on
 
 **Disable 2FA:**
 
 1. `POST /2fa/disable`
    - Auth: cookie session
-   - Body: `{ "password": "..." }`
+   - Body: `{ "password": "...", "code": "..." }`
    - Returns: `{ data: { message } }`
+   - Returns `422` for a wrong password or code, `429` after 5 failed codes
    - Returns `403 Forbidden` if `google2fa.mandatory` is `true`
+   - Returns `409` (`cannot_disable_2fa_unconfigured`) if 2FA is not on
 
 **Logging in**
 
@@ -293,18 +406,29 @@ flowchart TD
 ```
 
 **Managing 2FA once logged in.** These are separate requests made later, each
-authenticated with the cookie session above and confirmed with the account password.
+authenticated with the cookie session above and confirmed with the account password;
+regenerate and disable also need a one-time password or a recovery code.
 
 ```mermaid
 flowchart TD
-    Regenerate[POST /2fa/regenerate-recovery-codes] -- wrong password --> E401[401 Unauthorized]
+    Enable[POST /2fa/enable] -- already on or unavailable --> E409[409 Conflict]
+    Enable -- wrong password --> E422[422 Unprocessable]
+    Enable -- valid --> Secret[QR + secret]
+    Secret --> Confirm[POST /2fa/confirm]
+    Confirm -- already on or unavailable --> E409
+    Confirm -- wrong or used code --> E422
+    Confirm -- valid --> Enabled[2FA enabled + recovery codes]
+
+    Regenerate[POST /2fa/regenerate-recovery-codes] -- 2FA not on --> E409
+    Regenerate -- wrong password or code --> E422
     Regenerate -- valid --> NewCodes[New recovery codes]
 
     Disable[POST /2fa/disable] -- 2FA is mandatory --> E403[403 Forbidden]
-    Disable -- wrong password --> E401
+    Disable -- 2FA not on --> E409
+    Disable -- wrong password or code --> E422
     Disable -- valid --> Disabled[2FA disabled]
 
-    RequestReset[POST /2fa/request-reset] -- wrong password --> E401
+    RequestReset[POST /2fa/request-reset] -- wrong password --> E422
     RequestReset -- valid --> ResetToken[Re-setup Token]
     ResetToken --> Reset[POST /2fa/reset]
     Reset --> Cleared[2FA cleared]
@@ -312,25 +436,35 @@ flowchart TD
 
 ### Login screens
 
-The frontend layer covers the 2FA services, an in-memory challenge store and the two login
-screens (verification and setup). It writes:
+The frontend layer covers the 2FA services, an in-memory challenge store, the two login
+screens (verification and setup) and the account page (see [Account page](#account-page)).
+It writes:
 
 | File | Contents |
 | --- | --- |
 | `src/services/auth/two-factor/types.ts` | Response/payload types, the `TwoFactorChallengeResult` discriminant and its guards |
-| `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code and password zod schemas |
+| `src/services/auth/two-factor/schemas.ts` | OTP, recovery-code, password and password-plus-code zod schemas |
 | `src/services/auth/two-factor/api.ts` | `loginWithTwoFactorChallenge` plus one function per 2FA endpoint; the challenge-token endpoints attach a manual `Authorization: Bearer` header and set `isAuthProbe`, the session endpoints call the app's normal cookie-authenticated client |
-| `src/services/auth/two-factor/actions.ts` | `useTwoFactorSetup` (a query keyed by the challenge token, fetched once), `removeTwoFactorSetupQueries`, and `useMutation`-based hooks for the other endpoints |
+| `src/services/auth/two-factor/actions.ts` | `useTwoFactorSetup` (a query keyed by the challenge token, fetched once), `removeTwoFactorSetupQueries`, `useTwoFactorStatus`, `refreshTwoFactorState` (invalidates the status and current-user queries) and `useMutation`-based hooks for the other endpoints |
 | `src/stores/use-two-factor-challenge-store.ts` | Non-persisted zustand store holding the challenge token, its type and its expiry |
 | `src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts` | `useTwoFactorLogin`, a replacement for `useLogin()` (no hook-level props) whose `mutate` and `mutateAsync` route a challenge to the 2FA screens |
 | `src/routes/(public)/_guest/two-factor/page.tsx` | `/two-factor`: 6-digit code, with a switch to a recovery code |
 | `src/routes/(public)/_guest/two-factor/setup/page.tsx` | `/two-factor/setup`: QR code, manual-entry key, recovery codes and the first code |
 | `src/routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx` | Code form shared by both screens (`completeTwoFactor`) |
 | `src/routes/(public)/_guest/two-factor/-components/recovery-code-form.tsx` | Recovery-code form (`verifyRecoveryCode`), verification screen only |
-| `src/routes/(public)/_guest/two-factor/-components/recovery-codes.tsx` | Recovery-code list with a copy-to-clipboard button |
 | `src/routes/(public)/_guest/two-factor/-hooks/use-two-factor-completion.ts` | What both forms do on success and on error |
+| `src/components/two-factor/authenticator-secret.tsx` | QR code and manual-entry key, shared by the setup screen and the account page |
+| `src/components/two-factor/recovery-codes.tsx` | Recovery-code list with a copy-to-clipboard button, shared by the setup screen and the account page |
+| `src/routes/_private/account/two-factor/page.tsx` | `/account/two-factor`: reads `useTwoFactorStatus` and offers turn on, regenerate recovery codes and turn off |
+| `src/routes/_private/account/two-factor/-components/enable-two-factor-dialog.tsx` | Password, then QR code and first code, then the recovery codes (shown once) |
+| `src/routes/_private/account/two-factor/-components/confirm-two-factor-form.tsx` | First-code form (`confirmTwoFactor`) |
+| `src/routes/_private/account/two-factor/-components/regenerate-recovery-codes-dialog.tsx` | Password and a code, then the new recovery codes |
+| `src/routes/_private/account/two-factor/-components/disable-two-factor-dialog.tsx` | Password and a code; a `403` (2FA is mandatory) gets its own message |
+| `src/routes/_private/account/two-factor/-components/password-confirmation-form.tsx` | Password form of the turn-on dialog |
+| `src/routes/_private/account/two-factor/-components/second-factor-confirmation-form.tsx` | Password plus a 6-digit code, with a switch to a recovery code, shared by the regenerate and turn-off dialogs |
+| `src/routes/_private/account/two-factor/-hooks/use-two-factor-account-errors.ts` | Maps `422`, `409` and `429` from the account endpoints to form errors and toasts |
 
-The TanStack Router plugin adds the two routes to `src/routeTree.gen.ts` the next time `vite`
+The TanStack Router plugin adds the three routes to `src/routeTree.gen.ts` the next time `vite`
 runs (`dev` or `build`). Type-check after that.
 
 **How the flow works**
@@ -356,7 +490,8 @@ runs (`dev` or `build`). Type-check after that.
    user. The screen fetches the current-user query again, navigates to `redirect` (or `/`),
    clears the store and removes the setup query.
 6. When a code submission fails: `401` means the token expired or is no longer valid, so the
-   store is cleared and the user goes back to `/login`. A wrong code (`422`) or a lockout
+   store is cleared and the user goes back to `/login`. A wrong code (`422`), a code that was
+   already used (`422` with `otp_already_used`, which gets its own message) or a lockout
    (`429`) shows the error under the code field and keeps the user on the screen. Any other
    failure (a `500`, a network error) shows a generic error toast.
 7. When the setup screen can't load (`2fa/setup` fails), it shows an error. Both screens always
@@ -372,8 +507,14 @@ runs (`dev` or `build`). Type-check after that.
 | `verifyRecoveryCode` | `2fa/verify-recovery-code` | challenge token | Lost-device path; creates the session and returns the user, same as `completeTwoFactor` |
 | `requestTwoFactorReset` | `2fa/request-reset` | cookie session | Re-validates the password before issuing a reset challenge token |
 | `resetTwoFactor` | `2fa/reset` | reset challenge token | Clears the secret; the user re-enrolls through setup afterward |
-| `disableTwoFactor` | `2fa/disable` | cookie session | Fails with 403 when `google2fa.mandatory` is `true` on the backend - surface that error, don't hide the button |
-| `regenerateRecoveryCodes` | `2fa/regenerate-recovery-codes` | cookie session | No dedicated screen shipped; wire it into wherever your settings page lives |
+| `disableTwoFactor` | `2fa/disable` | cookie session | Password plus `code` (live code or recovery code); fails with 403 when `google2fa.mandatory` is `true` on the backend |
+| `regenerateRecoveryCodes` | `2fa/regenerate-recovery-codes` | cookie session | Password plus `code` (live code or recovery code); replaces every recovery code and returns the new ones |
+| `getTwoFactorStatus` | `2fa/status` | cookie session | `{ available, enabled, mandatory }` for the signed-in user; `available` is `google2fa.enabled` |
+| `enableTwoFactor` | `2fa/enable` | cookie session | Checks the password, stores a new secret, returns the QR code and the manual-entry key; `409` if 2FA is already on |
+| `confirmTwoFactor` | `2fa/confirm` | cookie session | Checks the first code, turns 2FA on and returns the recovery codes; `409` if 2FA is already on or `enableTwoFactor` was not called |
+
+Every password-confirmed call answers a wrong password with `422`, not `401`, so the
+shared `api` never sends a signed-in user back to `/login` over a typo.
 
 Recovery-code verification and regeneration live under `/2fa/*`, not `/auth/*`; the generated
 routes file follows that grouping, so these are the paths that are live once
@@ -381,13 +522,49 @@ routes file follows that grouping, so these are the paths that are live once
 
 **Screens still to build**
 
-- **Disable 2FA (self-service)** - a password-confirmation form calling `disableTwoFactor`,
-  handling the 403 `mandatory` case above instead of assuming the action always succeeds.
-- **Regenerate recovery codes** - a password-confirmation form calling
-  `regenerateRecoveryCodes`.
 - **Reset flow** - `requestTwoFactorReset` (password confirm, while still holding a cookie
   session) followed by `resetTwoFactor` (spends the resulting challenge token) is a two-step
   flow; design it to fit your own account-recovery patterns.
+
+### Account page
+
+With `google2fa.mandatory=false` on the backend, login never sends anyone through
+setup, so a signed-in user turns 2FA on from `/account/two-factor`. Every call
+there uses the cookie session through the shared `api`; there is no challenge
+token.
+
+1. The page reads `GET 2fa/status` (`{ available, enabled, mandatory }`);
+   the boilerplate's current-user payload has no 2FA flag. When `available` is `false`
+   (`google2fa.enabled` is off on the backend, so login never asks for a code) the page
+   only says 2FA isn't available and offers no action.
+2. Turn on: the password goes to `2fa/enable`, which returns the QR
+   code and the manual-entry key. The first code goes to `2fa/confirm`,
+   which turns 2FA on and returns the recovery codes. They are shown once, in the
+   dialog.
+3. Regenerate: the password and a code go to `2fa/regenerate-recovery-codes`
+   and the new codes are shown once. The code is the current 6-digit code from the
+   authenticator app or, after "Use a recovery code instead", one of the recovery
+   codes; a recovery code used here is spent.
+   While recovery codes are on screen, Escape and a click outside don't close the
+   dialog: the only way out is the "I've saved my recovery codes" button.
+4. Turn off: the password and a code (same choice as above) go to
+   `2fa/disable`. The button is hidden
+   while `mandatory` is `true`, and a `403` (the backend is mandatory after all) gets
+   its own message instead of the wrong-password one.
+5. After turning 2FA on or off, the status and current-user queries are invalidated.
+6. Each request is sent by a submit, never from an effect, so StrictMode's double
+   mount sends nothing twice. The enable, confirm and regenerate mutations pass
+   `gcTime: 0`, so the secret and the recovery codes leave the mutation cache as soon
+   as the dialog clears them.
+7. A wrong password or code is a `422` and stays on the form: `invalid_password`
+   marks the password field, anything else the code field, which is cleared. Wrong
+   codes on regenerate and turn off count toward the same per-user lockout as login. A code that was already
+   used is a `422` with `otp_already_used` for as long as it stays valid:
+   `(2 * window + 1) * 30` seconds, 90 seconds with the default `window` of 1 in the
+   backend's `config/google2fa.php`. The form says to wait for the next code. `429`
+   means too many attempts. `409` means another tab already changed the state, or 2FA
+   was switched off on the backend (`2fa_unavailable`), so the dialog closes and the
+   page says which and reloads the status.
 
 ### Challenge tokens and rate limiting
 
@@ -397,8 +574,12 @@ also confirms enrollment right after), but only a `verification_required` token 
 `/2fa/verify-recovery-code`. The token is valid until its TTL expires:
 `google2fa.challenge_ttl_minutes` in `config/google2fa.php`.
 
-`routes/two-factor-auth.php` throttles `setup`, `complete`, `verify-recovery-code` and `reset`
-with `throttle:2fa`. `lightit-auth-laravel`'s own service provider registers that named limiter
+`routes/two-factor-auth.php` throttles every route except `status` with `throttle:2fa`: 5 requests
+a minute per signed-in user on the account routes (`enable`, `confirm`, `disable`,
+`regenerate-recovery-codes` and `request-reset` share that bucket), per challenge token on the
+challenge routes, plus 30 a minute per IP. `complete`, `verify-recovery-code`, `confirm`,
+`disable` and `regenerate-recovery-codes` also count every code attempt against the per-user
+lockout. `lightit-auth-laravel`'s own service provider registers that named limiter
 in `boot()` when `\Lightit\Authentication\Domain\TwoFactorRateLimiter` exists, so there is no
 `AppServiceProvider` paste, and it still runs under `php artisan route:cache`, unlike a
 file-scope call in the routes file would. This is why `lightit-auth-laravel` must stay a
