@@ -21,6 +21,6 @@ PASSKEYS_ALLOWED_ORIGINS=http://localhost:5173
   `500` without it). Generate it once with `php -r 'echo bin2hex(random_bytes(32));'` and
   **never rotate it**: changing it invalidates every registered passkey.
 - [ ] **Use a shared cache store** in production (the boilerplate's `database` store is fine;
-  `array` is not): the registration challenge lives there.
+  `array` is not): the registration and sign-in challenges live there.
 
 Check it worked: as a signed-in user, `GET /api/passkeys` returns `200` with an empty list.
