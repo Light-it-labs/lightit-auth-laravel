@@ -1,0 +1,78 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\SocialProviders;
+
+use Firebase\JWT\JWK;
+use Firebase\JWT\Key;
+use Illuminate\Contracts\Cache\Repository as Cache;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\Factory as Http;
+use Illuminate\Http\Client\RequestException;
+use Lightit\Authentication\Domain\Exceptions\SocialProviderUnavailableException;
+use Throwable;
+
+final readonly class GoogleSigningKeys
+{
+    public const string JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+
+    private const string CACHE_KEY = 'social-login:google:jwks';
+
+    private const int FALLBACK_TTL_SECONDS = 3600;
+
+    public function __construct(
+        private Http $http,
+        private Cache $cache,
+    ) {}
+
+    /**
+     * @return array<string, Key>
+     *
+     * @throws SocialProviderUnavailableException
+     */
+    public function keys(): array
+    {
+        $jwks = $this->cache->get(self::CACHE_KEY);
+
+        if (! \is_array($jwks)) {
+            [$jwks, $ttlSeconds] = $this->fetch();
+
+            $this->cache->put(self::CACHE_KEY, $jwks, $ttlSeconds);
+        }
+
+        try {
+            return JWK::parseKeySet($jwks, 'RS256');
+        } catch (Throwable) {
+            $this->cache->forget(self::CACHE_KEY);
+
+            throw new SocialProviderUnavailableException;
+        }
+    }
+
+    /**
+     * @return array{0: array<mixed>, 1: int}
+     *
+     * @throws SocialProviderUnavailableException
+     */
+    private function fetch(): array
+    {
+        try {
+            $response = $this->http->timeout(5)->get(self::JWKS_URL)->throw();
+        } catch (ConnectionException|RequestException) {
+            throw new SocialProviderUnavailableException;
+        }
+
+        $jwks = $response->json();
+
+        if (! \is_array($jwks) || ! \is_array($jwks['keys'] ?? null)) {
+            throw new SocialProviderUnavailableException;
+        }
+
+        $maxAge = preg_match('/max-age=(\d+)/', $response->header('Cache-Control'), $matches) === 1
+            ? (int) $matches[1]
+            : self::FALLBACK_TTL_SECONDS;
+
+        return [$jwks, $maxAge];
+    }
+}

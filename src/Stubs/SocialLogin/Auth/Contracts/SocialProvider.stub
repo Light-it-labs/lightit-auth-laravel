@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Contracts;
+
+use Lightit\Authentication\Domain\DataTransferObjects\SocialIdentityDto;
+use Lightit\Authentication\Domain\Exceptions\InvalidSocialTokenException;
+use Lightit\Authentication\Domain\Exceptions\SocialProviderUnavailableException;
+
+/**
+ * One implementation per provider, registered under its route name in
+ * `config/social-login.php` (`providers`). `verify()` receives the token the
+ * frontend got from the provider and only returns an identity once the token's
+ * signature, issuer, audience and expiry have been checked.
+ */
+interface SocialProvider
+{
+    /**
+     * @throws InvalidSocialTokenException
+     * @throws SocialProviderUnavailableException
+     */
+    public function verify(string $token): SocialIdentityDto;
+}

@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Models;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Lightit\Users\Domain\Models\User;
+
+/**
+ * @property int             $id
+ * @property int             $user_id
+ * @property string          $provider
+ * @property string          $provider_user_id
+ * @property CarbonImmutable $created_at
+ * @property CarbonImmutable $updated_at
+ * @property-read User $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereProvider($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereProviderUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|SocialAccount whereUserId($value)
+ *
+ * @mixin \Eloquent
+ */
+final class SocialAccount extends Model
+{
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'immutable_datetime',
+            'updated_at' => 'immutable_datetime',
+        ];
+    }
+}

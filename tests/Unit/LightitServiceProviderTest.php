@@ -112,3 +112,36 @@ describe('LightitServiceProvider passkeys rate limiter registration', function (
         }
     );
 });
+
+describe('LightitServiceProvider social login rate limiter registration', function (): void {
+    it('registers a per-IP social-login limiter once SocialLoginRateLimiter is installed', function (): void {
+        $provider = new LightitServiceProvider($this->app);
+
+        if (! class_exists('Lightit\Authentication\Domain\SocialLoginRateLimiter', false)) {
+            $provider->packageBooted();
+
+            expect(RateLimiter::limiter('social-login'))->toBeNull();
+
+            $tempFile = sys_get_temp_dir() . '/lightit-social-login-rate-limiter-' . bin2hex(random_bytes(6)) . '.php';
+            file_put_contents(
+                $tempFile,
+                (string) file_get_contents(__DIR__ . '/../../src/Stubs/SocialLogin/Auth/SocialLoginRateLimiter.stub')
+            );
+            require_once $tempFile;
+            unlink($tempFile);
+        }
+
+        $provider->packageBooted();
+
+        $limiter = RateLimiter::limiter('social-login');
+        $limit = $limiter === null ? null : $limiter(Request::create(
+            '/',
+            'POST',
+            server: ['REMOTE_ADDR' => '203.0.113.7']
+        ));
+
+        expect($limit)->toBeInstanceOf(Limit::class)
+            ->and($limit?->maxAttempts)->toBe(10)
+            ->and($limit?->key)->toBe('social-login|203.0.113.7');
+    });
+});

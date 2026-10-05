@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class SocialProviderUnknownException extends HttpException
+{
+    #[\Override]
+    protected int $status = 404;
+
+    #[\Override]
+    protected string $errorCode = 'social_provider_unknown';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'This sign-in provider is not available.';
+}

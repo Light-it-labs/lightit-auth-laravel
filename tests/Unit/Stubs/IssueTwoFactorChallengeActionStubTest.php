@@ -104,7 +104,7 @@ describe('IssueTwoFactorChallengeAction stub', function (): void {
     })->throwsNoExceptions();
 
     it(
-        'does nothing when google2fa.enabled is entirely absent, as in an OTP-only or Google-SSO-only install',
+        'does nothing when google2fa.enabled is entirely absent, as in an OTP-only or social-login-only install',
         function (): void {
             config(['google2fa' => null]);
     

@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\DataTransferObjects\SocialLoginDto;
+
+final class SocialLoginRequest extends FormRequest
+{
+    public const string PROVIDER = 'provider';
+
+    public const string TOKEN = 'token';
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function rules(): array
+    {
+        return [
+            self::TOKEN => ['required', 'string'],
+        ];
+    }
+
+    public function toDto(): SocialLoginDto
+    {
+        $provider = $this->route(self::PROVIDER);
+
+        return new SocialLoginDto(
+            provider: \is_string($provider) ? $provider : '',
+            token: $this->string(self::TOKEN)->toString(),
+        );
+    }
+}

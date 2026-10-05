@@ -13,9 +13,11 @@ describe('Feature::selectable()', function (): void {
         expect(Feature::selectable())->toContain(Feature::Passkeys);
     });
 
-    it('still withholds OTP and Google SSO', function (): void {
-        expect(Feature::selectable())
-            ->not->toContain(Feature::Otp)
-            ->not->toContain(Feature::GoogleSso);
+    it('offers social login in auth:setup', function (): void {
+        expect(Feature::selectable())->toContain(Feature::SocialLogin);
+    });
+
+    it('still withholds OTP', function (): void {
+        expect(Feature::selectable())->not->toContain(Feature::Otp);
     });
 });
