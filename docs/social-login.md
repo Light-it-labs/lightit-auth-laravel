@@ -142,7 +142,9 @@ If you lose it, this page has every step in full (see Setup above).
      reset). A new user is linked right away. An existing user is linked only after the 2FA gate
      in step 6 lets them in: a sign-in that gets the 2FA challenge links nothing, and the next
      one matches the verified email again. An unverified email is `social_email_not_verified`
-     and nothing is linked or created.
+     and nothing is linked or created. If another request creates that link or registers that
+     email first (a double click, or a normal sign-up at the same moment), the sign-in carries on
+     with the user that now holds it, under the same rules: through the 2FA gate, then linked.
 
    Known trade-off: Google vouches for `email_verified` authoritatively only for `@gmail.com`
    addresses and for Google Workspace accounts (tokens with an `hd` claim). For any other

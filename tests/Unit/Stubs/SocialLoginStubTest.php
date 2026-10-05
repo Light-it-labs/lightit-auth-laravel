@@ -392,6 +392,44 @@ describe('SocialLoginAction stub', function (): void {
         }
     );
 
+    it(
+        'sends the user a concurrent registration created with the same email through the 2FA gate before linking',
+        function (bool $twoFactor) use ($signIn): void {
+            $concurrent = null;
+
+            DB::listen(function (QueryExecuted $query) use (&$concurrent): void {
+                if ($concurrent !== null || ! str_contains($query->sql, 'from "users" where "email"')) {
+                    return;
+                }
+
+                $concurrent = User::make('demo@example.com', 'Registered Demo');
+            });
+
+            $login = new LoginByUserAction(twoFactorEmails: $twoFactor ? ['demo@example.com'] : []);
+
+            if ($twoFactor) {
+                socialLoginFailure(
+                    TwoFactorChallengeException::class,
+                    fn () => $signIn->call($this, $this->tokens->sign(), $login),
+                );
+            } else {
+                $user = $signIn->call($this, $this->tokens->sign(), $login);
+
+                expect($user->is($concurrent))->toBeTrue()
+                    ->and($user->wasRecentlyCreated)->toBeFalse()
+                    ->and(SocialAccount::query()->sole()->user_id)->toBe($concurrent->id);
+            }
+
+            expect($concurrent)->not->toBeNull()
+                ->and(User::query()->sole()->name)->toBe('Registered Demo')
+                ->and($login->gatedEmails)->toBe(['demo@example.com'])
+                ->and(SocialAccount::query()->count())->toBe($twoFactor ? 0 : 1);
+        }
+    )->with([
+        'without 2FA' => [false],
+        'with 2FA' => [true],
+    ]);
+
     it('verifies nothing for an unknown provider', function () use ($signIn): void {
         socialLoginFailure(
             SocialProviderUnknownException::class,

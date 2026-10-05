@@ -60,21 +60,17 @@ final readonly class SocialLoginAction
             throw new SocialEmailNotVerifiedException;
         }
 
-        $existingUser = User::query()->where('email', Str::lower($identity->email))->first();
-
-        if ($existingUser === null) {
-            $user = $this->createLinkedUser($identity);
-            $this->loginByUserAction->execute($user);
-
-            return $user;
-        }
+        $user = $this->userWithEmail($identity) ?? $this->createLinkedUser($identity);
 
         // Linked only once the 2FA gate lets the user in: a challenged sign-in leaves no link,
         // and the next one matches the verified email again.
-        $this->loginByUserAction->execute($existingUser);
-        $this->linkExistingUser($existingUser, $identity);
+        $this->loginByUserAction->execute($user);
 
-        return $existingUser;
+        if (! $user->wasRecentlyCreated) {
+            $this->linkExistingUser($user, $identity);
+        }
+
+        return $user;
     }
 
     private function linkedUser(SocialIdentityDto $identity): User|null
@@ -84,6 +80,11 @@ final readonly class SocialLoginAction
             ->where('provider_user_id', $identity->providerUserId)
             ->first()
             ?->user;
+    }
+
+    private function userWithEmail(SocialIdentityDto $identity): User|null
+    {
+        return User::query()->where('email', Str::lower($identity->email))->first();
     }
 
     private function createLinkedUser(SocialIdentityDto $identity): User
@@ -102,7 +103,8 @@ final readonly class SocialLoginAction
                 return $user;
             });
         } catch (UniqueConstraintViolationException $exception) {
-            return $this->linkedUser($identity) ?? throw $exception;
+            // A concurrent request took this provider account or this email first: sign in whoever holds it.
+            return $this->linkedUser($identity) ?? $this->userWithEmail($identity) ?? throw $exception;
         }
     }
 
