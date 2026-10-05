@@ -176,7 +176,7 @@ runtime dependency (`composer require`, never `--dev`).
 
 | Method | Path | Body | Answer |
 | --- | --- | --- | --- |
-| `POST` | `/auth/social/{provider}` | `{ token }` | `200`: the user (session created) or the 2FA challenge; `201` instead of `200` when this sign-in created the user |
+| `POST` | `/auth/social/{provider}` | `{ token }` | `201`: the user this sign-in created (session created). `200`: a returning or newly linked user (session created), or the 2FA challenge, even for a user this sign-in created |
 
 Errors use the boilerplate's error body (`error.code`):
 

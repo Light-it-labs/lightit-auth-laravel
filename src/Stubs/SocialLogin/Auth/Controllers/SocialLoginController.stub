@@ -13,6 +13,10 @@ final readonly class SocialLoginController
 {
     public function __invoke(SocialLoginRequest $request, SocialLoginAction $socialLoginAction): JsonResponse
     {
-        return UserResource::make($socialLoginAction->execute($request->toDto()))->response();
+        $user = $socialLoginAction->execute($request->toDto());
+
+        return UserResource::make($user)
+            ->response()
+            ->setStatusCode($user->wasRecentlyCreated ? JsonResponse::HTTP_CREATED : JsonResponse::HTTP_OK);
     }
 }
