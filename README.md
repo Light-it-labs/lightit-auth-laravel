@@ -7,7 +7,7 @@ forgot password and social login - on top of the Light-it Laravel Boilerplate, w
 owns the base authentication.
 Supporting the following packages
 
-[//]: # (- [Google SSO]&#40;https://github.com/googleapis/google-api-php-client&#41;)
+[//]: # (- [Social login]&#40;https://github.com/firebase/php-jwt&#41;)
 
 [//]: # (- [Google 2FA]&#40;https://github.com/antonioribeiro/google2fa-laravel&#41;)
 
@@ -16,7 +16,7 @@ Supporting the following packages
 ## Contents
 
 - [Installation](#installation)
-- [Google SSO](docs/google-sso.md)
+- [Social Login (Google)](docs/social-login.md)
 - [Google 2FA](docs/google-2fa.md)
 - [Passkeys](docs/passkeys.md)
 - [Roles & Permissions](docs/permission.md)
@@ -76,12 +76,12 @@ If you are using Laravel Sail, you can run:
 This command walks you through the optional features it can add on top of the
 boilerplate's own authentication. It no longer configures an authentication driver.
 
-If the 2FA frontend layer can't find a React project next to your Laravel app (a
+If the frontend layer can't find a React project next to your Laravel app (a
 sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
 explicitly with `--frontend-path=<path>`. Relative paths resolve against the Laravel
 application root, not your shell's current directory. The frontend layer is only
-generated when Two-Factor Authentication is selected, but an invalid explicit path
-fails the whole command even if Two-Factor Authentication is not selected.
+generated when Two-Factor Authentication, Social Login or Passkeys is selected, but an
+invalid explicit path fails the whole command even if none of them is selected.
 
 For each feature that needs manual steps, `auth:setup` prints them and leaves a short
 checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
