@@ -82,6 +82,11 @@ application root, not your shell's current directory. The frontend layer is only
 generated when Two-Factor Authentication is selected, but an invalid explicit path
 fails the whole command even if Two-Factor Authentication is not selected.
 
+For each feature that needs manual steps, `auth:setup` prints them and leaves a short
+checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
+`AUTH-<FEATURE>-FRONTEND-TODO.md` in the frontend root. Tick the boxes, then delete the
+file: nothing reads it. The feature's page under `docs/` explains every step in full.
+
 ---
 
 ## Changelog
