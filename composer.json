@@ -1,6 +1,6 @@
 {
     "name": "light-it-labs/lightit-auth-laravel",
-    "description": "An optional-feature authentication package for Laravel projects. It layers Google SSO, 2FA, OTP, forgot password and role-permission systems on top of a boilerplate that already owns base authentication, with standardized examples for seamless integration into your projects.",
+    "description": "An optional-feature authentication package for Laravel projects. It layers social login (Google), 2FA, passkeys, OTP, forgot password and role-permission systems on top of a boilerplate that already owns base authentication, with standardized examples for seamless integration into your projects.",
     "keywords": [
         "Light-it Labs",
         "php",
@@ -9,7 +9,7 @@
         "auth",
         "laravel auth",
         "laravel authentication",
-        "google sso",
+        "social login",
         "2fa",
         "two factor auth",
         "otp",
@@ -45,6 +45,7 @@
         "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {
+        "firebase/php-jwt": "^7.0",
         "larastan/larastan": "^2.9||^3.0",
         "laravel/pint": "^1.14",
         "nunomaduro/collision": "^8.1.1||^7.10.0",

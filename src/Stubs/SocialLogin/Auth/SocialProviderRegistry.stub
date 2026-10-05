@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain;
+
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Contracts\SocialProvider;
+use Lightit\Authentication\Domain\Exceptions\SocialProviderUnknownException;
+use LogicException;
+
+final readonly class SocialProviderRegistry
+{
+    public function __construct(
+        private Container $container,
+    ) {}
+
+    /**
+     * @throws SocialProviderUnknownException
+     */
+    public function resolve(string $provider): SocialProvider
+    {
+        $providerClass = Config::array('social-login.providers', [])[$provider] ?? null;
+
+        if (! \is_string($providerClass)) {
+            throw new SocialProviderUnknownException;
+        }
+
+        $socialProvider = $this->container->make($providerClass);
+
+        if (! $socialProvider instanceof SocialProvider) {
+            throw new LogicException("{$providerClass} must implement " . SocialProvider::class . '.');
+        }
+
+        return $socialProvider;
+    }
+}

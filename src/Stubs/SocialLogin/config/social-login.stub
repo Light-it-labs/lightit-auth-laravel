@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+use Lightit\Authentication\Domain\SocialProviders\GoogleProvider;
+
+return [
+
+    /*
+     * Every provider `POST /api/auth/social/{provider}` accepts, by route name. Each class
+     * implements \Lightit\Authentication\Domain\Contracts\SocialProvider. To add one, write
+     * its class and add its line here.
+     */
+    'providers' => [
+        GoogleProvider::NAME => GoogleProvider::class,
+    ],
+
+    /*
+     * The OAuth client id from the Google Cloud console. Every Google token must be issued
+     * for it; sign-in with Google fails until it is set.
+     */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
+];

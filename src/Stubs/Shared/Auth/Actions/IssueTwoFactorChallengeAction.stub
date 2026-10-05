@@ -34,7 +34,7 @@ final class IssueTwoFactorChallengeAction
             return;
         }
 
-        // OTP-only and Google-SSO-only installs share this action but never require
+        // OTP-only and social-login-only installs share this action but never require
         // extending TwoFactorAuthenticatable, so this guard only runs once 2FA is
         // actually enabled - a plain User is then a misconfiguration, not a no-op,
         // so this fails closed instead of silently never challenging anyone.

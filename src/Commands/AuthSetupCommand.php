@@ -11,11 +11,11 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
-use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
+use Lightitlabs\Auth\Installers\SocialLoginInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Exceptions\SetupAbortedException;
@@ -123,7 +123,7 @@ class AuthSetupCommand extends Command
             Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
             Feature::Otp => $this->setupOtp(),
             Feature::ForgotPassword => $this->setupForgotPassword(),
-            Feature::GoogleSso => $this->setupGoogleSSO(),
+            Feature::SocialLogin => $this->setupSocialLogin(),
             Feature::Passkeys => $this->setupPasskeys(),
         };
     }
@@ -154,14 +154,13 @@ class AuthSetupCommand extends Command
         );
     }
 
-    protected function setupGoogleSSO(): void
+    protected function setupSocialLogin(): void
     {
-        $this->printBoxedMessage('Setting up Google SSO...');
+        $this->printBoxedMessage('Setting up Social Login...');
 
         $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
-        $googleSSOInstaller->install();
+        (new SocialLoginInstaller($this, $composerInstaller, $stubCopier))->install();
         $this->printSectionSeparator();
     }
 
