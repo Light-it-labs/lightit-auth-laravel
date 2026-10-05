@@ -27,8 +27,7 @@
   The TOTP secret's `encrypted` cast is built in.
 - [ ] **Run `php artisan migrate`** (adds the 2FA columns to `users`).
 - [ ] **Pick the mode** in `.env`: `TWO_FACTOR_AUTHENTICATION_MANDATORY=true` (the default:
-  every user sets 2FA up at login) or `false` (only users who already set it up are asked
-  for a code).
+  every user sets 2FA up at login) or `false` (users turn it on from `/account/two-factor`).
 
 Check it worked: log in with a user. With `true`, the response is `200` with
 `token_type: setup_required`; with `false`, a user without 2FA comes straight in.

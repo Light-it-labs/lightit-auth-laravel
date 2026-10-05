@@ -374,20 +374,34 @@ describe('Google2FAFrontendInstaller', function (): void {
         }
     });
 
-    it('labels the optional sidebar link with a short navigation key the TODO documents', function (): void {
-        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
-
-        $this->artisan('google2fa-frontend-fake')->assertSuccessful();
-
-        $todo = (string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md');
-
-        preg_match_all('/```json\n(.*?)```/s', $todo, $blocks);
-        $documented = json_decode('{' . $blocks[1][2] . '}', true, flags: JSON_THROW_ON_ERROR);
-
-        expect($todo)
-            ->toContain('{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> }')
-            ->and(Arr::get($documented, 'navigation.links.twoFactor'))->toBe('Two-factor');
-    });
+    it(
+        'prints the sidebar link as a manual step, labelled with a short navigation key the TODO documents',
+        function (): void {
+            $link = '{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },';
+    
+            Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+    
+            $this->artisan('google2fa-frontend-fake')
+                ->expectsOutputToContain('Manual step: link the account page from the sidebar.')
+                ->expectsOutputToContain(
+                    'In src/routes/_private/-components/sidebar/sidebar.tsx, add at the end of the links array:'
+                )
+                ->expectsOutputToContain($link)
+                ->assertSuccessful();
+    
+            $todo = (string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md');
+    
+            preg_match_all('/```json\n(.*?)```/s', $todo, $blocks);
+            $documented = json_decode('{' . $blocks[1][2] . '}', true, flags: JSON_THROW_ON_ERROR);
+    
+            expect($todo)
+                ->toContain(
+                    "\n- [ ] **Link the account page from the sidebar** in `src/routes/_private/-components/sidebar/sidebar.tsx`"
+                )
+                ->toContain('`' . $link . '`')
+                ->and(Arr::get($documented, 'navigation.links.twoFactor'))->toBe('Two-factor');
+        }
+    );
 
     it('never posts from an effect, so StrictMode cannot send an account request twice', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));

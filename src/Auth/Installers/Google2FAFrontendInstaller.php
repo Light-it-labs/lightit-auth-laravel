@@ -33,6 +33,10 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
     private const LOGIN_FORM_FILE = 'src/routes/(public)/_guest/login/-components/login-form.tsx';
 
+    private const SIDEBAR_FILE = 'src/routes/_private/-components/sidebar/sidebar.tsx';
+
+    private const SIDEBAR_LINK = '{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },';
+
     private const FILES = [
         'services/auth/two-factor/types.ts.stub' => 'src/services/auth/two-factor/types.ts',
         'services/auth/two-factor/schemas.ts.stub' => 'src/services/auth/two-factor/schemas.ts',
@@ -96,6 +100,14 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         $this->command->info('Frontend two-factor authentication services, login screens and account page generated.');
 
         $this->printLoginFormManualStep();
+        $this->printSidebarManualStep();
+    }
+
+    private function printSidebarManualStep(): void
+    {
+        $this->command->warn('Manual step: link the account page from the sidebar.');
+        $this->command->line('In ' . self::SIDEBAR_FILE . ', add at the end of the links array:');
+        $this->command->line('  ' . self::SIDEBAR_LINK);
     }
 
     private function printLoginFormManualStep(): void
