@@ -3,11 +3,14 @@
 declare(strict_types=1);
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Database\Events\QueryExecuted;
+use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -324,6 +327,29 @@ describe('generated roles API', function (): void {
             ->putJson("/api/users/{$superAdmin->id}/roles", ['roles' => ['admin']])
             ->assertOk()
             ->assertJsonPath('data.roles', ['admin']);
+    });
+
+    it('reads the super admin role row before any membership once the transaction starts', function (): void {
+        $superAdmin = rolesUser('super-admin');
+        rolesUser('super-admin');
+        $statements = [];
+        Event::listen(TransactionBeginning::class, static function () use (&$statements): void {
+            $statements[] = 'begin';
+        });
+        DB::listen(static function (QueryExecuted $query) use (&$statements): void {
+            $statements[] = $query->sql;
+        });
+
+        $this->actingAs($superAdmin)
+            ->putJson("/api/users/{$superAdmin->id}/roles", ['roles' => ['admin']])
+            ->assertOk();
+
+        $inTransaction = array_slice($statements, (int) array_search('begin', $statements, true) + 1);
+
+        expect($inTransaction[0])->toStartWith('select * from "roles" where "name" = ?')
+            ->and($inTransaction[1])->toContain('inner join "model_has_roles"')
+            ->and($inTransaction[2])->toStartWith('select "model_id" from "model_has_roles"')
+            ->and($inTransaction[3])->toStartWith('delete from "model_has_roles"');
     });
 
     it('lets only a super admin grant or revoke the super admin role', function (): void {

@@ -108,9 +108,11 @@ Every success body is wrapped in `data`.
   admin doesn't hold (`403` `role_assignment_forbidden`). An admin with `roles.manage` can't promote
   themselves, even after you add a role stronger than `admin`.
 - `PUT users/{user}/roles` never removes the last super admin, not even when they edit their own
-  roles. Every demotion locks the `super-admin` role row inside a transaction first, so two at the
-  same time can't both pass. Deleting that user through the boilerplate's `DELETE users/{user}`
-  still can; restore one with the tinker line from `AUTH-ROLES-TODO.md`.
+  roles. Every role change starts its transaction by locking the `super-admin` role row, and only
+  then reads the user's roles and counts the super admins with a locking read on
+  `model_has_roles`. So two demotions at the same time can't both pass on PostgreSQL's default
+  READ COMMITTED or MySQL's default REPEATABLE READ. The boilerplate's `DELETE users/{user}` can
+  still delete the last super admin; restore one with the tinker line from `AUTH-ROLES-TODO.md`.
 - `Gate::before` lets a super admin through every `can()` check, the boilerplate's `UserPolicy`
   included. `/me/permissions` still lists only the permissions the user really has, so seed new
   permissions to show super admins the matching UI.

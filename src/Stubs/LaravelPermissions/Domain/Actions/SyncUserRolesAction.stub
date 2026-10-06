@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Lightit\Roles\Domain\Actions;
 
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Lightit\Roles\Domain\Exceptions\LastSuperAdminException;
 use Lightit\Shared\Roles\RoleManagement;
 use Lightit\Users\Domain\Models\User;
 use Spatie\Permission\Guard;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 final readonly class SyncUserRolesAction
 {
+    public function __construct(
+        private PermissionRegistrar $permissionRegistrar,
+    ) {}
+
     /**
      * @param Collection<int, Role> $roles
      *
@@ -22,7 +28,14 @@ final readonly class SyncUserRolesAction
     public function execute(User $user, Collection $roles): User
     {
         return DB::transaction(function () use ($user, $roles): User {
-            if ($this->removesSuperAdmin($user, $roles) && $this->superAdminCountUnderLock() <= 1) {
+            $superAdminRole = $this->lockSuperAdminRole();
+            $user->load('roles');
+
+            if (
+                $user->roles->contains($superAdminRole)
+                && $roles->doesntContain($superAdminRole)
+                && $this->countMembersUnderLock($superAdminRole, $user) <= 1
+            ) {
                 throw new LastSuperAdminException;
             }
 
@@ -33,33 +46,31 @@ final readonly class SyncUserRolesAction
     }
 
     /**
-     * @param Collection<int, Role> $roles
+     * Taken before any other read in the transaction: concurrent role changes queue here, and on
+     * MySQL's REPEATABLE READ the snapshot starts at the next plain read, after the previous change
+     * committed.
      */
-    private function removesSuperAdmin(User $user, Collection $roles): bool
+    private function lockSuperAdminRole(): Role
     {
-        return $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN)
-            && $roles->doesntContain(static fn (Role $role): bool => $role->name === RoleManagement::ROLE_SUPER_ADMIN);
-    }
-
-    /**
-     * Every demotion locks the super admin role row first, so they queue on one row: locking
-     * `users` rows alone doesn't, because membership lives in `model_has_roles`. The count is a
-     * locking read too, so MySQL reads the latest commit instead of the transaction's snapshot;
-     * it counts plucked ids because PostgreSQL rejects `FOR UPDATE` on an aggregate.
-     */
-    private function superAdminCountUnderLock(): int
-    {
-        Role::query()
+        return Role::query()
             ->where('name', RoleManagement::ROLE_SUPER_ADMIN)
             ->where('guard_name', Guard::getDefaultName(User::class))
             ->lockForUpdate()
             ->firstOrFail();
+    }
 
+    /**
+     * A locking read sees the latest commit and holds the counted rows until this transaction ends.
+     * Plucked, not counted, because PostgreSQL rejects `FOR UPDATE` with an aggregate.
+     */
+    private function countMembersUnderLock(Role $role, User $user): int
+    {
         return count(
-            User::query()
-                ->role(RoleManagement::ROLE_SUPER_ADMIN)
+            DB::table(Config::string('permission.table_names.model_has_roles'))
+                ->where($this->permissionRegistrar->pivotRole, $role->getKey())
+                ->where('model_type', $user->getMorphClass())
                 ->lockForUpdate()
-                ->pluck('id')
+                ->pluck(Config::string('permission.column_names.model_morph_key'))
                 ->all(),
         );
     }
