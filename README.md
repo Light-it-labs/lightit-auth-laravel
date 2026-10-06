@@ -75,12 +75,12 @@ If you are using Laravel Sail, you can run:
 This command walks you through the optional features it can add on top of the
 boilerplate's own authentication. It no longer configures an authentication driver.
 
-If the 2FA frontend layer can't find a React project next to your Laravel app (a
+If the frontend layer can't find a React project next to your Laravel app (a
 sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
 explicitly with `--frontend-path=<path>`. Relative paths resolve against the Laravel
 application root, not your shell's current directory. The frontend layer is only
-generated when Two-Factor Authentication is selected, but an invalid explicit path
-fails the whole command even if Two-Factor Authentication is not selected.
+generated when Two-Factor Authentication or Roles and Permissions is selected, but an
+invalid explicit path fails the whole command even if neither is selected.
 
 For each feature that needs manual steps, `auth:setup` prints them and leaves a short
 checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and

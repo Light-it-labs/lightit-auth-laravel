@@ -1,0 +1,34 @@
+import { useQuery } from "@tanstack/react-query";
+
+import { useCurrentUser } from "@/services/auth/actions";
+import { queries } from "./factories";
+import type { CurrentPermissions } from "./types";
+
+export const currentPermissionsQuery = queries.current;
+
+export const hasPermission = (current: CurrentPermissions | undefined, permission: string) => {
+  return current?.permissions.includes(permission) ?? false;
+};
+
+export const hasRole = (current: CurrentPermissions | undefined, role: string) => {
+  return current?.roles.includes(role) ?? false;
+};
+
+export const usePermissions = () => {
+  const { data: user } = useCurrentUser();
+
+  const { data: current, isPending } = useQuery({
+    ...currentPermissionsQuery(user?.id),
+    enabled: Boolean(user),
+  });
+
+  return {
+    isPending,
+    hasPermission: (permission: string) => {
+      return hasPermission(current, permission);
+    },
+    hasRole: (role: string) => {
+      return hasRole(current, role);
+    },
+  };
+};

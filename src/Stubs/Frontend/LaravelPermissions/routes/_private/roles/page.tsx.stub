@@ -1,0 +1,69 @@
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { DataTable } from "@/components/ui/data-table";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { DEFAULT_PAGE_SIZE } from "@/constants/pagination";
+import { paginationValidationWithDefaults, usePagination } from "@/hooks/use-pagination";
+import { useTranslation } from "@/i18n";
+import { PERMISSIONS } from "@/services/permissions/constants";
+import { ensurePermission } from "@/services/permissions/ensure-permission";
+import { useUsersWithRoles } from "@/services/roles/actions";
+import type { UserWithRoles } from "@/services/roles/types";
+import { EditUserRolesDialog } from "./-components/edit-user-roles-dialog";
+import { useUserRolesTable } from "./-hooks/use-user-roles-table";
+
+const RolesPage = () => {
+  const { t } = useTranslation();
+
+  const {
+    actions: { changePage },
+    page,
+    pageIndex,
+  } = usePagination(Route.id);
+
+  const { data: usersWithRoles, isError, isLoading } = useUsersWithRoles(page);
+  const [editedUser, setEditedUser] = useState<UserWithRoles | null>(null);
+
+  const pageSize = usersWithRoles?.meta.perPage ?? DEFAULT_PAGE_SIZE;
+
+  const table = useUserRolesTable({
+    data: usersWithRoles?.data ?? [],
+    state: { pagination: { pageIndex, pageSize } },
+    onEditRoles: setEditedUser,
+    onPaginationChange: (updater) => {
+      if (typeof updater === "function") {
+        changePage(updater({ pageIndex, pageSize }));
+      }
+    },
+    pageCount: usersWithRoles?.meta.lastPage,
+    meta: { totalItems: usersWithRoles?.meta.total ?? 0 },
+  });
+
+  return (
+    <div className="flex flex-col gap-y-2">
+      <h1>{t("roles.title")}</h1>
+
+      {isError ? <ErrorMessage errorMessage={t("roles.loadError")} /> : null}
+
+      <DataTable isLoading={isLoading} table={table} />
+
+      {editedUser ? (
+        <EditUserRolesDialog
+          user={editedUser}
+          onClose={() => {
+            setEditedUser(null);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+export const Route = createFileRoute("/_private/roles/")({
+  validateSearch: paginationValidationWithDefaults,
+  beforeLoad: () => {
+    return ensurePermission(PERMISSIONS.manageRoles);
+  },
+  component: RolesPage,
+});

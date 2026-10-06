@@ -1,0 +1,12 @@
+import type { z } from "zod";
+
+import type { roleSchema, userWithRolesSchema } from "./schemas";
+
+export type Role = z.infer<typeof roleSchema>;
+
+export type UserWithRoles = z.infer<typeof userWithRolesSchema>;
+
+export type SyncUserRolesPayload = {
+  roles: Role["name"][];
+  userId: UserWithRoles["id"];
+};

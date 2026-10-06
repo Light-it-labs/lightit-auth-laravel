@@ -1,0 +1,15 @@
+import { createQueryKeys } from "@lukemorales/query-key-factory";
+
+import type { User } from "@/services/users/types";
+import { getCurrentPermissions } from "./api";
+
+export const queries = createQueryKeys("permissions", {
+  current: (userId: User["id"] | undefined) => {
+    return {
+      queryKey: [userId],
+      queryFn: () => {
+        return getCurrentPermissions();
+      },
+    };
+  },
+});

@@ -1,0 +1,8 @@
+import { api } from "@/config/api";
+import { currentPermissionsSchema } from "./schemas";
+
+export const getCurrentPermissions = async () => {
+  const response = await api.get("me/permissions");
+
+  return currentPermissionsSchema.parse(response.data.data);
+};
