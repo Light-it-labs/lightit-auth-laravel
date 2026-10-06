@@ -152,7 +152,8 @@ Router plugin adds the route to `src/routeTree.gen.ts` the next time `vite` runs
    `navigator.credentials.create`, and the result goes with the name to `POST passkeys`. The
    backend spends the challenge on that call, so a retry starts over from the password.
 3. A wrong password is a `422` on the `password` field and shows under it.
-4. A cancelled or timed-out browser prompt, a device that can't create passkeys, a device that
+4. A cancelled or timed-out browser prompt, a device that can't create passkeys, a browser
+   `SecurityError` (the page's origin doesn't match `PASSKEYS_RP_ID`), a device that
    already holds a passkey for the account (the browser's `InvalidStateError` or the backend's
    `409`) and an expired challenge (`410`) get their own message; any other failure shows
    `common.requestError`.

@@ -48,6 +48,7 @@ At the top level:
   "errors": {
     "cancelled": "The passkey request was cancelled or timed out.",
     "unsupported": "This browser or device can't create passkeys.",
+    "misconfigured": "This site isn't set up for passkeys yet. Please contact support.",
     "alreadyRegistered": "This device already has a passkey for your account.",
     "challengeExpired": "That took too long. Try again."
   }

@@ -11,6 +11,7 @@ export const usePasskeyErrors = () => {
   const failureMessages: Record<PasskeyFailure, string> = {
     cancelled: t("passkeys.errors.cancelled"),
     unsupported: t("passkeys.errors.unsupported"),
+    misconfigured: t("passkeys.errors.misconfigured"),
     alreadyRegistered: t("passkeys.errors.alreadyRegistered"),
     challengeExpired: t("passkeys.errors.challengeExpired"),
   };

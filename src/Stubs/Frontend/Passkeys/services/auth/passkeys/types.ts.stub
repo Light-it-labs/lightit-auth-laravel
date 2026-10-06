@@ -19,12 +19,18 @@ export type DeletePasskeyPayload = Pick<Passkey, "id"> & {
   password: string;
 };
 
-export type PasskeyFailure = "cancelled" | "unsupported" | "alreadyRegistered" | "challengeExpired";
+export type PasskeyFailure =
+  | "cancelled"
+  | "unsupported"
+  | "misconfigured"
+  | "alreadyRegistered"
+  | "challengeExpired";
 
 const failureByErrorName: Partial<Record<string, PasskeyFailure>> = {
   AbortError: "cancelled",
   NotAllowedError: "cancelled",
   NotSupportedError: "unsupported",
+  SecurityError: "misconfigured",
   InvalidStateError: "alreadyRegistered",
 };
 
