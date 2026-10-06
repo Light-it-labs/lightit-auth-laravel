@@ -62,6 +62,7 @@ final class Passkey extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
             'sign_count' => 'integer',
             'transports' => 'array',
             'backup_eligible' => 'boolean',

@@ -294,3 +294,12 @@ describe('PasskeyCeremonyService stub without its relying party configured', fun
             ->toThrow(RuntimeException::class, 'Set PASSKEYS_USER_HANDLE_SECRET');
     })->with(['unset' => [null], 'empty' => ['']]);
 });
+
+describe('Passkey model stub', function (): void {
+    it('casts user_id to an integer for drivers that return numeric strings', function (): void {
+        $passkey = new Passkey();
+        $passkey->setRawAttributes(['user_id' => '42']);
+
+        expect($passkey->user_id)->toBe(42);
+    });
+});
