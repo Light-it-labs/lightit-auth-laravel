@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\DB;
 use Lightit\Roles\Domain\Exceptions\LastSuperAdminException;
 use Lightit\Shared\Roles\RoleManagement;
 use Lightit\Users\Domain\Models\User;
+use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Role;
 
 final readonly class SyncUserRolesAction
 {
@@ -19,7 +21,7 @@ final readonly class SyncUserRolesAction
     public function execute(User $user, array $roleNames): User
     {
         return DB::transaction(function () use ($user, $roleNames): User {
-            if ($this->removesSuperAdmin($user, $roleNames) && $this->lockedSuperAdminCount() <= 1) {
+            if ($this->removesSuperAdmin($user, $roleNames) && $this->superAdminCountUnderLock() <= 1) {
                 throw new LastSuperAdminException;
             }
 
@@ -39,12 +41,19 @@ final readonly class SyncUserRolesAction
     }
 
     /**
-     * Locks every super admin row, so two requests demoting the last two super admins
-     * at the same time can't both pass this check. Counted after `pluck()`: PostgreSQL
-     * rejects `FOR UPDATE` on an aggregate query.
+     * Every demotion locks the super admin role row first, so they queue on one row: locking
+     * `users` rows alone doesn't, because membership lives in `model_has_roles`. The count is a
+     * locking read too, so MySQL reads the latest commit instead of the transaction's snapshot;
+     * it counts plucked ids because PostgreSQL rejects `FOR UPDATE` on an aggregate.
      */
-    private function lockedSuperAdminCount(): int
+    private function superAdminCountUnderLock(): int
     {
+        Role::query()
+            ->where('name', RoleManagement::ROLE_SUPER_ADMIN)
+            ->where('guard_name', Guard::getDefaultName(User::class))
+            ->lockForUpdate()
+            ->firstOrFail();
+
         return count(
             User::query()
                 ->role(RoleManagement::ROLE_SUPER_ADMIN)

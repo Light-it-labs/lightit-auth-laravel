@@ -102,8 +102,10 @@ Every success body is wrapped in `data`.
   `<Can>` and `ensurePermission()` are UX only.
 - Only a super admin can grant or revoke `super-admin`, so an admin with `roles.manage` can't
   promote themselves.
-- The last super admin can't lose the role, not even by editing their own roles. The check locks
-  the super admin rows inside a transaction, so two simultaneous demotions can't both pass.
+- `PUT users/{user}/roles` never removes the last super admin, not even when they edit their own
+  roles. Every demotion locks the `super-admin` role row inside a transaction first, so two at the
+  same time can't both pass. Deleting that user through the boilerplate's `DELETE users/{user}`
+  still can; restore one with the tinker line from `AUTH-ROLES-TODO.md`.
 - `Gate::before` lets a super admin through every `can()` check, the boilerplate's `UserPolicy`
   included. `/me/permissions` still lists only the permissions the user really has, so seed new
   permissions to show super admins the matching UI.
