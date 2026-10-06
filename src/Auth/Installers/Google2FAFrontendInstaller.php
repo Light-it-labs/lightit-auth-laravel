@@ -162,31 +162,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         return [
             ...FrontendStubTokens::defaults(),
             'packageManager' => $this->manifest->packageManager($root),
-            'dependencyReport' => $this->dependencyReport($root),
+            'dependencyReport' => $this->manifest->dependencyReport($root, self::REQUIRED_DEPENDENCIES),
         ];
-    }
-
-    private function dependencyReport(string $root): string
-    {
-        $installed = $this->manifest->dependencies($root);
-
-        $missing = array_values(array_filter(
-            self::REQUIRED_DEPENDENCIES,
-            static function (string $dependency) use ($installed): bool {
-                return ! \array_key_exists($dependency, $installed);
-            }
-        ));
-
-        if ($missing === []) {
-            return FrontendStubTokens::defaults()['dependencyReport'];
-        }
-
-        return trim(implode("\n", [
-            'Missing dependencies. Run:',
-            '',
-            '```sh',
-            $this->manifest->addCommand($root) . ' ' . implode(' ', $missing),
-            '```',
-        ]));
     }
 }
