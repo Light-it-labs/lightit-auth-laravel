@@ -96,6 +96,20 @@ describe('SocialLoginInstaller', function (): void {
         }
     );
 
+    it('skips the migration when the app already has it under another timestamp', function (): void {
+        mkdir($this->tempBase . '/database/migrations', 0755, true);
+        file_put_contents(
+            $this->tempBase . '/database/migrations/2031_05_05_120000_create_social_accounts_table.php',
+            '<?php'
+        );
+
+        $this->artisan('social-login-installer-fake')
+            ->expectsOutputToContain('Skipped database/migrations/2031_05_05_120000_create_social_accounts_table.php')
+            ->assertSuccessful();
+
+        expect(glob($this->tempBase . '/database/migrations/*_create_social_accounts_table.php'))->toHaveCount(1);
+    });
+
     it('requires routes/social-login.php from routes/api.php exactly once', function (): void {
         $this->artisan('social-login-installer-fake')
             ->expectsOutputToContain("Updated routes/api.php: require __DIR__ . '/social-login.php';")
