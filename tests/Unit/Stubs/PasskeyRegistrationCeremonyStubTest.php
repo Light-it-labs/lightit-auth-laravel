@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\Passkey;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyAlreadyRegisteredException;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeExpiredException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyRegistrationFailedException;
@@ -165,6 +167,89 @@ describe('PasskeyCeremonyService::verifyRegistration() stub', function (): void 
         expect(Passkey::query()->sole()->is($passkey))->toBeTrue()
             ->and($passkey->user_id)->toBe($this->user->id)
             ->and($passkey->name)->toBe('Laptop');
+    });
+});
+
+function storeFailure(callable $attempt): Throwable
+{
+    try {
+        $attempt();
+    } catch (Throwable $exception) {
+        return $exception;
+    }
+
+    test()->fail('Expected StorePasskeyAction to throw.');
+}
+
+describe('StorePasskeyAction stub', function (): void {
+    beforeEach(function (): void {
+        Config::set('passkeys.relying_party', ['id' => 'example.test', 'name' => 'Example App']);
+        Config::set('passkeys.allowed_origins', [PASSKEY_TEST_ORIGIN]);
+        Config::set('passkeys.user_handle_secret', 'test-user-handle-secret');
+        Config::set('passkeys.challenge_ttl_seconds', 300);
+
+        User::createTable();
+        StubLoader::migratePasskeysTable();
+
+        $this->user = User::make('jane.doe@example.test', 'Jane Doe');
+        $service = new PasskeyCeremonyService(Mockery::spy(ExceptionHandler::class));
+        $challengeStore = new PasskeyChallengeStore();
+        $this->start = new StartPasskeyRegistrationAction($service, $challengeStore);
+        $this->store = new StorePasskeyAction($service, $challengeStore);
+        $this->authenticator = new FakeAuthenticator();
+
+        $this->register = function (): Passkey {
+            $options = json_decode($this->start->execute($this->user), true, flags: \JSON_THROW_ON_ERROR);
+
+            return $this->store->execute($this->user, new StorePasskeyDto(
+                name: 'Laptop',
+                credential: $this->authenticator->attestation($options, PASSKEY_TEST_ORIGIN),
+            ));
+        };
+    });
+
+    it('answers 409 passkey_already_registered for a credential the table already holds', function (): void {
+        ($this->register)();
+
+        $exception = storeFailure($this->register);
+
+        expect($exception)->toBeInstanceOf(PasskeyAlreadyRegisteredException::class)
+            ->and($exception->statusCode())->toBe(409)
+            ->and($exception->errorCode())->toBe('passkey_already_registered')
+            ->and(Passkey::query()->count())->toBe(1);
+    });
+
+    it('answers 410 passkey_challenge_expired when the same start is stored twice', function (): void {
+        $options = json_decode($this->start->execute($this->user), true, flags: \JSON_THROW_ON_ERROR);
+        $dto = new StorePasskeyDto(
+            name: 'Laptop',
+            credential: $this->authenticator->attestation($options, PASSKEY_TEST_ORIGIN),
+        );
+        $this->store->execute($this->user, $dto);
+
+        $exception = storeFailure(fn () => $this->store->execute($this->user, $dto));
+
+        expect($exception)->toBeInstanceOf(PasskeyChallengeExpiredException::class)
+            ->and($exception->statusCode())->toBe(410)
+            ->and($exception->errorCode())->toBe('passkey_challenge_expired')
+            ->and(Passkey::query()->count())->toBe(1);
+    });
+
+    it('answers 410 passkey_challenge_expired when no registration was started', function (): void {
+        $options = json_decode(
+            new PasskeyCeremonyService(Mockery::spy(ExceptionHandler::class))->creationOptions($this->user),
+            true,
+            flags: \JSON_THROW_ON_ERROR,
+        );
+
+        $exception = storeFailure(fn () => $this->store->execute($this->user, new StorePasskeyDto(
+            name: 'Laptop',
+            credential: $this->authenticator->attestation($options, PASSKEY_TEST_ORIGIN),
+        )));
+
+        expect($exception)->toBeInstanceOf(PasskeyChallengeExpiredException::class)
+            ->and($exception->statusCode())->toBe(410)
+            ->and(Passkey::query()->count())->toBe(0);
     });
 });
 
