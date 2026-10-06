@@ -131,6 +131,9 @@ on and off; a wrong one is a `422` on `password`, not a `401`. Another user's pa
 `403`. `credential` is the browser's `RegistrationResponseJSON`, sent as is. The challenge is
 bound to the user, lives `passkeys.challenge_ttl_seconds` and is spent by the first
 `POST /passkeys` under a cache lock.
+A rejected ceremony (the `422`) is logged at `warning` level as `passkey registration rejected`
+with the exception class and message, never the credential, so a wrong `PASSKEYS_RP_ID` or
+origin shows up in the logs.
 
 ### Account page
 

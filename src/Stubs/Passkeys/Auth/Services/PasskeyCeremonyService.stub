@@ -7,6 +7,7 @@ namespace Lightit\Authentication\Domain\Services;
 use Cose\Algorithms;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
@@ -82,7 +83,9 @@ final readonly class PasskeyCeremonyService
 
     /**
      * On malformed input the library throws TypeError, RangeException, ValueError and
-     * serializer exceptions besides its own, so all of them are a rejected ceremony.
+     * serializer exceptions besides its own, so all of them are a rejected ceremony. They
+     * are logged as warnings rather than reported, so a wrong RP ID or origin leaves a
+     * trace without reporting every user's bad device.
      *
      * @throws PasskeyRegistrationFailedException
      */
@@ -105,7 +108,12 @@ final readonly class PasskeyCeremonyService
 
             $record = AuthenticatorAttestationResponseValidator::create($ceremonySteps)
                 ->check($publicKeyCredential->response, $creationOptions, $relyingPartyId);
-        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError) {
+        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError $exception) {
+            Log::warning('passkey registration rejected', [
+                'reason' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
             throw new PasskeyRegistrationFailedException;
         } catch (Throwable $throwable) {
             $this->exceptionHandler->report($throwable);

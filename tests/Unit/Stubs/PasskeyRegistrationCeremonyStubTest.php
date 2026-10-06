@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\Passkey;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
@@ -109,6 +110,23 @@ describe('PasskeyCeremonyService::verifyRegistration() stub', function (): void 
                 ->attestation($options, PASSKEY_TEST_ORIGIN, userVerified: false),
         ],
     ]);
+
+    it('logs a rejected ceremony as a warning with the reason and no credential data', function (): void {
+        Log::spy();
+
+        rejectedRegistration(fn () => $this->service->verifyRegistration(
+            $this->creationOptions,
+            $this->authenticator->attestation($this->decodedCreationOptions, 'https://evil.example.test'),
+        ));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $message === 'passkey registration rejected'
+                && array_keys($context) === ['reason', 'message']
+                && is_a($context['reason'], Throwable::class, true)
+                && is_string($context['message']),
+        );
+        $this->exceptionHandler->shouldNotHaveReceived('report');
+    });
 
     it(
         'rejects a body that is not a credential with 422 passkey_registration_failed',
