@@ -87,6 +87,9 @@ final class PasskeysInstaller implements AuthInstallerInterface
         $this->composerInstaller->printSuccess('Passkey registration installed successfully!');
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function writeFiles(): void
     {
         $this->createAuthFiles();
@@ -119,6 +122,9 @@ final class PasskeysInstaller implements AuthInstallerInterface
         $this->copy(self::stubDirectory() . '/config/passkeys.stub', self::CONFIG_FILE);
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     private function registerRoutes(): void
     {
         $this->composerInstaller->printStep(4, self::TOTAL_STEPS, 'Registering routes');
@@ -144,9 +150,9 @@ final class PasskeysInstaller implements AuthInstallerInterface
             RouteRegistrationOutcome::Failed => $this->command->warn(
                 "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. Please add it manually.'
             ),
-            RouteRegistrationOutcome::Corrupted => $this->command->error(
-                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
-                . 'Please inspect the file.'
+            RouteRegistrationOutcome::Corrupted => throw SetupAbortedException::corruptedRouteFile(
+                self::API_ROUTES_PATH,
+                $requireStatement,
             ),
         };
     }

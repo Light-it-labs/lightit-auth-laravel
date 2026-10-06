@@ -272,6 +272,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         };
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     private function registerRoutes(): void
     {
         $this->composerInstaller->printStep(5, 6, 'Registering routes');
@@ -314,9 +317,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
                 "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. '
                 . 'Please add it manually.'
             ),
-            RouteRegistrationOutcome::Corrupted => $this->command->error(
-                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
-                . 'Please inspect the file.'
+            RouteRegistrationOutcome::Corrupted => throw SetupAbortedException::corruptedRouteFile(
+                self::API_ROUTES_PATH,
+                $requireStatement,
             ),
         };
     }
