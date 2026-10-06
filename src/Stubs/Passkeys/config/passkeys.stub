@@ -2,15 +2,18 @@
 
 declare(strict_types=1);
 
+$localDefaults = in_array(env('APP_ENV', 'production'), ['local', 'testing'], true);
+
 return [
 
     /*
      * The relying party the browser binds every passkey to. `id` is the frontend's
      * host or a registrable parent domain of it (never a sibling host), without
-     * scheme or port.
+     * scheme or port. Only `local` and `testing` fall back to localhost; anywhere else
+     * passkeys refuse to run until PASSKEYS_RP_ID and PASSKEYS_ALLOWED_ORIGINS are set.
      */
     'relying_party' => [
-        'id' => env('PASSKEYS_RP_ID', 'localhost'),
+        'id' => env('PASSKEYS_RP_ID', $localDefaults ? 'localhost' : null),
         'name' => env('PASSKEYS_RP_NAME', env('APP_NAME', 'Laravel')),
     ],
 
@@ -19,7 +22,7 @@ return [
      */
     'allowed_origins' => array_values(array_filter(array_map(
         trim(...),
-        explode(',', (string) env('PASSKEYS_ALLOWED_ORIGINS', 'http://localhost:5173')),
+        explode(',', (string) env('PASSKEYS_ALLOWED_ORIGINS', $localDefaults ? 'http://localhost:5173' : '')),
     ))),
 
     /*

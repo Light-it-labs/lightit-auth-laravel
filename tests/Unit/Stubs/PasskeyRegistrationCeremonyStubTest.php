@@ -149,3 +149,39 @@ describe('PasskeyCeremonyService::verifyRegistration() stub', function (): void 
             ->and($passkey->name)->toBe('Laptop');
     });
 });
+
+describe('PasskeyCeremonyService stub without its relying party configured', function (): void {
+    beforeEach(function (): void {
+        Config::set('passkeys.relying_party', ['id' => 'example.test', 'name' => 'Example App']);
+        Config::set('passkeys.allowed_origins', [PASSKEY_TEST_ORIGIN]);
+        Config::set('passkeys.user_handle_secret', 'test-user-handle-secret');
+        Config::set('passkeys.challenge_ttl_seconds', 300);
+
+        User::createTable();
+        StubLoader::migratePasskeysTable();
+
+        $this->user = User::make('jane.doe@example.test', 'Jane Doe');
+        $this->service = new PasskeyCeremonyService(Mockery::spy(ExceptionHandler::class));
+    });
+
+    it('refuses to issue options without PASSKEYS_RP_ID', function (?string $relyingPartyId): void {
+        Config::set('passkeys.relying_party.id', $relyingPartyId);
+
+        expect(fn () => $this->service->creationOptions($this->user))
+            ->toThrow(RuntimeException::class, 'Set PASSKEYS_RP_ID');
+    })->with(['unset' => [null], 'empty' => ['']]);
+
+    it('refuses to verify a ceremony without PASSKEYS_ALLOWED_ORIGINS', function (): void {
+        $options = $this->service->creationOptions($this->user);
+        Config::set('passkeys.allowed_origins', []);
+
+        expect(fn () => $this->service->verifyRegistration(
+            $options,
+            new FakeAuthenticator()->attestation(
+                json_decode($options, true, flags: \JSON_THROW_ON_ERROR),
+                PASSKEY_TEST_ORIGIN,
+            ),
+        ))->toThrow(RuntimeException::class, 'Set PASSKEYS_ALLOWED_ORIGINS');
+    });
+});
+

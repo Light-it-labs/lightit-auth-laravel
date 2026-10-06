@@ -14,6 +14,7 @@ use Lightit\Authentication\Domain\Models\Passkey;
 use Lightit\Users\Domain\Models\User;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use RangeException;
+use RuntimeException;
 use Symfony\Component\Serializer\Exception\ExceptionInterface as SerializerException;
 use Symfony\Component\Serializer\Normalizer\AbstractObjectNormalizer;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -152,6 +153,11 @@ final readonly class PasskeyCeremonyService
         $factory = new CeremonyStepManagerFactory;
         /** @var list<string> $allowedOrigins */
         $allowedOrigins = Config::array('passkeys.allowed_origins');
+
+        if ($allowedOrigins === []) {
+            throw new RuntimeException('Set PASSKEYS_ALLOWED_ORIGINS: passkeys.allowed_origins is empty.');
+        }
+
         $factory->setAllowedOrigins($allowedOrigins);
 
         return $factory;
@@ -159,6 +165,17 @@ final readonly class PasskeyCeremonyService
 
     private function relyingPartyId(): string
     {
-        return Config::string('passkeys.relying_party.id');
+        return $this->requiredConfig('passkeys.relying_party.id', 'PASSKEYS_RP_ID');
+    }
+
+    private function requiredConfig(string $key, string $envVariable): string
+    {
+        $value = Config::get($key);
+
+        if (! is_string($value) || $value === '') {
+            throw new RuntimeException("Set {$envVariable}: {$key} is missing.");
+        }
+
+        return $value;
     }
 }

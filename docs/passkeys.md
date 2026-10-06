@@ -39,7 +39,10 @@ PASSKEYS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
 `PASSKEYS_RP_ID` is the frontend's host (or a registrable parent domain), without scheme or
-port. `PASSKEYS_ALLOWED_ORIGINS` lists the full frontend origins, comma-separated.
+port. `PASSKEYS_ALLOWED_ORIGINS` lists the full frontend origins, comma-separated. Both fall
+back to `localhost` / `http://localhost:5173` only when `APP_ENV` is `local` or `testing`;
+anywhere else a missing value makes the first passkey request fail with a reported `500` naming
+the variable, instead of a `422` that looks like a bad device.
 `PASSKEYS_CHALLENGE_TTL_SECONDS` (default `300`) is how long a registration challenge lives.
 
 #### 3. Optional: set the user handle secret

@@ -8,7 +8,8 @@
 - [ ] **Run `php artisan migrate`** (creates the `passkeys` table).
 - [ ] **Set the relying party** in `.env` (read by `config/passkeys.php`). `PASSKEYS_RP_ID` is
   your frontend's host in production, without scheme or port; `PASSKEYS_ALLOWED_ORIGINS` lists
-  your frontend URLs, comma-separated:
+  your frontend URLs, comma-separated. Only `local` and `testing` fall back to localhost; in any
+  other environment passkeys answer `500` until both are set:
 
 ```dotenv
 PASSKEYS_RP_ID=localhost
