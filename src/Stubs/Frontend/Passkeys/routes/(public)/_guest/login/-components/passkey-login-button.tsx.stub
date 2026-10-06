@@ -18,6 +18,7 @@ export const PasskeyLoginButton = () => {
   const failureMessages: Partial<Record<PasskeySignInFailure, string>> = {
     cancelled: t("passkeys.errors.cancelled"),
     unsupported: t("passkeys.signIn.unsupported"),
+    misconfigured: t("passkeys.errors.misconfigured"),
     notRecognised: t("passkeys.errors.notRecognised"),
     challengeExpired: t("passkeys.errors.challengeExpired"),
   };
