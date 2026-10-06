@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Lightit\Roles\Domain\Exceptions\LastSuperAdminException;
+use Lightit\Roles\Domain\Exceptions\RoleAssignmentForbiddenException;
+use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
 use Lightit\Shared\Roles\RoleManagement;
 use Lightit\Users\Domain\Models\User;
 use Spatie\Permission\Guard;
@@ -23,13 +25,18 @@ final readonly class SyncUserRolesAction
     /**
      * @param Collection<int, Role> $roles
      *
+     * @throws SuperAdminRoleChangeForbiddenException
+     * @throws RoleAssignmentForbiddenException
      * @throws LastSuperAdminException
      */
-    public function execute(User $user, Collection $roles): User
+    public function execute(User $actor, User $user, Collection $roles): User
     {
-        return DB::transaction(function () use ($user, $roles): User {
+        return DB::transaction(function () use ($actor, $user, $roles): User {
             $superAdminRole = $this->lockSuperAdminRole();
+            $actor->load('roles', 'permissions');
             $user->load('roles');
+
+            $this->ensureActorMayChange($actor, $user->roles, $roles);
 
             if (
                 $user->roles->contains($superAdminRole)
@@ -43,6 +50,47 @@ final readonly class SyncUserRolesAction
 
             return $user->load('roles');
         });
+    }
+
+    /**
+     * Anyone with roles.manage (checked on the route) may change roles, but only a super admin
+     * may change super-admin or a role granting a permission they don't hold themselves.
+     * SyncUserRolesRequest runs it for an early 403; execute() runs it again under the lock, on
+     * memberships read after any concurrent change committed.
+     *
+     * @param Collection<int, Role> $currentRoles
+     * @param Collection<int, Role> $requestedRoles
+     *
+     * @throws SuperAdminRoleChangeForbiddenException
+     * @throws RoleAssignmentForbiddenException
+     */
+    public function ensureActorMayChange(User $actor, Collection $currentRoles, Collection $requestedRoles): void
+    {
+        if ($actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
+            return;
+        }
+
+        $changedRoles = $currentRoles->diff($requestedRoles)->merge($requestedRoles->diff($currentRoles));
+
+        if ($changedRoles->contains(static fn (Role $role): bool => $role->name === RoleManagement::ROLE_SUPER_ADMIN)) {
+            throw new SuperAdminRoleChangeForbiddenException;
+        }
+
+        if (! $this->holdsEveryPermissionOf($actor, $changedRoles)) {
+            throw new RoleAssignmentForbiddenException;
+        }
+    }
+
+    /**
+     * @param Collection<int, Role> $roles
+     */
+    private function holdsEveryPermissionOf(User $actor, Collection $roles): bool
+    {
+        $actorPermissions = $actor->getAllPermissions()->pluck('name');
+
+        return $roles
+            ->load('permissions')
+            ->every(static fn (Role $role): bool => $role->permissions->pluck('name')->diff($actorPermissions)->isEmpty());
     }
 
     /**

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Schema;
 use Lightitlabs\Tests\Fixtures\RolesApiStub\HttpException;
 use Lightitlabs\Tests\Fixtures\RolesApiStub\RoleSeeder;
 use Lightitlabs\Tests\Fixtures\RolesApiStub\StubLoader;
+use Lightitlabs\Tests\Fixtures\RolesApiStub\SyncUserRolesRequest;
 use Lightitlabs\Tests\Fixtures\RolesApiStub\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -348,8 +349,10 @@ describe('generated roles API', function (): void {
 
         expect($inTransaction[0])->toStartWith('select * from "roles" where "name" = ?')
             ->and($inTransaction[1])->toContain('inner join "model_has_roles"')
-            ->and($inTransaction[2])->toStartWith('select "model_id" from "model_has_roles"')
-            ->and($inTransaction[3])->toStartWith('delete from "model_has_roles"');
+            ->and($inTransaction[2])->toContain('inner join "model_has_permissions"')
+            ->and($inTransaction[3])->toContain('inner join "model_has_roles"')
+            ->and($inTransaction[4])->toStartWith('select "model_id" from "model_has_roles"')
+            ->and($inTransaction[5])->toStartWith('delete from "model_has_roles"');
     });
 
     it('lets only a super admin grant or revoke the super admin role', function (): void {
@@ -394,6 +397,62 @@ describe('generated roles API', function (): void {
         $this->actingAs(rolesUser('super-admin'))
             ->putJson("/api/users/{$user->id}/roles", ['roles' => ['billing-admin']])
             ->assertOk();
+    });
+
+    it('checks again under the lock a role revoked after the early check', function (string $role, string $code): void {
+        Role::create(['name' => 'billing-admin'])->givePermissionTo(Permission::findOrCreate('billing.manage'));
+        $target = rolesUser($role, 'user');
+
+        $this->app->afterResolving(SyncUserRolesRequest::class, static function () use ($target, $role): void {
+            User::query()->findOrFail($target->id)->removeRole($role);
+        });
+
+        $this->actingAs(rolesUser('admin'))
+            ->putJson("/api/users/{$target->id}/roles", ['roles' => [$role, 'user']])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', $code);
+
+        expect($target->fresh()?->getRoleNames()->all())->toBe(['user']);
+    })->with([
+        'super admin' => ['super-admin', 'super_admin_role_change_forbidden'],
+        'role with a permission the admin lacks' => ['billing-admin', 'role_assignment_forbidden'],
+    ]);
+
+    it('checks again under the lock a role granted after the early check', function (string $role, string $code): void {
+        Role::create(['name' => 'billing-admin'])->givePermissionTo(Permission::findOrCreate('billing.manage'));
+        rolesUser('super-admin');
+        $target = rolesUser('user');
+
+        $this->app->afterResolving(SyncUserRolesRequest::class, static function () use ($target, $role): void {
+            User::query()->findOrFail($target->id)->assignRole($role);
+        });
+
+        $this->actingAs(rolesUser('admin'))
+            ->putJson("/api/users/{$target->id}/roles", ['roles' => ['user']])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', $code);
+
+        expect($target->fresh()?->getRoleNames()->sort()->values()->all())->toBe([$role, 'user']);
+    })->with([
+        'super admin' => ['super-admin', 'super_admin_role_change_forbidden'],
+        'role with a permission the admin lacks' => ['billing-admin', 'role_assignment_forbidden'],
+    ]);
+
+    it('checks again under the lock with the actor\'s own roles read after the early check', function (): void {
+        $actor = rolesUser('super-admin');
+        rolesUser('super-admin');
+        $target = rolesUser('user');
+
+        $this->app->afterResolving(SyncUserRolesRequest::class, static function () use ($actor): void {
+            User::query()->findOrFail($actor->id)->syncRoles(['admin']);
+        });
+
+        $this->actingAs($actor)
+            ->putJson("/api/users/{$target->id}/roles", ['roles' => ['super-admin']])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'super_admin_role_change_forbidden');
+
+        expect($target->fresh()?->getRoleNames()->all())->toBe(['user']);
     });
 
     it('lets a super admin through any gate once the checklist\'s Gate::before line is pasted', function (): void {

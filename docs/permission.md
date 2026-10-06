@@ -102,8 +102,9 @@ Every success body is wrapped in `data`.
 ### Security notes
 
 - Authorization is enforced by the backend: `->can(RolePermissions::MANAGE)` on the routes, as the
-  boilerplate does for its own, and `SyncUserRolesRequest::authorize()` for the super admin rule.
-  `<Can>` and `ensurePermission()` are UX only.
+  boilerplate does for its own, and the rules below in `SyncUserRolesAction`, which
+  `SyncUserRolesRequest::authorize()` runs for an early `403` and the action runs again under its
+  lock. `<Can>` and `ensurePermission()` are UX only.
 - Only a super admin can grant or revoke `super-admin`, or a role that grants a permission the
   admin doesn't hold (`403` `role_assignment_forbidden`). An admin with `roles.manage` can't promote
   themselves, even after you add a role stronger than `admin`, as long as it is stronger by its
@@ -111,10 +112,12 @@ Every success body is wrapped in `data`.
   than by permission can be granted by any admin who holds the same permissions.
 - `PUT users/{user}/roles` never removes the last super admin, not even when they edit their own
   roles. Every role change starts its transaction by locking the `super-admin` role row, and only
-  then reads the user's roles and counts the super admins with a locking read on
-  `model_has_roles`. So two demotions at the same time can't both pass on PostgreSQL's default
-  READ COMMITTED or MySQL's default REPEATABLE READ. The boilerplate's `DELETE users/{user}` can
-  still delete the last super admin; restore one with the tinker line from `AUTH-ROLES-TODO.md`.
+  then reads the admin's and the user's roles, checks the two rules above on them and counts the
+  super admins with a locking read on `model_has_roles`. So on PostgreSQL's default READ COMMITTED
+  or MySQL's default REPEATABLE READ, two demotions at the same time can't both pass, and a request
+  can't undo a role change that committed after its early check. The boilerplate's
+  `DELETE users/{user}` can still delete the last super admin; restore one with the tinker line
+  from `AUTH-ROLES-TODO.md`.
 - `Gate::before` lets a super admin through every `can()` check, the boilerplate's `UserPolicy`
   included. `/me/permissions` still lists only the permissions the user really has, so seed new
   permissions to show super admins the matching UI.

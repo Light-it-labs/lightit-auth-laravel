@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Roles\App\Controllers;
 
+use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\JsonResponse;
 use Lightit\Roles\App\Requests\SyncUserRolesRequest;
 use Lightit\Roles\App\Resources\UserWithRolesResource;
@@ -14,9 +15,11 @@ final readonly class SyncUserRolesController
 {
     public function __invoke(
         SyncUserRolesRequest $request,
+        #[CurrentUser]
+        User $actor,
         User $user,
         SyncUserRolesAction $action,
     ): JsonResponse {
-        return UserWithRolesResource::make($action->execute($user, $request->roles()))->response();
+        return UserWithRolesResource::make($action->execute($actor, $user, $request->roles()))->response();
     }
 }

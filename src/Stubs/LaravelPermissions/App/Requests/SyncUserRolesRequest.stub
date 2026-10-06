@@ -9,9 +9,9 @@ use Illuminate\Container\Attributes\RouteParameter;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Lightit\Roles\Domain\Actions\SyncUserRolesAction;
 use Lightit\Roles\Domain\Exceptions\RoleAssignmentForbiddenException;
 use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
-use Lightit\Shared\Roles\RoleManagement;
 use Lightit\Users\Domain\Models\User;
 use Spatie\Permission\Guard;
 use Spatie\Permission\Models\Role;
@@ -26,8 +26,7 @@ final class SyncUserRolesRequest extends FormRequest
     private Collection|null $guardRoles = null;
 
     /**
-     * Anyone with roles.manage (checked on the route) may change roles, but only a super admin
-     * may change super-admin or a role granting a permission they don't hold themselves.
+     * An early 403 before the action's transaction; SyncUserRolesAction checks again under its lock.
      *
      * @throws SuperAdminRoleChangeForbiddenException
      * @throws RoleAssignmentForbiddenException
@@ -37,22 +36,9 @@ final class SyncUserRolesRequest extends FormRequest
         User $actor,
         #[RouteParameter('user')]
         User $user,
+        SyncUserRolesAction $syncUserRolesAction,
     ): bool {
-        if ($actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
-            return true;
-        }
-
-        $currentRoles = Role::query()->whereKey($user->roles()->allRelatedIds())->get();
-        $requestedRoles = $this->roles();
-        $changedRoles = $currentRoles->diff($requestedRoles)->merge($requestedRoles->diff($currentRoles));
-
-        if ($changedRoles->contains(static fn (Role $role): bool => $role->name === RoleManagement::ROLE_SUPER_ADMIN)) {
-            throw new SuperAdminRoleChangeForbiddenException;
-        }
-
-        if (! $this->holdsEveryPermissionOf($actor, $changedRoles)) {
-            throw new RoleAssignmentForbiddenException;
-        }
+        $syncUserRolesAction->ensureActorMayChange($actor, $user->roles, $this->roles());
 
         return true;
     }
@@ -81,18 +67,6 @@ final class SyncUserRolesRequest extends FormRequest
         return $this->guardRoles()
             ->filter(static fn (Role $role): bool => in_array($role->name, $requestedNames, true))
             ->values();
-    }
-
-    /**
-     * @param Collection<int, Role> $roles
-     */
-    private function holdsEveryPermissionOf(User $actor, Collection $roles): bool
-    {
-        $actorPermissions = $actor->getAllPermissions()->pluck('name');
-
-        return $roles
-            ->load('permissions')
-            ->every(static fn (Role $role): bool => $role->permissions->pluck('name')->diff($actorPermissions)->isEmpty());
     }
 
     /**
