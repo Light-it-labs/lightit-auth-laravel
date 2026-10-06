@@ -46,7 +46,8 @@ At the top level:
     "success": "Roles updated",
     "error": "We couldn't update the roles. Try again in a moment.",
     "lastSuperAdmin": "This is the last super admin, so they must keep that role.",
-    "forbidden": "Only a super admin can grant or revoke the super admin role."
+    "forbidden": "Only a super admin can grant or revoke the super admin role.",
+    "roleNotAllowed": "You can only grant or revoke roles whose permissions you have."
   }
 }
 ```

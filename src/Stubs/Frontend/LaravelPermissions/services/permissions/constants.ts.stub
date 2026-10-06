@@ -1,3 +1,7 @@
 export const PERMISSIONS = {
   manageRoles: "roles.manage",
 } as const;
+
+export const ROLES = {
+  superAdmin: "super-admin",
+} as const;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HttpStatusCode, isAxiosError } from "axios";
+import { isAxiosError } from "axios";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,16 @@ import { Dialog } from "@/components/ui/dialog";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "@/i18n";
+import { usePermissions } from "@/services/permissions/actions";
+import { ROLES } from "@/services/permissions/constants";
 import { useRoles, useSyncUserRoles } from "@/services/roles/actions";
 import type { UserWithRoles } from "@/services/roles/types";
 
-const SUPER_ADMIN_ROLE_CHANGE_FORBIDDEN = "super_admin_role_change_forbidden";
+const ERROR_CODES = {
+  lastSuperAdmin: "last_super_admin",
+  roleAssignmentForbidden: "role_assignment_forbidden",
+  superAdminRoleChangeForbidden: "super_admin_role_change_forbidden",
+} as const;
 
 type ErrorResponse = {
   error?: { code?: string };
@@ -27,6 +33,7 @@ export const EditUserRolesDialog = ({ onClose, user }: EditUserRolesDialogProps)
 
   const { data: roles = [], isError, isLoading } = useRoles();
   const { isPending, mutate: syncUserRoles } = useSyncUserRoles();
+  const { hasRole } = usePermissions();
   const [selectedRoles, setSelectedRoles] = useState(user.roles);
 
   const toggleRole = (role: string, isSelected: boolean) => {
@@ -40,14 +47,18 @@ export const EditUserRolesDialog = ({ onClose, user }: EditUserRolesDialogProps)
   };
 
   const errorMessage = (error: unknown) => {
-    const response = isAxiosError<ErrorResponse>(error) ? error.response : undefined;
+    const code = isAxiosError<ErrorResponse>(error) ? error.response?.data.error?.code : undefined;
 
-    if (response?.status === HttpStatusCode.Conflict) {
+    if (code === ERROR_CODES.lastSuperAdmin) {
       return t("roles.edit.lastSuperAdmin");
     }
 
-    if (response?.data.error?.code === SUPER_ADMIN_ROLE_CHANGE_FORBIDDEN) {
+    if (code === ERROR_CODES.superAdminRoleChangeForbidden) {
       return t("roles.edit.forbidden");
+    }
+
+    if (code === ERROR_CODES.roleAssignmentForbidden) {
+      return t("roles.edit.roleNotAllowed");
     }
 
     return t("roles.edit.error");
@@ -96,7 +107,9 @@ export const EditUserRolesDialog = ({ onClose, user }: EditUserRolesDialogProps)
               <div key={role.id} className="flex items-center gap-2">
                 <Checkbox
                   checked={selectedRoles.includes(role.name)}
-                  disabled={isPending}
+                  disabled={
+                    isPending || (role.name === ROLES.superAdmin && !hasRole(ROLES.superAdmin))
+                  }
                   id={checkboxId}
                   onCheckedChange={(checked) => {
                     toggleRole(role.name, checked === true);
