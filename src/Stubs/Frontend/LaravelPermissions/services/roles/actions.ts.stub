@@ -1,0 +1,28 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+
+import { queryClient } from "@/config/query-client";
+import { currentPermissionsQuery } from "@/services/permissions/actions";
+import type { UseMutationProps } from "@/services/types";
+import { mutations, queries } from "./factories";
+
+export const useRoles = () => {
+  return useQuery(queries.list);
+};
+
+export const useUsersWithRoles = (page: number) => {
+  return useQuery(queries.users(page));
+};
+
+export const useSyncUserRoles = (props?: UseMutationProps<typeof mutations.syncUserRoles>) => {
+  return useMutation({
+    mutationFn: mutations.syncUserRoles,
+    ...props,
+    onSuccess: async (...args) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queries.users._def }),
+        queryClient.invalidateQueries({ queryKey: currentPermissionsQuery._def }),
+      ]);
+      await props?.onSuccess?.(...args);
+    },
+  });
+};

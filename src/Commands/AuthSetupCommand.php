@@ -12,6 +12,7 @@ use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
+use Lightitlabs\Auth\Installers\LaravelPermissionFrontendInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
@@ -34,7 +35,7 @@ class AuthSetupCommand extends Command
         $this->initializeOutput($this);
     }
 
-    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication is selected; an invalid path fails the whole command even if Two-Factor Authentication is not selected}';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication or Roles and Permissions is selected; an invalid path fails the whole command even if neither is selected}';
 
     protected $description = 'Setup the authentication structure';
 
@@ -229,6 +230,28 @@ class AuthSetupCommand extends Command
         $stubCopier = new StubCopier(OriginMarker::resolved());
         $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
         $laravelPermission->install();
+        $this->printSectionSeparator();
+
+        $this->setupRolesAndPermissionsFrontend();
+    }
+
+    protected function setupRolesAndPermissionsFrontend(): void
+    {
+        $this->printBoxedMessage('Setting up Roles and Permissions frontend...');
+
+        $manifest = new FrontendPackageManifest();
+
+        $frontendInstaller = new LaravelPermissionFrontendInstaller(
+            $this,
+            new StubRenderer(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+            $this->frontendPathOption(),
+        );
+
+        $frontendInstaller->install();
+
         $this->printSectionSeparator();
     }
 

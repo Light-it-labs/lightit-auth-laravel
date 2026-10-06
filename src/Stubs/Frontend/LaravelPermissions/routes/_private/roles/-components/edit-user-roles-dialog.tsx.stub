@@ -1,0 +1,137 @@
+import { useState } from "react";
+import { isAxiosError } from "axios";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog } from "@/components/ui/dialog";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { Label } from "@/components/ui/label";
+import { useTranslation } from "@/i18n";
+import { usePermissions } from "@/services/permissions/actions";
+import { ROLES } from "@/services/permissions/constants";
+import { useRoles, useSyncUserRoles } from "@/services/roles/actions";
+import type { UserWithRoles } from "@/services/roles/types";
+
+const ERROR_CODES = {
+  lastSuperAdmin: "last_super_admin",
+  roleAssignmentForbidden: "role_assignment_forbidden",
+  superAdminRoleChangeForbidden: "super_admin_role_change_forbidden",
+} as const;
+
+type ErrorResponse = {
+  error?: { code?: string };
+};
+
+type EditUserRolesDialogProps = {
+  onClose: () => void;
+  user: UserWithRoles;
+};
+
+export const EditUserRolesDialog = ({ onClose, user }: EditUserRolesDialogProps) => {
+  const { t } = useTranslation();
+
+  const { data: roles = [], isError, isLoading } = useRoles();
+  const { isPending, mutate: syncUserRoles } = useSyncUserRoles();
+  const { hasRole } = usePermissions();
+  const [selectedRoles, setSelectedRoles] = useState(user.roles);
+
+  const toggleRole = (role: string, isSelected: boolean) => {
+    setSelectedRoles((current) => {
+      return isSelected
+        ? [...current, role]
+        : current.filter((name) => {
+            return name !== role;
+          });
+    });
+  };
+
+  const errorMessage = (error: unknown) => {
+    const code = isAxiosError<ErrorResponse>(error) ? error.response?.data.error?.code : undefined;
+
+    if (code === ERROR_CODES.lastSuperAdmin) {
+      return t("roles.edit.lastSuperAdmin");
+    }
+
+    if (code === ERROR_CODES.superAdminRoleChangeForbidden) {
+      return t("roles.edit.forbidden");
+    }
+
+    if (code === ERROR_CODES.roleAssignmentForbidden) {
+      return t("roles.edit.roleNotAllowed");
+    }
+
+    return t("roles.edit.error");
+  };
+
+  const handleSave = () => {
+    syncUserRoles(
+      { roles: selectedRoles, userId: user.id },
+      {
+        onSuccess: () => {
+          toast.success(t("roles.edit.success"));
+          onClose();
+        },
+        onError: (error) => {
+          toast.error(errorMessage(error));
+        },
+      },
+    );
+  };
+
+  return (
+    <Dialog.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
+      <Dialog.Content isDismissible={!isPending}>
+        <Dialog.Header>
+          <Dialog.Title>{t("roles.edit.title", { name: user.name })}</Dialog.Title>
+
+          <Dialog.Description>{t("roles.edit.description")}</Dialog.Description>
+        </Dialog.Header>
+
+        {isLoading ? <p className="text-sm">{t("roles.edit.loading")}</p> : null}
+
+        {isError ? <ErrorMessage errorMessage={t("roles.edit.loadError")} /> : null}
+
+        <div className="flex flex-col gap-3">
+          {roles.map((role) => {
+            const checkboxId = `role-${role.id}`;
+
+            return (
+              <div key={role.id} className="flex items-center gap-2">
+                <Checkbox
+                  checked={selectedRoles.includes(role.name)}
+                  disabled={
+                    isPending || (role.name === ROLES.superAdmin && !hasRole(ROLES.superAdmin))
+                  }
+                  id={checkboxId}
+                  onCheckedChange={(checked) => {
+                    toggleRole(role.name, checked === true);
+                  }}
+                />
+
+                <Label htmlFor={checkboxId}>{role.name}</Label>
+              </div>
+            );
+          })}
+        </div>
+
+        <Dialog.Footer>
+          <Dialog.Close disabled={isPending} asChild>
+            <Button variant="outlined">{t("buttons.cancel")}</Button>
+          </Dialog.Close>
+
+          <Button disabled={isLoading || isError} isLoading={isPending} onClick={handleSave}>
+            {t("roles.edit.submit")}
+          </Button>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog.Root>
+  );
+};

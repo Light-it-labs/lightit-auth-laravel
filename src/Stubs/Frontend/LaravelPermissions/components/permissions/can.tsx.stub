@@ -1,0 +1,13 @@
+import type { PropsWithChildren } from "react";
+
+import { usePermissions } from "@/services/permissions/actions";
+
+type CanProps = PropsWithChildren<{
+  permission: string;
+}>;
+
+export const Can = ({ children, permission }: CanProps) => {
+  const { hasPermission } = usePermissions();
+
+  return hasPermission(permission) ? children : null;
+};

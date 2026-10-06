@@ -109,6 +109,34 @@ final class FrontendPackageManifest
         return self::ADD_COMMANDS[$this->packageManager($root)];
     }
 
+    /**
+     * The install line for the dependencies in `$required` that `package.json` lacks, as
+     * Markdown for a generated checklist.
+     *
+     * @param list<string> $required
+     */
+    public function dependencyReport(string $root, array $required): string
+    {
+        $installed = $this->dependencies($root);
+
+        $missing = array_values(array_filter(
+            $required,
+            static fn (string $dependency): bool => ! \array_key_exists($dependency, $installed),
+        ));
+
+        if ($missing === []) {
+            return FrontendStubTokens::defaults()['dependencyReport'];
+        }
+
+        return implode("\n", [
+            'Missing dependencies. Run:',
+            '',
+            '```sh',
+            $this->addCommand($root) . ' ' . implode(' ', $missing),
+            '```',
+        ]);
+    }
+
     public function majorVersion(string $constraint): ?int
     {
         $version = $this->normalizeVersion($constraint);

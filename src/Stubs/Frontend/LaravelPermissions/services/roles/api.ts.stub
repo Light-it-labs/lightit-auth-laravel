@@ -1,0 +1,24 @@
+import { z } from "zod";
+
+import { api } from "@/config/api";
+import { parsePaginatedResponse } from "@/services/schemas";
+import { roleSchema, userWithRolesSchema } from "./schemas";
+import type { SyncUserRolesPayload } from "./types";
+
+export const getRoles = async () => {
+  const response = await api.get("roles");
+
+  return z.array(roleSchema).parse(response.data.data);
+};
+
+export const getUsersWithRoles = async (page: number) => {
+  const response = await api.get("roles/users", { params: { page } });
+
+  return parsePaginatedResponse(z.array(userWithRolesSchema), response.data);
+};
+
+export const syncUserRoles = async ({ roles, userId }: SyncUserRolesPayload) => {
+  const response = await api.put(`users/${userId}/roles`, { roles });
+
+  return userWithRolesSchema.parse(response.data.data);
+};

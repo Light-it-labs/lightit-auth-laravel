@@ -6,6 +6,7 @@ namespace Lightit\Shared\Roles;
 
 use Illuminate\Support\Collection;
 use Lightit\Shared\Permissions\PermissionManagement;
+use Lightit\Shared\Permissions\RolePermissions;
 use Lightit\Shared\Permissions\UserPermissions;
 
 class RoleManagement
@@ -19,13 +20,16 @@ class RoleManagement
     public static function listFor(string $roleIdentifier): array
     {
         return match ($roleIdentifier) {
-            self::ROLE_SUPER_ADMIN => PermissionManagement::getPermissions()->keys()->toArray(),
-            self::ROLE_ADMIN => UserPermissions::all(),
+            self::ROLE_SUPER_ADMIN => PermissionManagement::getPermissions()->keys()->all(),
+            self::ROLE_ADMIN => [...UserPermissions::all(), RolePermissions::MANAGE],
             self::ROLE_USER => [],
             default => [],
         };
     }
 
+    /**
+     * @return Collection<int, string>
+     */
     public static function getRoles(): Collection
     {
         return collect([

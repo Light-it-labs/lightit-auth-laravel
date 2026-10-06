@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\Domain\Actions;
+
+use Illuminate\Database\Eloquent\Collection;
+use Lightit\Users\Domain\Models\User;
+use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Role;
+
+final readonly class ListRolesAction
+{
+    /**
+     * @return Collection<int, Role>
+     */
+    public function execute(): Collection
+    {
+        return Role::query()
+            ->where('guard_name', Guard::getDefaultName(User::class))
+            ->orderBy('name')
+            ->get();
+    }
+}

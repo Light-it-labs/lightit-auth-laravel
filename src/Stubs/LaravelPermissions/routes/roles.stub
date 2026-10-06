@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Roles\App\Controllers\ListRolesController;
+use Lightit\Roles\App\Controllers\ListUsersWithRolesController;
+use Lightit\Roles\App\Controllers\ShowCurrentUserPermissionsController;
+use Lightit\Roles\App\Controllers\SyncUserRolesController;
+use Lightit\Shared\Permissions\RolePermissions;
+
+Route::middleware(['auth:sanctum', 'throttle:60,1'])
+    ->group(static function (): void {
+        Route::get('me/permissions', ShowCurrentUserPermissionsController::class);
+
+        Route::prefix('roles')
+            ->group(static function (): void {
+                Route::get('/', ListRolesController::class)->can(RolePermissions::MANAGE);
+                Route::get('users', ListUsersWithRolesController::class)->can(RolePermissions::MANAGE);
+            });
+
+        Route::put('users/{user}/roles', SyncUserRolesController::class)
+            ->whereNumber('user')
+            ->can(RolePermissions::MANAGE);
+    });

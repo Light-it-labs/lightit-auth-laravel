@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class SuperAdminRoleChangeForbiddenException extends HttpException
+{
+    public function __construct()
+    {
+        $this->status = 403;
+        $this->errorCode = 'super_admin_role_change_forbidden';
+
+        parent::__construct('Only a super admin can grant or revoke the super admin role.');
+    }
+}

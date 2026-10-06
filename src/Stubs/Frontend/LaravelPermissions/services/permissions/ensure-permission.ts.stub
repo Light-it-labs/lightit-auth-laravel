@@ -1,0 +1,19 @@
+import { redirect } from "@tanstack/react-router";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { currentPermissionsQuery, hasPermission } from "./actions";
+
+export const ensurePermission = async (permission: string) => {
+  const user = await queryClient.ensureQueryData(currentUserQuery);
+
+  if (!user) {
+    throw redirect({ to: "/login" });
+  }
+
+  const current = await queryClient.fetchQuery(currentPermissionsQuery(user.id));
+
+  if (!hasPermission(current, permission)) {
+    throw redirect({ to: "/" });
+  }
+};

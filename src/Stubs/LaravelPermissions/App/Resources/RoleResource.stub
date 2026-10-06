@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\App\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Spatie\Permission\Models\Role;
+
+/**
+ * @mixin Role
+ */
+final class RoleResource extends JsonResource
+{
+    /**
+     * @return array{id: int, name: string}
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => (int) $this->id,
+            'name' => $this->name,
+        ];
+    }
+}

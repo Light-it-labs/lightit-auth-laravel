@@ -1,0 +1,22 @@
+import { createQueryKeys } from "@lukemorales/query-key-factory";
+
+import { getRoles, getUsersWithRoles, syncUserRoles } from "./api";
+
+export const queries = createQueryKeys("roles", {
+  list: {
+    queryKey: null,
+    queryFn: () => {
+      return getRoles();
+    },
+  },
+  users: (page: number) => {
+    return {
+      queryKey: [page],
+      queryFn: () => {
+        return getUsersWithRoles(page);
+      },
+    };
+  },
+});
+
+export const mutations = { syncUserRoles };

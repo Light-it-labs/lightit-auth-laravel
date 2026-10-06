@@ -11,13 +11,13 @@ use Spatie\Permission\PermissionRegistrar;
 
 class RoleSeeder extends Seeder
 {
-    public function run(): void
+    public function run(PermissionRegistrar $permissionRegistrar): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $permissionRegistrar->forgetCachedPermissions();
 
         $this->call(PermissionSeeder::class);
 
-        RoleManagement::getRoles()->each(function (string $roleName) {
+        RoleManagement::getRoles()->each(function (string $roleName): void {
             $role = Role::findOrCreate($roleName);
             $permissions = RoleManagement::listFor($roleName);
             $role->syncPermissions($permissions);

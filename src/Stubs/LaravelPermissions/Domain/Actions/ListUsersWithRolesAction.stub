@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\Domain\Actions;
+
+use Illuminate\Pagination\LengthAwarePaginator;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class ListUsersWithRolesAction
+{
+    /**
+     * @return LengthAwarePaginator<int, User>
+     */
+    public function execute(): LengthAwarePaginator
+    {
+        return User::query()
+            ->with('roles')
+            ->orderBy('id')
+            ->paginate();
+    }
+}

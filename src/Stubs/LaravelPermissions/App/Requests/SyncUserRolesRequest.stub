@@ -1,0 +1,81 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\App\Requests;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Container\Attributes\RouteParameter;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Lightit\Roles\Domain\Actions\SyncUserRolesAction;
+use Lightit\Roles\Domain\Exceptions\RoleAssignmentForbiddenException;
+use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
+use Lightit\Users\Domain\Models\User;
+use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Role;
+
+final class SyncUserRolesRequest extends FormRequest
+{
+    public const string ROLES = 'roles';
+
+    /**
+     * @var Collection<int, Role>|null
+     */
+    private Collection|null $guardRoles = null;
+
+    /**
+     * An early 403 before the action's transaction; SyncUserRolesAction checks again under its lock.
+     *
+     * @throws SuperAdminRoleChangeForbiddenException
+     * @throws RoleAssignmentForbiddenException
+     */
+    public function authorize(
+        #[CurrentUser]
+        User $actor,
+        #[RouteParameter('user')]
+        User $user,
+        SyncUserRolesAction $syncUserRolesAction,
+    ): bool {
+        $syncUserRolesAction->ensureActorMayChange($actor, $user->roles, $this->roles());
+
+        return true;
+    }
+
+    /**
+     * Role names are compared in PHP, never by the database: a case-insensitive collation
+     * (MySQL's default) would let `Super-Admin` match `super-admin`.
+     */
+    public function rules(): array
+    {
+        return [
+            self::ROLES => ['present', 'array'],
+            self::ROLES . '.*' => ['string', 'distinct', Rule::in($this->guardRoles()->pluck('name')->all())],
+        ];
+    }
+
+    /**
+     * The requested roles, matched by exact name; names that don't match are rejected by rules().
+     *
+     * @return Collection<int, Role>
+     */
+    public function roles(): Collection
+    {
+        $requestedNames = array_filter($this->collect(self::ROLES)->all(), is_string(...));
+
+        return $this->guardRoles()
+            ->filter(static fn (Role $role): bool => in_array($role->name, $requestedNames, true))
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, Role>
+     */
+    private function guardRoles(): Collection
+    {
+        return $this->guardRoles ??= Role::query()
+            ->where('guard_name', Guard::getDefaultName(User::class))
+            ->get();
+    }
+}

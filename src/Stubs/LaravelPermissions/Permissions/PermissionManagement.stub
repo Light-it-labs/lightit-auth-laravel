@@ -21,8 +21,14 @@ class PermissionManagement
         UserPermissions::DELETE => [
             'name' => UserPermissions::DELETE,
         ],
+        RolePermissions::MANAGE => [
+            'name' => RolePermissions::MANAGE,
+        ],
     ];
 
+    /**
+     * @return Collection<string, array{name: string}>
+     */
     public static function getPermissions(): Collection
     {
         return collect(self::PERMISSIONS);
