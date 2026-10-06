@@ -20,7 +20,7 @@ final readonly class SyncUserRolesAction
     {
         return DB::transaction(function () use ($user, $roleNames): User {
             if ($this->removesSuperAdmin($user, $roleNames) && $this->lockedSuperAdminCount() <= 1) {
-                throw new LastSuperAdminException();
+                throw new LastSuperAdminException;
             }
 
             $user->syncRoles($roleNames);
@@ -45,10 +45,12 @@ final readonly class SyncUserRolesAction
      */
     private function lockedSuperAdminCount(): int
     {
-        return User::query()
-            ->role(RoleManagement::ROLE_SUPER_ADMIN)
-            ->lockForUpdate()
-            ->pluck('id')
-            ->count();
+        return count(
+            User::query()
+                ->role(RoleManagement::ROLE_SUPER_ADMIN)
+                ->lockForUpdate()
+                ->pluck('id')
+                ->all(),
+        );
     }
 }

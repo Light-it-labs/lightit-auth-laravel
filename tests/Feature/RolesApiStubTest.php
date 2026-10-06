@@ -96,7 +96,7 @@ describe('generated roles API', function (): void {
 
         (include __DIR__ . '/../../vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub')->up();
 
-        (new RoleSeeder())->setContainer($this->app)->run();
+        (new RoleSeeder())->setContainer($this->app)->__invoke();
 
         // The boilerplate's ExceptionHandler: its HttpException subclasses render as the error
         // envelope, and a failed authorization (AccessDeniedHttpException once Laravel prepares it)

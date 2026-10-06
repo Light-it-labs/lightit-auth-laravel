@@ -26,6 +26,9 @@ class PermissionManagement
         ],
     ];
 
+    /**
+     * @return Collection<string, array{name: string}>
+     */
     public static function getPermissions(): Collection
     {
         return collect(self::PERMISSIONS);

@@ -18,9 +18,14 @@ final class CurrentUserPermissionsResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $roles = array_values(array_filter($this->getRoleNames()->all(), is_string(...)));
+        $permissions = array_values(array_filter($this->getAllPermissions()->pluck('name')->all(), is_string(...)));
+        sort($roles);
+        sort($permissions);
+
         return [
-            'roles' => $this->getRoleNames()->sort()->values()->all(),
-            'permissions' => $this->getAllPermissions()->pluck('name')->sort()->values()->all(),
+            'roles' => $roles,
+            'permissions' => $permissions,
         ];
     }
 }

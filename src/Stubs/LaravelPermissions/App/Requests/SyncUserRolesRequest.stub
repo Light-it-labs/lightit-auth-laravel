@@ -55,9 +55,6 @@ final class SyncUserRolesRequest extends FormRequest
      */
     public function roleNames(): array
     {
-        return $this->collect(self::ROLES)
-            ->filter(static fn (mixed $role): bool => is_string($role))
-            ->values()
-            ->all();
+        return array_values(array_filter($this->collect(self::ROLES)->all(), is_string(...)));
     }
 }
