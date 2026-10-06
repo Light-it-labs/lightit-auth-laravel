@@ -12,7 +12,7 @@ final readonly class PasskeyChallengeStore
 {
     private const string REGISTRATION_KEY_PREFIX = 'passkeys:registration:';
 
-    private const int LOCK_SECONDS = 10;
+    private const int LOCK_SECONDS = 3;
 
     public function putRegistration(User $user, string $options): void
     {
