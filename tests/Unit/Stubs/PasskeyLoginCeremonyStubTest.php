@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\LockRecordingGrammar;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
@@ -59,7 +60,8 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
         StubLoader::migratePasskeysTable();
 
         $this->user = User::make('jane.doe@example.test', 'Jane Doe');
-        $this->service = new PasskeyCeremonyService(Mockery::spy(ExceptionHandler::class));
+        $this->exceptionHandler = Mockery::spy(ExceptionHandler::class);
+        $this->service = new PasskeyCeremonyService($this->exceptionHandler);
         $this->authenticator = new FakeAuthenticator();
 
         $challengeStore = new PasskeyChallengeStore();
@@ -111,6 +113,22 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
 
         expect($exception->statusCode())->toBe(422)
             ->and($exception->errorCode())->toBe('passkey_login_failed');
+    });
+
+    it('logs a rejected assertion as a warning with the reason and no credential data', function (): void {
+        $this->passkey->sign_count = 5;
+        $this->passkey->saveOrFail();
+        Log::spy();
+
+        rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, ($this->signedAssertion)(5)));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $message === 'passkey sign-in rejected'
+                && array_keys($context) === ['reason', 'message']
+                && is_a($context['reason'], Throwable::class, true)
+                && is_string($context['message']),
+        );
+        $this->exceptionHandler->shouldNotHaveReceived('report');
     });
 
     it('turns a credential with malformed UTF-8 into the 422 ceremony rejection, not a 500', function (): void {
