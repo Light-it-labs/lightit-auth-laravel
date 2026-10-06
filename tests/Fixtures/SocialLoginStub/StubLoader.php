@@ -16,13 +16,28 @@ final class StubLoader
 {
     private const FIXTURE_NAMESPACE = 'Lightitlabs\Tests\Fixtures\SocialLoginStub';
 
+    /**
+     * @var array<string, true>
+     */
+    private static array $loaded = [];
+
     public static function load(string ...$relativePaths): void
     {
         foreach ($relativePaths as $relativePath) {
-            $tempFile = sys_get_temp_dir() . '/social-login-stub-' . md5($relativePath) . '.php';
+            if (isset(self::$loaded[$relativePath])) {
+                continue;
+            }
+
+            $tempFile = sys_get_temp_dir() . '/social-login-stub-' . bin2hex(random_bytes(8)) . '.php';
             file_put_contents($tempFile, self::render($relativePath));
 
-            require_once $tempFile;
+            try {
+                require $tempFile;
+            } finally {
+                unlink($tempFile);
+            }
+
+            self::$loaded[$relativePath] = true;
         }
     }
 
