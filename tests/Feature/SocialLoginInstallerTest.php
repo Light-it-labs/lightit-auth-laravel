@@ -110,6 +110,25 @@ describe('SocialLoginInstaller', function (): void {
         ))->toBe(1);
     });
 
+    it('aborts the setup when routes/api.php is left in an inconsistent state', function (): void {
+        chmod($this->tempBase . '/routes/api.php', 0444);
+        set_error_handler(static fn (): bool => true);
+
+        try {
+            expect(fn () => $this->artisan('social-login-installer-fake')->run())
+                ->toThrow(
+                    SetupAbortedException::class,
+                    "routes/api.php was left in an inconsistent state while adding require __DIR__ . '/social-login.php';"
+                );
+        } finally {
+            restore_error_handler();
+            chmod($this->tempBase . '/routes/api.php', 0644);
+        }
+    })->skip(
+        fn (): bool => ! function_exists('posix_getuid') || posix_getuid() === 0,
+        'root bypasses file permissions'
+    );
+
     it('aborts before writing anything when composer cannot require php-jwt', function (): void {
         file_put_contents($this->tempBase . '/composer.json', '{ not json');
 

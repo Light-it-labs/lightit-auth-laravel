@@ -77,6 +77,9 @@ final class SocialLoginInstaller implements AuthInstallerInterface
         $this->composerInstaller->printSuccess('Social login installed successfully!');
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function writeFiles(): void
     {
         $this->createAuthFiles();
@@ -122,6 +125,9 @@ final class SocialLoginInstaller implements AuthInstallerInterface
         $this->copy(self::stubDirectory() . '/config/social-login.stub', self::CONFIG_FILE);
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     private function registerRoutes(): void
     {
         $this->composerInstaller->printStep(5, self::TOTAL_STEPS, 'Registering routes');
@@ -147,9 +153,9 @@ final class SocialLoginInstaller implements AuthInstallerInterface
             RouteRegistrationOutcome::Failed => $this->command->warn(
                 "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. Please add it manually.'
             ),
-            RouteRegistrationOutcome::Corrupted => $this->command->error(
-                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
-                . 'Please inspect the file.'
+            RouteRegistrationOutcome::Corrupted => throw SetupAbortedException::corruptedRouteFile(
+                self::API_ROUTES_PATH,
+                $requireStatement,
             ),
         };
     }
