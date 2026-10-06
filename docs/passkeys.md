@@ -155,8 +155,8 @@ start replaces the first, so only one ceremony can succeed, and only if the newe
 first. Otherwise the older tab fails verification against the newer challenge (a `422`) and
 spends it, so the newer tab then gets a `410`.
 A rejected ceremony (the `422`) is logged at `warning` level as `passkey registration rejected`
-with the exception class and message, never the credential, so a wrong `PASSKEYS_RP_ID` or
-origin shows up in the logs.
+(or `passkey sign-in rejected` for `passkey_login_failed`) with the exception class and message,
+never the credential, so a wrong `PASSKEYS_RP_ID` or origin shows up in the logs.
 
 ### Account page
 

@@ -228,7 +228,8 @@ final readonly class PasskeyCeremonyService
 
     /**
      * On malformed input the library throws TypeError, RangeException, ValueError and
-     * serializer exceptions besides its own, so all of them are a rejected ceremony.
+     * serializer exceptions besides its own, so all of them are a rejected ceremony,
+     * logged as a warning like a rejected registration.
      *
      * @template T
      *
@@ -242,7 +243,12 @@ final readonly class PasskeyCeremonyService
     {
         try {
             return $step();
-        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError) {
+        } catch (WebauthnException|SerializerException|InvalidArgumentException|RangeException|TypeError|ValueError $exception) {
+            Log::warning('passkey sign-in rejected', [
+                'reason' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
             throw new PasskeyLoginFailedException;
         } catch (Throwable $throwable) {
             $this->exceptionHandler->report($throwable);
