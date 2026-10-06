@@ -10,7 +10,7 @@ namespace Lightitlabs\Tools;
  */
 final class MigrationLocator
 {
-    public function find(string $migrationsDirectory, string $migrationName): ?string
+    public function find(string $migrationsDirectory, string $migrationName): string|null
     {
         $matches = glob("{$migrationsDirectory}/*_{$migrationName}.php");
 

@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\Log;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\Passkey;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyAlreadyRegisteredException;
-use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeExpiredException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeExpiredException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyRegistrationFailedException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StartPasskeyRegistrationAction;
@@ -267,7 +267,7 @@ describe('PasskeyCeremonyService stub without its relying party configured', fun
         $this->service = new PasskeyCeremonyService(Mockery::spy(ExceptionHandler::class));
     });
 
-    it('refuses to issue options without PASSKEYS_RP_ID', function (?string $relyingPartyId): void {
+    it('refuses to issue options without PASSKEYS_RP_ID', function (string|null $relyingPartyId): void {
         Config::set('passkeys.relying_party.id', $relyingPartyId);
 
         expect(fn () => $this->service->creationOptions($this->user))
@@ -287,7 +287,7 @@ describe('PasskeyCeremonyService stub without its relying party configured', fun
         ))->toThrow(RuntimeException::class, 'Set PASSKEYS_ALLOWED_ORIGINS');
     });
 
-    it('refuses to issue options without PASSKEYS_USER_HANDLE_SECRET', function (?string $secret): void {
+    it('refuses to issue options without PASSKEYS_USER_HANDLE_SECRET', function (string|null $secret): void {
         Config::set('passkeys.user_handle_secret', $secret);
 
         expect(fn () => $this->service->creationOptions($this->user))

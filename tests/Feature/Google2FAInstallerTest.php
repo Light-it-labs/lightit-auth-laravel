@@ -163,7 +163,9 @@ describe('Google2FAInstaller', function (): void {
 
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
         $this->artisan('google2fa-installer-fake')
-            ->expectsOutputToContain('Skipped database/migrations/2031_05_05_120000_add_two_factor_authentication_columns.php')
+            ->expectsOutputToContain(
+                'Skipped database/migrations/2031_05_05_120000_add_two_factor_authentication_columns.php'
+            )
             ->assertSuccessful();
 
         expect(glob($this->tempBase . '/database/migrations/*_add_two_factor_authentication_columns.php'))

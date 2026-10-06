@@ -86,7 +86,10 @@ describe('PasskeysInstaller', function (): void {
 
     it('skips the migration when the app already has it under another timestamp', function (): void {
         mkdir($this->tempBase . '/database/migrations', 0755, true);
-        file_put_contents($this->tempBase . '/database/migrations/2031_05_05_120000_create_passkeys_table.php', '<?php');
+        file_put_contents(
+            $this->tempBase . '/database/migrations/2031_05_05_120000_create_passkeys_table.php',
+            '<?php'
+        );
 
         $this->artisan('passkeys-installer-fake')
             ->expectsOutputToContain('Skipped database/migrations/2031_05_05_120000_create_passkeys_table.php')
