@@ -39,8 +39,9 @@ again never overwrites it, and warns you while `User` still misses `HasRoles`.
 ### How it works
 
 1. The frontend reads `GET /me/permissions` per signed-in user and caches it like any query (two
-   minutes fresh in the template, so a changed role shows up within that). `<Can>`,
-   `usePermissions()` and `ensurePermission()` answer from that list.
+   minutes fresh in the template, so a changed role shows up within that). `<Can>` and
+   `usePermissions()` answer from that list; `ensurePermission()` fetches it again first when it
+   is stale.
 2. `/roles` runs `ensurePermission(PERMISSIONS.manageRoles)` in `beforeLoad`: without
    `roles.manage` the user is sent to `/`, even when they type the URL.
 3. The page lists users with their roles and edits them in a dialog that sends

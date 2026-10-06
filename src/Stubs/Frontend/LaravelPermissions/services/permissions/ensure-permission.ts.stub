@@ -11,7 +11,7 @@ export const ensurePermission = async (permission: string) => {
     throw redirect({ to: "/login" });
   }
 
-  const current = await queryClient.ensureQueryData(currentPermissionsQuery(user.id));
+  const current = await queryClient.fetchQuery(currentPermissionsQuery(user.id));
 
   if (!hasPermission(current, permission)) {
     throw redirect({ to: "/" });
