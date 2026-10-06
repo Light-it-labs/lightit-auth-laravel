@@ -18,6 +18,7 @@ use Lightitlabs\Tests\Fixtures\RolesApiStub\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionServiceProvider;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 StubLoader::load(
     'Permissions/UserPermissions.stub',
@@ -97,10 +98,20 @@ describe('generated roles API', function (): void {
 
         (new RoleSeeder())->setContainer($this->app)->run();
 
-        $this->app->make(ExceptionHandler::class)->renderable(
+        // The boilerplate's ExceptionHandler: its HttpException subclasses render as the error
+        // envelope, and a failed authorization (AccessDeniedHttpException once Laravel prepares it)
+        // becomes ForbiddenException (code `forbidden`).
+        $handler = $this->app->make(ExceptionHandler::class);
+        $handler->renderable(
             static fn (HttpException $exception) => response()->json(
                 ['error' => ['code' => $exception->errorCode(), 'message' => $exception->getMessage()]],
                 $exception->getStatusCode(),
+            ),
+        );
+        $handler->renderable(
+            static fn (AccessDeniedHttpException $exception) => response()->json(
+                ['error' => ['code' => 'forbidden', 'message' => null]],
+                403,
             ),
         );
 
@@ -149,9 +160,11 @@ describe('generated roles API', function (): void {
 
         $this->actingAs(rolesUser('user'));
 
-        $this->getJson('/api/roles')->assertForbidden();
-        $this->getJson('/api/roles/users')->assertForbidden();
-        $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['admin']])->assertForbidden();
+        $this->getJson('/api/roles')->assertForbidden()->assertJsonPath('error.code', 'forbidden');
+        $this->getJson('/api/roles/users')->assertForbidden()->assertJsonPath('error.code', 'forbidden');
+        $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['admin']])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'forbidden');
 
         expect($target->fresh()?->getRoleNames()->all())->toBe(['user']);
     });

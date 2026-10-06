@@ -18,19 +18,23 @@ final class SyncUserRolesRequest extends FormRequest
 {
     public const string ROLES = 'roles';
 
+    /**
+     * @throws SuperAdminRoleChangeForbiddenException
+     */
     public function authorize(
         #[CurrentUser]
         User $actor,
         #[RouteParameter('user')]
         User $user,
     ): bool {
-        if ($actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
-            return true;
+        $changesSuperAdmin = $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN)
+            !== in_array(RoleManagement::ROLE_SUPER_ADMIN, $this->roleNames(), true);
+
+        if ($changesSuperAdmin && ! $actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
+            throw new SuperAdminRoleChangeForbiddenException;
         }
 
-        $keepsSuperAdmin = in_array(RoleManagement::ROLE_SUPER_ADMIN, $this->roleNames(), true);
-
-        return $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN) === $keepsSuperAdmin;
+        return true;
     }
 
     public function rules(): array
@@ -55,11 +59,5 @@ final class SyncUserRolesRequest extends FormRequest
             ->filter(static fn (mixed $role): bool => is_string($role))
             ->values()
             ->all();
-    }
-
-    #[\Override]
-    protected function failedAuthorization(): never
-    {
-        throw new SuperAdminRoleChangeForbiddenException();
     }
 }

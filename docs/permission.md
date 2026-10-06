@@ -91,15 +91,15 @@ Every success body is wrapped in `data`.
 | `PUT users/{user}/roles` | `roles.manage` | `roles: string[]` (may be empty) | `{ id, name, email_address, roles }` | `401`, `403`, `404`, `409` `last_super_admin`, `422`, `429` |
 
 - `roles` replaces the user's roles; each name must exist for the app's guard.
-- A missing `roles.manage` is spatie's `403` (`{ message }`). A non-super admin who tries to grant
-  or revoke `super-admin` gets `403` with `error.code` `super_admin_role_change_forbidden`.
+- A missing `roles.manage` is `403` with `error.code` `forbidden`. A non-super admin who tries to
+  grant or revoke `super-admin` gets `403` with `error.code` `super_admin_role_change_forbidden`.
 - `GET roles/users` eager-loads the roles: the same number of queries whatever the page size.
 
 ### Security notes
 
-- Authorization is enforced by the backend: spatie's `PermissionMiddleware` on the routes and
-  `SyncUserRolesRequest::authorize()` for the super admin rule. `<Can>` and `ensurePermission()`
-  are UX only.
+- Authorization is enforced by the backend: `->can(RolePermissions::MANAGE)` on the routes, as the
+  boilerplate does for its own, and `SyncUserRolesRequest::authorize()` for the super admin rule.
+  `<Can>` and `ensurePermission()` are UX only.
 - Only a super admin can grant or revoke `super-admin`, so an admin with `roles.manage` can't
   promote themselves.
 - The last super admin can't lose the role, not even by editing their own roles. The check locks

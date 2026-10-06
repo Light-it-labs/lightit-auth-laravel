@@ -8,20 +8,18 @@ use Lightit\Roles\App\Controllers\ListUsersWithRolesController;
 use Lightit\Roles\App\Controllers\ShowCurrentUserPermissionsController;
 use Lightit\Roles\App\Controllers\SyncUserRolesController;
 use Lightit\Shared\Permissions\RolePermissions;
-use Spatie\Permission\Middleware\PermissionMiddleware;
 
 Route::middleware(['auth:sanctum', 'throttle:60,1'])
     ->group(static function (): void {
         Route::get('me/permissions', ShowCurrentUserPermissionsController::class);
 
-        Route::middleware(PermissionMiddleware::using(RolePermissions::MANAGE))
+        Route::prefix('roles')
             ->group(static function (): void {
-                Route::prefix('roles')
-                    ->group(static function (): void {
-                        Route::get('/', ListRolesController::class);
-                        Route::get('users', ListUsersWithRolesController::class);
-                    });
-
-                Route::put('users/{user}/roles', SyncUserRolesController::class)->whereNumber('user');
+                Route::get('/', ListRolesController::class)->can(RolePermissions::MANAGE);
+                Route::get('users', ListUsersWithRolesController::class)->can(RolePermissions::MANAGE);
             });
+
+        Route::put('users/{user}/roles', SyncUserRolesController::class)
+            ->whereNumber('user')
+            ->can(RolePermissions::MANAGE);
     });
