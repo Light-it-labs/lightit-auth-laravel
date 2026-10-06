@@ -21,6 +21,9 @@ class PermissionManagement
         UserPermissions::DELETE => [
             'name' => UserPermissions::DELETE,
         ],
+        RolePermissions::MANAGE => [
+            'name' => RolePermissions::MANAGE,
+        ],
     ];
 
     public static function getPermissions(): Collection

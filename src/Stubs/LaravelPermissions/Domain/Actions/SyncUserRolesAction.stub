@@ -1,0 +1,54 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\Domain\Actions;
+
+use Illuminate\Support\Facades\DB;
+use Lightit\Roles\Domain\Exceptions\LastSuperAdminException;
+use Lightit\Shared\Roles\RoleManagement;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class SyncUserRolesAction
+{
+    /**
+     * @param list<string> $roleNames
+     *
+     * @throws LastSuperAdminException
+     */
+    public function execute(User $user, array $roleNames): User
+    {
+        return DB::transaction(function () use ($user, $roleNames): User {
+            if ($this->removesSuperAdmin($user, $roleNames) && $this->lockedSuperAdminCount() <= 1) {
+                throw new LastSuperAdminException();
+            }
+
+            $user->syncRoles($roleNames);
+
+            return $user->load('roles');
+        });
+    }
+
+    /**
+     * @param list<string> $roleNames
+     */
+    private function removesSuperAdmin(User $user, array $roleNames): bool
+    {
+        return $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN)
+            && ! in_array(RoleManagement::ROLE_SUPER_ADMIN, $roleNames, true);
+    }
+
+    /**
+     * Locks every super admin row, so two requests demoting the last two super admins
+     * at the same time can't both pass this check. Counted after `pluck()`: PostgreSQL
+     * rejects `FOR UPDATE` on an aggregate query.
+     */
+    private function lockedSuperAdminCount(): int
+    {
+        return User::query()
+            ->role(RoleManagement::ROLE_SUPER_ADMIN)
+            ->lockForUpdate()
+            ->pluck('id')
+            ->count();
+    }
+}

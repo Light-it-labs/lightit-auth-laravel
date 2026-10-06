@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Roles\App\Resources\RoleResource;
+use Lightit\Roles\Domain\Actions\ListRolesAction;
+
+final readonly class ListRolesController
+{
+    public function __invoke(ListRolesAction $action): JsonResponse
+    {
+        return RoleResource::collection($action->execute())->response();
+    }
+}

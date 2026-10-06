@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\App\Requests;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Container\Attributes\RouteParameter;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Validation\Rule;
+use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
+use Lightit\Shared\Roles\RoleManagement;
+use Lightit\Users\Domain\Models\User;
+use Spatie\Permission\Guard;
+
+final class SyncUserRolesRequest extends FormRequest
+{
+    public const string ROLES = 'roles';
+
+    public function authorize(
+        #[CurrentUser]
+        User $actor,
+        #[RouteParameter('user')]
+        User $user,
+    ): bool {
+        if ($actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
+            return true;
+        }
+
+        $keepsSuperAdmin = in_array(RoleManagement::ROLE_SUPER_ADMIN, $this->roleNames(), true);
+
+        return $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN) === $keepsSuperAdmin;
+    }
+
+    public function rules(): array
+    {
+        return [
+            self::ROLES => ['present', 'array'],
+            self::ROLES . '.*' => [
+                'string',
+                'distinct',
+                Rule::exists(Config::string('permission.table_names.roles'), 'name')
+                    ->where('guard_name', Guard::getDefaultName(User::class)),
+            ],
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function roleNames(): array
+    {
+        return $this->collect(self::ROLES)
+            ->filter(static fn (mixed $role): bool => is_string($role))
+            ->values()
+            ->all();
+    }
+
+    #[\Override]
+    protected function failedAuthorization(): never
+    {
+        throw new SuperAdminRoleChangeForbiddenException();
+    }
+}

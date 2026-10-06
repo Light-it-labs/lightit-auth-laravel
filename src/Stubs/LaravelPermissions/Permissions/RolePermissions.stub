@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Shared\Permissions;
+
+class RolePermissions
+{
+    public const MANAGE = 'roles.manage';
+}

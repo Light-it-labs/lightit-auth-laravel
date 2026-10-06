@@ -6,6 +6,7 @@ namespace Lightit\Shared\Roles;
 
 use Illuminate\Support\Collection;
 use Lightit\Shared\Permissions\PermissionManagement;
+use Lightit\Shared\Permissions\RolePermissions;
 use Lightit\Shared\Permissions\UserPermissions;
 
 class RoleManagement
@@ -20,7 +21,7 @@ class RoleManagement
     {
         return match ($roleIdentifier) {
             self::ROLE_SUPER_ADMIN => PermissionManagement::getPermissions()->keys()->toArray(),
-            self::ROLE_ADMIN => UserPermissions::all(),
+            self::ROLE_ADMIN => [...UserPermissions::all(), RolePermissions::MANAGE],
             self::ROLE_USER => [],
             default => [],
         };

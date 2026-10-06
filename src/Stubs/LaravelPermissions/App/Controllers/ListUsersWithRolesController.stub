@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Roles\App\Resources\UserWithRolesResource;
+use Lightit\Roles\Domain\Actions\ListUsersWithRolesAction;
+
+final readonly class ListUsersWithRolesController
+{
+    public function __invoke(ListUsersWithRolesAction $action): JsonResponse
+    {
+        return UserWithRolesResource::collection($action->execute())->response();
+    }
+}
