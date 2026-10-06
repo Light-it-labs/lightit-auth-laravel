@@ -155,6 +155,21 @@ describe('Google2FAInstaller', function (): void {
             ->toContain('\Lightit\Authentication\Domain\TwoFactorAuthenticatable`');
     });
 
+    it('skips the migration when the app already has it under another timestamp', function (): void {
+        file_put_contents(
+            $this->tempBase . '/database/migrations/2031_05_05_120000_add_two_factor_authentication_columns.php',
+            '<?php'
+        );
+
+        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
+        $this->artisan('google2fa-installer-fake')
+            ->expectsOutputToContain('Skipped database/migrations/2031_05_05_120000_add_two_factor_authentication_columns.php')
+            ->assertSuccessful();
+
+        expect(glob($this->tempBase . '/database/migrations/*_add_two_factor_authentication_columns.php'))
+            ->toHaveCount(1);
+    });
+
     it('reports Skipped instead of recreating any file on a second run', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
         $this->artisan('google2fa-installer-fake')->assertSuccessful();

@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Exceptions\SetupAbortedException;
+use Lightitlabs\Tools\MigrationLocator;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -27,7 +28,11 @@ final class PasskeysInstaller implements AuthInstallerInterface
 
     private const TODO_FILE = 'AUTH-PASSKEYS-TODO.md';
 
-    private const MIGRATION_FILE = 'database/migrations/2026_10_01_000000_create_passkeys_table.php';
+    private const MIGRATIONS_DIRECTORY = 'database/migrations';
+
+    private const MIGRATION_NAME = 'create_passkeys_table';
+
+    private const MIGRATION_FILE = self::MIGRATIONS_DIRECTORY . '/2026_10_01_000000_' . self::MIGRATION_NAME . '.php';
 
     private const CONFIG_FILE = 'config/passkeys.php';
 
@@ -65,6 +70,7 @@ final class PasskeysInstaller implements AuthInstallerInterface
         private readonly StubCopier $stubCopier,
         private readonly StubRenderer $stubRenderer = new StubRenderer(),
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
+        private readonly MigrationLocator $migrationLocator = new MigrationLocator(),
     ) {
     }
 
@@ -111,6 +117,14 @@ final class PasskeysInstaller implements AuthInstallerInterface
     private function copyMigration(): void
     {
         $this->composerInstaller->printStep(2, self::TOTAL_STEPS, 'Copying migration files');
+
+        $existing = $this->migrationLocator->find(base_path(self::MIGRATIONS_DIRECTORY), self::MIGRATION_NAME);
+
+        if ($existing !== null) {
+            $this->composerInstaller->printSkipped(self::MIGRATIONS_DIRECTORY . "/{$existing}");
+
+            return;
+        }
 
         $this->copy(self::stubDirectory() . '/database/migrations/create_passkeys_table.stub', self::MIGRATION_FILE);
     }
