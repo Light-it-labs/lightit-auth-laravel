@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Exceptions\SetupAbortedException;
+use Lightitlabs\Tools\MigrationLocator;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -27,7 +28,11 @@ final class SocialLoginInstaller implements AuthInstallerInterface
 
     private const TODO_FILE = 'AUTH-SOCIAL-TODO.md';
 
-    private const MIGRATION_FILE = 'database/migrations/2026_10_05_000000_create_social_accounts_table.php';
+    private const MIGRATIONS_DIRECTORY = 'database/migrations';
+
+    private const MIGRATION_NAME = 'create_social_accounts_table';
+
+    private const MIGRATION_FILE = self::MIGRATIONS_DIRECTORY . '/2026_10_05_000000_' . self::MIGRATION_NAME . '.php';
 
     private const CONFIG_FILE = 'config/social-login.php';
 
@@ -55,6 +60,7 @@ final class SocialLoginInstaller implements AuthInstallerInterface
         private readonly StubCopier $stubCopier,
         private readonly StubRenderer $stubRenderer = new StubRenderer(),
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
+        private readonly MigrationLocator $migrationLocator = new MigrationLocator(),
     ) {
     }
 
@@ -111,6 +117,14 @@ final class SocialLoginInstaller implements AuthInstallerInterface
     private function copyMigration(): void
     {
         $this->composerInstaller->printStep(3, self::TOTAL_STEPS, 'Copying migration files');
+
+        $existing = $this->migrationLocator->find(base_path(self::MIGRATIONS_DIRECTORY), self::MIGRATION_NAME);
+
+        if ($existing !== null) {
+            $this->composerInstaller->printSkipped(self::MIGRATIONS_DIRECTORY . "/{$existing}");
+
+            return;
+        }
 
         $this->copy(
             self::stubDirectory() . '/database/migrations/create_social_accounts_table.stub',
