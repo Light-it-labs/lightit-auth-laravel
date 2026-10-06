@@ -59,6 +59,41 @@ function rolesUser(string ...$roles): User
     return $user;
 }
 
+/**
+ * Rebuilds the roles table with `name` under SQLite's NOCASE collation, the way MySQL's default
+ * case-insensitive collation compares it.
+ */
+function compareRoleNamesCaseInsensitively(): void
+{
+    $table = config('permission.table_names.roles');
+    $definition = (string) DB::table('sqlite_master')
+        ->where('type', 'table')
+        ->where('name', $table)
+        ->value('sql');
+    $indexes = DB::table('sqlite_master')
+        ->where('type', 'index')
+        ->where('tbl_name', $table)
+        ->whereNotNull('sql')
+        ->pluck('sql');
+
+    Schema::withoutForeignKeyConstraints(static function () use ($table, $definition, $indexes): void {
+        DB::statement((string) preg_replace(
+            ['/^create table "' . $table . '"/i', '/"name" varchar not null/i'],
+            ['create table "' . $table . '_nocase"', '"name" varchar not null collate nocase'],
+            $definition,
+        ));
+        DB::statement("insert into \"{$table}_nocase\" select * from \"{$table}\"");
+        Schema::drop($table);
+        Schema::rename($table . '_nocase', $table);
+
+        foreach ($indexes as $index) {
+            DB::statement((string) $index);
+        }
+    });
+
+    expect(DB::table($table)->where('name', 'SUPER-ADMIN')->exists())->toBeTrue();
+}
+
 function checklistPhpLine(string $startsWith): string
 {
     $checklist = (string) file_get_contents(__DIR__ . '/../../src/Stubs/LaravelPermissions/AUTH-ROLES-TODO.md.stub');
@@ -247,6 +282,21 @@ describe('generated roles API', function (): void {
         'not a list' => [['roles' => 'admin']],
         'unknown role' => [['roles' => ['owner']]],
         'other guard' => [['roles' => ['auditor']]],
+    ]);
+
+    it('rejects a role name that differs only in case, even on a case-insensitive DB', function (array $roles): void {
+        compareRoleNamesCaseInsensitively();
+        $target = rolesUser('user');
+
+        $this->actingAs(rolesUser('admin'))
+            ->putJson("/api/users/{$target->id}/roles", ['roles' => $roles])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('roles.0');
+
+        expect($target->fresh()?->getRoleNames()->all())->toBe(['user']);
+    })->with([
+        'super admin' => [['Super-Admin']],
+        'admin' => [['ADMIN']],
     ]);
 
     it('answers 404 for a user id that is not a number', function (): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Lightit\Roles\Domain\Actions;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Lightit\Roles\Domain\Exceptions\LastSuperAdminException;
 use Lightit\Shared\Roles\RoleManagement;
@@ -14,30 +15,30 @@ use Spatie\Permission\Models\Role;
 final readonly class SyncUserRolesAction
 {
     /**
-     * @param list<string> $roleNames
+     * @param Collection<int, Role> $roles
      *
      * @throws LastSuperAdminException
      */
-    public function execute(User $user, array $roleNames): User
+    public function execute(User $user, Collection $roles): User
     {
-        return DB::transaction(function () use ($user, $roleNames): User {
-            if ($this->removesSuperAdmin($user, $roleNames) && $this->superAdminCountUnderLock() <= 1) {
+        return DB::transaction(function () use ($user, $roles): User {
+            if ($this->removesSuperAdmin($user, $roles) && $this->superAdminCountUnderLock() <= 1) {
                 throw new LastSuperAdminException;
             }
 
-            $user->syncRoles($roleNames);
+            $user->syncRoles($roles);
 
             return $user->load('roles');
         });
     }
 
     /**
-     * @param list<string> $roleNames
+     * @param Collection<int, Role> $roles
      */
-    private function removesSuperAdmin(User $user, array $roleNames): bool
+    private function removesSuperAdmin(User $user, Collection $roles): bool
     {
         return $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN)
-            && ! in_array(RoleManagement::ROLE_SUPER_ADMIN, $roleNames, true);
+            && $roles->doesntContain(static fn (Role $role): bool => $role->name === RoleManagement::ROLE_SUPER_ADMIN);
     }
 
     /**

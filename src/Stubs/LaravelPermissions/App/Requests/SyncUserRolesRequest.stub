@@ -6,8 +6,8 @@ namespace Lightit\Roles\App\Requests;
 
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Container\Attributes\RouteParameter;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\Rule;
 use Lightit\Roles\Domain\Exceptions\RoleAssignmentForbiddenException;
 use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
@@ -19,6 +19,11 @@ use Spatie\Permission\Models\Role;
 final class SyncUserRolesRequest extends FormRequest
 {
     public const string ROLES = 'roles';
+
+    /**
+     * @var Collection<int, Role>|null
+     */
+    private Collection|null $guardRoles = null;
 
     /**
      * Anyone with roles.manage (checked on the route) may change roles, but only a super admin
@@ -37,14 +42,11 @@ final class SyncUserRolesRequest extends FormRequest
             return true;
         }
 
-        $currentRoles = array_values(array_filter($user->getRoleNames()->all(), is_string(...)));
-        $requestedRoles = $this->roleNames();
-        $changedRoles = [
-            ...array_diff($currentRoles, $requestedRoles),
-            ...array_diff($requestedRoles, $currentRoles),
-        ];
+        $currentRoles = Role::query()->whereKey($user->roles()->allRelatedIds())->get();
+        $requestedRoles = $this->roles();
+        $changedRoles = $currentRoles->diff($requestedRoles)->merge($requestedRoles->diff($currentRoles));
 
-        if (in_array(RoleManagement::ROLE_SUPER_ADMIN, $changedRoles, true)) {
+        if ($changedRoles->contains(static fn (Role $role): bool => $role->name === RoleManagement::ROLE_SUPER_ADMIN)) {
             throw new SuperAdminRoleChangeForbiddenException;
         }
 
@@ -55,39 +57,51 @@ final class SyncUserRolesRequest extends FormRequest
         return true;
     }
 
+    /**
+     * Role names are compared in PHP, never by the database: a case-insensitive collation
+     * (MySQL's default) would let `Super-Admin` match `super-admin`.
+     */
     public function rules(): array
     {
         return [
             self::ROLES => ['present', 'array'],
-            self::ROLES . '.*' => [
-                'string',
-                'distinct',
-                Rule::exists(Config::string('permission.table_names.roles'), 'name')
-                    ->where('guard_name', Guard::getDefaultName(User::class)),
-            ],
+            self::ROLES . '.*' => ['string', 'distinct', Rule::in($this->guardRoles()->pluck('name')->all())],
         ];
     }
 
     /**
-     * @param list<string> $roleNames
+     * The requested roles, matched by exact name; names that don't match are rejected by rules().
+     *
+     * @return Collection<int, Role>
      */
-    private function holdsEveryPermissionOf(User $actor, array $roleNames): bool
+    public function roles(): Collection
+    {
+        $requestedNames = array_filter($this->collect(self::ROLES)->all(), is_string(...));
+
+        return $this->guardRoles()
+            ->filter(static fn (Role $role): bool => in_array($role->name, $requestedNames, true))
+            ->values();
+    }
+
+    /**
+     * @param Collection<int, Role> $roles
+     */
+    private function holdsEveryPermissionOf(User $actor, Collection $roles): bool
     {
         $actorPermissions = $actor->getAllPermissions()->pluck('name');
 
-        return Role::query()
-            ->whereIn('name', $roleNames)
-            ->where('guard_name', Guard::getDefaultName(User::class))
-            ->with('permissions')
-            ->get()
+        return $roles
+            ->load('permissions')
             ->every(static fn (Role $role): bool => $role->permissions->pluck('name')->diff($actorPermissions)->isEmpty());
     }
 
     /**
-     * @return list<string>
+     * @return Collection<int, Role>
      */
-    public function roleNames(): array
+    private function guardRoles(): Collection
     {
-        return array_values(array_filter($this->collect(self::ROLES)->all(), is_string(...)));
+        return $this->guardRoles ??= Role::query()
+            ->where('guard_name', Guard::getDefaultName(User::class))
+            ->get();
     }
 }

@@ -17,6 +17,6 @@ final readonly class SyncUserRolesController
         User $user,
         SyncUserRolesAction $action,
     ): JsonResponse {
-        return UserWithRolesResource::make($action->execute($user, $request->roleNames()))->response();
+        return UserWithRolesResource::make($action->execute($user, $request->roles()))->response();
     }
 }
