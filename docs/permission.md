@@ -28,7 +28,7 @@ What it cannot do for you is in two checklists. **The steps live there, not on t
 
 | File | Where | What it lists |
 | --- | --- | --- |
-| `AUTH-ROLES-TODO.md` | backend root | Add `HasRoles` to `User`, paste the `Gate::before` line, `migrate`, seed the roles, make your first super admin |
+| `AUTH-ROLES-TODO.md` | backend root | Add `HasRoles` to `User`, paste the `Gate::before` line, run `pint` on both files, `migrate`, seed the roles, make your first super admin |
 | `AUTH-ROLES-FRONTEND-TODO.md` | frontend root | Install dependencies, add the i18n keys, link the roles page from the sidebar |
 
 Each one is written for your install (your package manager, your missing dependencies). Tick the

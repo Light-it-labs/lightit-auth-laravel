@@ -403,25 +403,15 @@ describe('generated roles API', function (): void {
 
         expect($superAdmin->can('reports.export'))->toBeFalse();
 
-        // The imports AppServiceProvider already has, plus the one the checklist adds.
-        eval(StubLoader::fixtureLine(
-            'use Illuminate\Support\Facades\Gate; use \Lightit\Users\Domain\Models\User; '
-            . 'use \Lightit\Shared\Roles\RoleManagement; ' . checklistPhpLine('Gate::before('),
-        ));
+        eval(StubLoader::fixtureLine(checklistPhpLine('\Illuminate\Support\Facades\Gate::before(')));
 
         expect(Gate::forUser($superAdmin)->allows('reports.export'))->toBeTrue()
             ->and(Gate::forUser($admin)->allows('reports.export'))->toBeFalse();
     });
 
     it('gives a model roles with the checklist\'s HasRoles line', function (): void {
-        $checklist = (string) file_get_contents(
-            __DIR__ . '/../../src/Stubs/LaravelPermissions/AUTH-ROLES-TODO.md.stub'
-        );
-
-        expect($checklist)->toContain('`use Spatie\Permission\Traits\HasRoles;`')->toContain('`use HasRoles;`');
-
         $name = 'ChecklistUser' . bin2hex(random_bytes(4));
-        eval("use Spatie\\Permission\\Traits\\HasRoles; final class {$name} extends \\Illuminate\\Foundation\\Auth\\User { use HasRoles; }");
+        eval("final class {$name} extends \\Illuminate\\Foundation\\Auth\\User { " . checklistPhpLine('use \\') . ' }');
 
         expect(class_uses_recursive($name))
             ->toContain(Spatie\Permission\Traits\HasRoles::class);

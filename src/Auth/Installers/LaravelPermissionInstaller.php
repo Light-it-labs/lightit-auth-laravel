@@ -207,12 +207,17 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->report($outcome, self::TODO_FILE);
 
         $this->command->line('Finish the setup with the steps in ' . self::TODO_FILE . ':');
-        $this->command->line('  1. Give \\' . self::USER_MODEL_CLASS . ' the ' . self::HAS_ROLES_TRAIT . ' trait.');
         $this->command->line(
-            '  2. Add the Gate::before line for super admins at the end of AppServiceProvider::boot().'
+            '  1. Add use \\' . self::HAS_ROLES_TRAIT . '; inside \\' . self::USER_MODEL_CLASS
+            . ' (after use HasApiTokens;).'
         );
-        $this->command->line('  3. Run php artisan migrate, then php artisan db:seed --class=RoleSeeder.');
-        $this->command->line('  4. Give your first user the super admin role.');
+        $this->command->line(
+            '  2. Add the Gate::before line for super admins at the end of '
+            . '\\Lightit\\Shared\\App\\Providers\\AppServiceProvider::boot().'
+        );
+        $this->command->line('  3. Run vendor/bin/pint on those two files, to turn the full names into imports.');
+        $this->command->line('  4. Run php artisan migrate, then php artisan db:seed --class=RoleSeeder.');
+        $this->command->line('  5. Give your first user the super admin role.');
     }
 
     /**
