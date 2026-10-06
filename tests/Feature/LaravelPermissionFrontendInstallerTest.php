@@ -120,19 +120,32 @@ describe('LaravelPermissionFrontendInstaller', function (): void {
         }
     });
 
-    it('lists in the checklist every i18n key the generated files use', function (): void {
+    it('lists every i18n key the generated files use, with the same keys for en and es', function (): void {
         $this->artisan('laravel-permission-frontend-fake')->assertSuccessful();
 
         $todo = File::get($this->root . '/AUTH-ROLES-FRONTEND-TODO.md');
-        preg_match_all('/```json\n(.*?)\n```/s', $todo, $blocks);
+        [, $afterEnHeading] = explode('In `en.json`', $todo, 2);
+        [$enSection, $esSection] = explode('In `es.json`', $afterEnHeading, 2);
 
-        $listed = [];
+        $keysIn = static function (string $section): array {
+            preg_match_all('/```json\n(.*?)\n```/s', $section, $blocks);
+            expect($blocks[1])->not->toBeEmpty();
 
-        foreach ($blocks[1] as $block) {
-            $decoded = json_decode(str_starts_with(trim($block), '{') ? $block : '{' . $block . '}', true);
-            expect($decoded)->toBeArray();
-            $listed = [...$listed, ...array_keys(Arr::dot($decoded))];
-        }
+            $keys = [];
+
+            foreach ($blocks[1] as $block) {
+                $decoded = json_decode(str_starts_with(trim($block), '{') ? $block : '{' . $block . '}', true);
+                expect($decoded)->toBeArray();
+                $keys = [...$keys, ...array_keys(Arr::dot($decoded))];
+            }
+
+            sort($keys);
+
+            return $keys;
+        };
+
+        $en = $keysIn($enSection);
+        $es = $keysIn($esSection);
 
         $used = [];
 
@@ -141,13 +154,13 @@ describe('LaravelPermissionFrontendInstaller', function (): void {
             $used = [...$used, ...$matches[1]];
         }
 
-        expect($used)->not->toBeEmpty();
+        expect($used)->not->toBeEmpty()
+            ->and($en)->toContain('navigation.links.roles')
+            ->and($es)->toBe($en);
 
         foreach (array_unique($used) as $key) {
-            expect([...$listed, ...ROLES_TEMPLATE_I18N_KEYS])->toContain($key);
+            expect([...$en, ...ROLES_TEMPLATE_I18N_KEYS])->toContain($key);
         }
-
-        expect($listed)->toContain('navigation.links.roles');
     });
 
     it('writes the checklist with the missing dependency, the sidebar snippet and folded i18n keys', function (): void {
