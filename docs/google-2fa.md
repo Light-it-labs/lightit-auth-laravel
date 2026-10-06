@@ -13,12 +13,14 @@ boilerplate's cookie-session login, built on
 
 Run `php artisan auth:setup` and pick **Two-Factor Authentication**. It requires
 `pragmarx/google2fa-laravel`, `pragmarx/google2fa-qrcode` and `bacon/bacon-qr-code`, then writes
-these files, skipping any that already exist (it never edits a file it did not write):
+these files, skipping any that already exist. It edits one file it did not write: it appends
+`// lightit-auth: two-factor authentication routes` and `require __DIR__ . '/two-factor-auth.php';`
+to the end of `routes/api.php`. It skips that when the marker comment is already there, and puts
+the original `routes/api.php` back if the write fails.
 
 - **Backend:** the 2FA actions, controllers, requests and resources under `src/Authentication/`,
   `IssueTwoFactorChallengeAction` and `TwoFactorAuthenticatable`, a migration for the 2FA columns
-  on `users`, `config/google2fa.php`, `lang/en/google2fa.php` and `routes/two-factor-auth.php`
-  (required from `routes/api.php` for you).
+  on `users`, `config/google2fa.php`, `lang/en/google2fa.php` and `routes/two-factor-auth.php`.
 - **Frontend:** the 2FA services, an in-memory challenge store, the `/two-factor` and
   `/two-factor/setup` login screens and the `/account/two-factor` page. It looks for the React
   project in a sibling directory named `frontend`, `front` or `<app>-frontend`; pass
@@ -95,16 +97,16 @@ Paths are under the boilerplate's `/api` prefix. Errors use the boilerplate's sh
 
 | Method & path | Auth | Request | Success (`200`) | Errors |
 | --- | --- | --- | --- | --- |
-| `POST 2fa/setup` | `setup_required` token | - | `{ qr, secret, recovery_codes }` | `401` bad or expired token, or 2FA already on |
+| `POST 2fa/setup` | `setup_required` token | - | `{ qr, secret, recovery_codes }` | `401` bad or expired token, or 2FA already on; `429` |
 | `POST 2fa/complete` | `setup_required` or `verification_required` token | `one_time_password` | `UserResource` + session | `401` token; `422` `invalid_otp`, `otp_already_used`; `429` |
 | `POST 2fa/verify-recovery-code` | `verification_required` token | `recovery_code` | `UserResource` + session | `401` token; `422` `invalid_recovery_code`; `429` |
 | `GET 2fa/status` | session | - | `{ available, enabled, mandatory }` | - |
 | `POST 2fa/enable` | session | `password` | `{ qr, secret }` | `422` `invalid_password`; `409` `2fa_already_configured`, `2fa_unavailable`; `429` |
 | `POST 2fa/confirm` | session | `one_time_password` | `{ recovery_codes }` | `422` `invalid_otp`, `otp_already_used`; `409` `2fa_already_configured`, `2fa_not_started`, `2fa_unavailable`; `429` |
-| `POST 2fa/regenerate-recovery-codes` | session | `password`, `code` | `{ recovery_codes }` | `422` `invalid_password`, `invalid_otp`; `409` `cannot_regenerate_2fa_unconfigured`; `429` |
-| `POST 2fa/disable` | session | `password`, `code` | `{ message }` | `403` `disable_forbidden` (mandatory); `409` `cannot_disable_2fa_unconfigured`; `422`; `429` |
+| `POST 2fa/regenerate-recovery-codes` | session | `password`, `code` | `{ recovery_codes }` | `422` `invalid_password`, `invalid_otp`, `otp_already_used`; `409` `cannot_regenerate_2fa_unconfigured`; `429` |
+| `POST 2fa/disable` | session | `password`, `code` | `{ message }` | `403` `disable_forbidden` (mandatory); `409` `cannot_disable_2fa_unconfigured`; `422` `invalid_password`, `invalid_otp`, `otp_already_used`; `429` |
 | `POST 2fa/request-reset` | session | `password` | `{ access_token, token_type: "reset_required", expires_in }` | `422` `invalid_password`; `429` |
-| `POST 2fa/reset` | `reset_required` token | - | `{ message }` | `401` token |
+| `POST 2fa/reset` | `reset_required` token | - | `{ message }` | `401` token; `429` |
 
 - Every success body is wrapped in `data`.
 - `code` on regenerate and disable is a live 6-digit code or a recovery code (which is spent).
