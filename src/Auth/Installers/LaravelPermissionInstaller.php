@@ -207,7 +207,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $this->report($outcome, self::TODO_FILE);
 
         $this->command->line('Finish the setup with the steps in ' . self::TODO_FILE . ':');
-        $this->command->line('  1. Add use \\' . self::HAS_ROLES_TRAIT . '; inside \\' . self::USER_MODEL_CLASS . '.');
+        $this->command->line('  1. Give \\' . self::USER_MODEL_CLASS . ' the ' . self::HAS_ROLES_TRAIT . ' trait.');
         $this->command->line(
             '  2. Add the Gate::before line for super admins at the end of AppServiceProvider::boot().'
         );
