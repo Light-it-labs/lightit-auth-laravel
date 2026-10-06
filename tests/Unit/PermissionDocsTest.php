@@ -23,13 +23,13 @@ describe('docs/permission.md', function (): void {
 
         $documented = [
             'GET me/permissions' => "Route::get('me/permissions', ShowCurrentUserPermissionsController::class)",
-            'GET roles' => "Route::get('roles', ListRolesController::class)",
-            'GET users/roles' => "Route::get('roles', ListUsersWithRolesController::class)",
-            'PUT users/{user}/roles' => "Route::put('{user}/roles', SyncUserRolesController::class)",
+            'GET roles' => "Route::get('/', ListRolesController::class)",
+            'GET roles/users' => "Route::get('users', ListUsersWithRolesController::class)",
+            'PUT users/{user}/roles' => "Route::put('users/{user}/roles', SyncUserRolesController::class)",
         ];
 
         expect(preg_match_all('/Route::(get|post|put|patch|delete)\(/', $routesFile))->toBe(count($documented))
-            ->and($routesFile)->toContain("Route::prefix('users')");
+            ->and($routesFile)->toContain("Route::prefix('roles')");
 
         foreach ($documented as $path => $definition) {
             expect($routesFile)->toContain($definition)

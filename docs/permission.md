@@ -53,7 +53,7 @@ sequenceDiagram
     FE->>API: GET /api/me/permissions (session cookie)
     API-->>FE: 200 { roles, permissions }
     Note over FE: /roles opens only with roles.manage
-    FE->>API: GET /api/users/roles?page=1
+    FE->>API: GET /api/roles/users?page=1
     API-->>FE: 200 users with their roles
     FE->>API: PUT /api/users/{user}/roles { roles: [...] }
     alt allowed
@@ -87,13 +87,13 @@ Every success body is wrapped in `data`.
 | --- | --- | --- | --- | --- |
 | `GET me/permissions` | - | - | `{ roles: string[], permissions: string[] }` | `401` |
 | `GET roles` | `roles.manage` | - | `[{ id, name }]` | `401`, `403` |
-| `GET users/roles` | `roles.manage` | `page` | paginated `[{ id, name, email_address, roles }]` | `401`, `403` |
+| `GET roles/users` | `roles.manage` | `page` | paginated `[{ id, name, email_address, roles }]` | `401`, `403` |
 | `PUT users/{user}/roles` | `roles.manage` | `roles: string[]` (may be empty) | `{ id, name, email_address, roles }` | `401`, `403`, `404`, `409` `last_super_admin`, `422`, `429` |
 
 - `roles` replaces the user's roles; each name must exist for the app's guard.
 - A missing `roles.manage` is spatie's `403` (`{ message }`). A non-super admin who tries to grant
   or revoke `super-admin` gets `403` with `error.code` `super_admin_role_change_forbidden`.
-- `GET users/roles` eager-loads the roles: the same number of queries whatever the page size.
+- `GET roles/users` eager-loads the roles: the same number of queries whatever the page size.
 
 ### Security notes
 

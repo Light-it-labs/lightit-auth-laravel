@@ -12,7 +12,7 @@ export const getRoles = async () => {
 };
 
 export const getUsersWithRoles = async (page: number) => {
-  const response = await api.get("users/roles", { params: { page } });
+  const response = await api.get("roles/users", { params: { page } });
 
   return parsePaginatedResponse(z.array(userWithRolesSchema), response.data);
 };

@@ -104,6 +104,18 @@ describe('generated roles API', function (): void {
             ),
         );
 
+        // Registered first and shaped like laravel-for-package 13.x's routes/api.php, where
+        // whereNumber() is chained after group() and so does not constrain {user}.
+        Route::middleware(SubstituteBindings::class)
+            ->prefix('api/users')
+            ->group(static function (): void {
+                Route::prefix('{user}')
+                    ->group(static function (): void {
+                        Route::get('/', static fn (User $user): array => ['boilerplate_user' => $user->id]);
+                    })
+                    ->whereNumber('user');
+            });
+
         Route::middleware(SubstituteBindings::class)
             ->prefix('api')
             ->group(StubLoader::renderToFile('routes/roles.stub'));
@@ -138,7 +150,7 @@ describe('generated roles API', function (): void {
         $this->actingAs(rolesUser('user'));
 
         $this->getJson('/api/roles')->assertForbidden();
-        $this->getJson('/api/users/roles')->assertForbidden();
+        $this->getJson('/api/roles/users')->assertForbidden();
         $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['admin']])->assertForbidden();
 
         expect($target->fresh()?->getRoleNames()->all())->toBe(['user']);
@@ -157,10 +169,10 @@ describe('generated roles API', function (): void {
         $admin = rolesUser('admin');
         rolesUser('user');
 
-        $this->actingAs($admin)->getJson('/api/users/roles')->assertOk();
+        $this->actingAs($admin)->getJson('/api/roles/users')->assertOk();
 
         DB::enableQueryLog();
-        $this->getJson('/api/users/roles')
+        $this->getJson('/api/roles/users')
             ->assertOk()
             ->assertJsonPath('data.0.email_address', $admin->email)
             ->assertJsonPath('data.0.roles', ['admin'])
@@ -172,9 +184,16 @@ describe('generated roles API', function (): void {
         rolesUser('admin', 'user');
 
         DB::flushQueryLog();
-        $this->getJson('/api/users/roles')->assertOk()->assertJsonPath('meta.total', 4);
+        $this->getJson('/api/roles/users')->assertOk()->assertJsonPath('meta.total', 4);
 
         expect(count(DB::getQueryLog()))->toBe($queriesForTwoUsers);
+    });
+
+    it('keeps the users listing out of the boilerplate\'s users/{user} routes', function (): void {
+        $this->actingAs(rolesUser('admin'));
+
+        $this->getJson('/api/users/roles')->assertNotFound();
+        $this->getJson('/api/roles/users')->assertOk()->assertJsonPath('meta.total', 1);
     });
 
     it('replaces a user\'s roles and returns them', function (): void {
