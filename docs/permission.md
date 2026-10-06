@@ -92,7 +92,8 @@ Every success body is wrapped in `data`.
 
 - `roles` replaces the user's roles; each name must exist for the app's guard.
 - A missing `roles.manage` is `403` with `error.code` `forbidden`. A non-super admin who tries to
-  grant or revoke `super-admin` gets `403` with `error.code` `super_admin_role_change_forbidden`.
+  grant or revoke `super-admin` gets `403` `super_admin_role_change_forbidden`, and one who tries a
+  role with a permission they lack gets `403` `role_assignment_forbidden`.
 - `GET roles/users` eager-loads the roles: the same number of queries whatever the page size.
 
 ### Security notes
@@ -100,8 +101,9 @@ Every success body is wrapped in `data`.
 - Authorization is enforced by the backend: `->can(RolePermissions::MANAGE)` on the routes, as the
   boilerplate does for its own, and `SyncUserRolesRequest::authorize()` for the super admin rule.
   `<Can>` and `ensurePermission()` are UX only.
-- Only a super admin can grant or revoke `super-admin`, so an admin with `roles.manage` can't
-  promote themselves.
+- Only a super admin can grant or revoke `super-admin`, or a role that grants a permission the
+  admin doesn't hold (`403` `role_assignment_forbidden`). An admin with `roles.manage` can't promote
+  themselves, even after you add a role stronger than `admin`.
 - `PUT users/{user}/roles` never removes the last super admin, not even when they edit their own
   roles. Every demotion locks the `super-admin` role row inside a transaction first, so two at the
   same time can't both pass. Deleting that user through the boilerplate's `DELETE users/{user}`

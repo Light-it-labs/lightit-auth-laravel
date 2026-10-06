@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Roles\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class RoleAssignmentForbiddenException extends HttpException
+{
+    public function __construct()
+    {
+        $this->status = 403;
+        $this->errorCode = 'role_assignment_forbidden';
+
+        parent::__construct('You can only grant or revoke roles whose permissions you have.');
+    }
+}

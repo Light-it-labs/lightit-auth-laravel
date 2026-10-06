@@ -38,6 +38,7 @@ describe('LaravelPermissionInstaller', function (): void {
             'database/seeders/RoleSeeder.php',
             'src/Roles/Domain/Exceptions/LastSuperAdminException.php',
             'src/Roles/Domain/Exceptions/SuperAdminRoleChangeForbiddenException.php',
+            'src/Roles/Domain/Exceptions/RoleAssignmentForbiddenException.php',
             'src/Roles/Domain/Actions/ListRolesAction.php',
             'src/Roles/Domain/Actions/ListUsersWithRolesAction.php',
             'src/Roles/Domain/Actions/SyncUserRolesAction.php',

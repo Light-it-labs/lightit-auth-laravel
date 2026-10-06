@@ -29,6 +29,7 @@ StubLoader::load(
     'Database/Seeders/RoleSeeder.stub',
     'Domain/Exceptions/LastSuperAdminException.stub',
     'Domain/Exceptions/SuperAdminRoleChangeForbiddenException.stub',
+    'Domain/Exceptions/RoleAssignmentForbiddenException.stub',
     'Domain/Actions/ListRolesAction.stub',
     'Domain/Actions/ListUsersWithRolesAction.stub',
     'Domain/Actions/SyncUserRolesAction.stub',
@@ -293,6 +294,29 @@ describe('generated roles API', function (): void {
 
         $this->actingAs($superAdmin)
             ->putJson("/api/users/{$user->id}/roles", ['roles' => ['super-admin']])
+            ->assertOk();
+    });
+
+    it('lets an admin grant or revoke only roles whose permissions they hold', function (): void {
+        Role::create(['name' => 'billing-admin'])->givePermissionTo(Permission::findOrCreate('billing.manage'));
+        $user = rolesUser('user');
+        $billingAdmin = rolesUser('billing-admin');
+
+        $this->actingAs(rolesUser('admin'));
+
+        $this->putJson("/api/users/{$user->id}/roles", ['roles' => ['billing-admin']])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'role_assignment_forbidden');
+        $this->putJson("/api/users/{$billingAdmin->id}/roles", ['roles' => []])
+            ->assertForbidden()
+            ->assertJsonPath('error.code', 'role_assignment_forbidden');
+        $this->putJson("/api/users/{$billingAdmin->id}/roles", ['roles' => ['billing-admin', 'admin']])
+            ->assertOk();
+
+        expect($user->fresh()?->getRoleNames()->all())->toBe(['user']);
+
+        $this->actingAs(rolesUser('super-admin'))
+            ->putJson("/api/users/{$user->id}/roles", ['roles' => ['billing-admin']])
             ->assertOk();
     });
 

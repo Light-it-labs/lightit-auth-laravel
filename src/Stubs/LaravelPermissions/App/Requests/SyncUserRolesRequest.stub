@@ -9,17 +9,23 @@ use Illuminate\Container\Attributes\RouteParameter;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\Rule;
+use Lightit\Roles\Domain\Exceptions\RoleAssignmentForbiddenException;
 use Lightit\Roles\Domain\Exceptions\SuperAdminRoleChangeForbiddenException;
 use Lightit\Shared\Roles\RoleManagement;
 use Lightit\Users\Domain\Models\User;
 use Spatie\Permission\Guard;
+use Spatie\Permission\Models\Role;
 
 final class SyncUserRolesRequest extends FormRequest
 {
     public const string ROLES = 'roles';
 
     /**
+     * Anyone with roles.manage (checked on the route) may change roles, but only a super admin
+     * may change super-admin or a role granting a permission they don't hold themselves.
+     *
      * @throws SuperAdminRoleChangeForbiddenException
+     * @throws RoleAssignmentForbiddenException
      */
     public function authorize(
         #[CurrentUser]
@@ -27,11 +33,23 @@ final class SyncUserRolesRequest extends FormRequest
         #[RouteParameter('user')]
         User $user,
     ): bool {
-        $changesSuperAdmin = $user->hasRole(RoleManagement::ROLE_SUPER_ADMIN)
-            !== in_array(RoleManagement::ROLE_SUPER_ADMIN, $this->roleNames(), true);
+        if ($actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
+            return true;
+        }
 
-        if ($changesSuperAdmin && ! $actor->hasRole(RoleManagement::ROLE_SUPER_ADMIN)) {
+        $currentRoles = array_values(array_filter($user->getRoleNames()->all(), is_string(...)));
+        $requestedRoles = $this->roleNames();
+        $changedRoles = [
+            ...array_diff($currentRoles, $requestedRoles),
+            ...array_diff($requestedRoles, $currentRoles),
+        ];
+
+        if (in_array(RoleManagement::ROLE_SUPER_ADMIN, $changedRoles, true)) {
             throw new SuperAdminRoleChangeForbiddenException;
+        }
+
+        if (! $this->holdsEveryPermissionOf($actor, $changedRoles)) {
+            throw new RoleAssignmentForbiddenException;
         }
 
         return true;
@@ -48,6 +66,21 @@ final class SyncUserRolesRequest extends FormRequest
                     ->where('guard_name', Guard::getDefaultName(User::class)),
             ],
         ];
+    }
+
+    /**
+     * @param list<string> $roleNames
+     */
+    private function holdsEveryPermissionOf(User $actor, array $roleNames): bool
+    {
+        $actorPermissions = $actor->getAllPermissions()->pluck('name');
+
+        return Role::query()
+            ->whereIn('name', $roleNames)
+            ->where('guard_name', Guard::getDefaultName(User::class))
+            ->with('permissions')
+            ->get()
+            ->every(static fn (Role $role): bool => $role->permissions->pluck('name')->diff($actorPermissions)->isEmpty());
     }
 
     /**

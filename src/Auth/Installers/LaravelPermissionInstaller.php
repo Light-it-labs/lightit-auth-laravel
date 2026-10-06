@@ -49,6 +49,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
     private const API_FILES = [
         'Domain/Exceptions/LastSuperAdminException.stub' => 'src/Roles/Domain/Exceptions/LastSuperAdminException.php',
         'Domain/Exceptions/SuperAdminRoleChangeForbiddenException.stub' => 'src/Roles/Domain/Exceptions/SuperAdminRoleChangeForbiddenException.php',
+        'Domain/Exceptions/RoleAssignmentForbiddenException.stub' => 'src/Roles/Domain/Exceptions/RoleAssignmentForbiddenException.php',
         'Domain/Actions/ListRolesAction.stub' => 'src/Roles/Domain/Actions/ListRolesAction.php',
         'Domain/Actions/ListUsersWithRolesAction.stub' => 'src/Roles/Domain/Actions/ListUsersWithRolesAction.php',
         'Domain/Actions/SyncUserRolesAction.stub' => 'src/Roles/Domain/Actions/SyncUserRolesAction.php',
