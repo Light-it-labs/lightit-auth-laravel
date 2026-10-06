@@ -106,7 +106,9 @@ Every success body is wrapped in `data`.
   `<Can>` and `ensurePermission()` are UX only.
 - Only a super admin can grant or revoke `super-admin`, or a role that grants a permission the
   admin doesn't hold (`403` `role_assignment_forbidden`). An admin with `roles.manage` can't promote
-  themselves, even after you add a role stronger than `admin`.
+  themselves, even after you add a role stronger than `admin`, as long as it is stronger by its
+  permissions: a role your code checks by name (`hasRole()`, spatie's `role:` middleware) rather
+  than by permission can be granted by any admin who holds the same permissions.
 - `PUT users/{user}/roles` never removes the last super admin, not even when they edit their own
   roles. Every role change starts its transaction by locking the `super-admin` role row, and only
   then reads the user's roles and counts the super admins with a locking read on
