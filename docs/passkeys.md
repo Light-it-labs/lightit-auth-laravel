@@ -130,7 +130,8 @@ Starting a registration and deleting a passkey ask for the current password, lik
 on and off; a wrong one is a `422` on `password`, not a `401`. Another user's passkey is a
 `403`. `credential` is the browser's `RegistrationResponseJSON`, sent as is. The challenge is
 bound to the user, lives `passkeys.challenge_ttl_seconds` and is spent by the first
-`POST /passkeys` under a cache lock.
+`POST /passkeys` under a cache lock. There is one challenge per user: a second registration
+start replaces the first, so only the latest tab can finish and the other one gets a `410`.
 A rejected ceremony (the `422`) is logged at `warning` level as `passkey registration rejected`
 with the exception class and message, never the credential, so a wrong `PASSKEYS_RP_ID` or
 origin shows up in the logs.
