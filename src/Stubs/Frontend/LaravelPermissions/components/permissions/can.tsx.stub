@@ -1,14 +1,13 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import type { PropsWithChildren } from "react";
 
 import { usePermissions } from "@/services/permissions/actions";
 
 type CanProps = PropsWithChildren<{
-  fallback?: ReactNode;
   permission: string;
 }>;
 
-export const Can = ({ children, fallback = null, permission }: CanProps) => {
+export const Can = ({ children, permission }: CanProps) => {
   const { hasPermission } = usePermissions();
 
-  return hasPermission(permission) ? children : fallback;
+  return hasPermission(permission) ? children : null;
 };

@@ -17,13 +17,12 @@ export const hasRole = (current: CurrentPermissions | undefined, role: string) =
 export const usePermissions = () => {
   const { data: user } = useCurrentUser();
 
-  const { data: current, isPending } = useQuery({
+  const { data: current } = useQuery({
     ...currentPermissionsQuery(user?.id),
     enabled: Boolean(user),
   });
 
   return {
-    isPending,
     hasPermission: (permission: string) => {
       return hasPermission(current, permission);
     },

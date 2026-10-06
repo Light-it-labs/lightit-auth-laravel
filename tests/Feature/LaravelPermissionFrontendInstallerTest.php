@@ -8,8 +8,8 @@ use Illuminate\Support\Facades\File;
 use Lightitlabs\Tests\Fixtures\FakeLaravelPermissionFrontendCommand;
 
 /**
- * The react-template (develop) modules the generated files import; anything else under
- * `@/` must be a file this installer writes.
+ * The react-template modules the generated files import, read from react-template@develop 8509eed;
+ * re-check them when the template moves. Anything else under `@/` must be a file this installer writes.
  */
 const ROLES_TEMPLATE_MODULES = [
     '@/components/ui/badge',
@@ -172,13 +172,14 @@ describe('LaravelPermissionFrontendInstaller', function (): void {
     it('guards the roles page with the permission the backend checks', function (): void {
         $this->artisan('laravel-permission-frontend-fake')->assertSuccessful();
 
-        $backendPermission = File::get(
-            __DIR__ . '/../../src/Stubs/LaravelPermissions/Permissions/RolePermissions.stub'
+        preg_match(
+            "/MANAGE = '([^']+)'/",
+            File::get(__DIR__ . '/../../src/Stubs/LaravelPermissions/Permissions/RolePermissions.stub'),
+            $backendPermission,
         );
 
         expect(File::get($this->root . '/src/services/permissions/constants.ts'))
-            ->toContain('manageRoles: "roles.manage"')
-            ->and($backendPermission)->toContain("public const MANAGE = 'roles.manage';")
+            ->toContain('manageRoles: "' . $backendPermission[1] . '"')
             ->and(File::get($this->root . '/src/routes/_private/roles/page.tsx'))
             ->toContain('createFileRoute("/_private/roles/")')
             ->toContain('return ensurePermission(PERMISSIONS.manageRoles);');

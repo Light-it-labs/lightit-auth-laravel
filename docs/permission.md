@@ -38,7 +38,8 @@ again never overwrites it, and warns you while `User` still misses `HasRoles`.
 
 ### How it works
 
-1. The frontend reads `GET /me/permissions` once per signed-in user and caches it. `<Can>`,
+1. The frontend reads `GET /me/permissions` per signed-in user and caches it like any query (two
+   minutes fresh in the template, so a changed role shows up within that). `<Can>`,
    `usePermissions()` and `ensurePermission()` answer from that list.
 2. `/roles` runs `ensurePermission(PERMISSIONS.manageRoles)` in `beforeLoad`: without
    `roles.manage` the user is sent to `/`, even when they type the URL.
@@ -74,8 +75,10 @@ roles refetches the list and the signed-in user's permissions.
   and run `php artisan db:seed --class=RoleSeeder` again. The seeders only add; they never delete.
 - **Frontend constant:** `PERMISSIONS` in `src/services/permissions/constants.ts` mirrors the
   permissions the frontend checks. Add yours there too.
-- **Spatie:** `config/permission.php` is spatie's own file (table names, cache). The roles API
-  reads the roles table name from it and the guard from spatie (`web` in the boilerplate).
+- **Spatie:** `config/permission.php` and the migration are spatie's own files, copied as
+  `vendor:publish` writes them (no `strict_types`, untyped config reads), so the boilerplate's rector
+  and PHPStan flag them like any published vendor file. The roles API reads the roles table name
+  from the config and the guard from spatie (`web` in the boilerplate).
 - **Rate limit:** every route in `routes/roles.php` is throttled at 60 requests a minute per user.
 
 ### API reference

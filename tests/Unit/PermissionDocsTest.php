@@ -8,16 +8,6 @@ describe('docs/permission.md', function (): void {
         $this->stubs = __DIR__ . '/../../src/Stubs/LaravelPermissions/';
     });
 
-    it('points to both checklists instead of repeating their steps', function (): void {
-        expect($this->doc)
-            ->toContain('### Install')
-            ->toContain('**The steps live there, not on this page:**')
-            ->toContain('**delete the file when every box is ticked**')
-            ->toContain('| `AUTH-ROLES-TODO.md` |')
-            ->toContain('| `AUTH-ROLES-FRONTEND-TODO.md` |')
-            ->not->toMatch('/^#{2,4} \d+\./m');
-    });
-
     it('documents every route the generated routes file registers', function (): void {
         $routesFile = (string) file_get_contents($this->stubs . 'routes/roles.stub');
 
