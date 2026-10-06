@@ -111,17 +111,20 @@ describe('PasskeysInstaller', function (): void {
             ->and($this->tempBase . '/AUTH-PASSKEYS-TODO.md')->not->toBeFile();
     });
 
-    it('prints the only follow-up the command leaves: migrate and the relying party env', function (): void {
+    it('prints the only follow-up the command leaves: migrate and the passkeys env', function (): void {
         $this->artisan('passkeys-installer-fake')
             ->expectsOutputToContain(
-                'Run php artisan migrate, then set PASSKEYS_RP_ID and PASSKEYS_ALLOWED_ORIGINS in .env'
+                'Run php artisan migrate, then set PASSKEYS_RP_ID, PASSKEYS_ALLOWED_ORIGINS and '
+                . 'PASSKEYS_USER_HANDLE_SECRET in .env'
             )
             ->assertSuccessful();
 
         expect(file_get_contents($this->tempBase . '/AUTH-PASSKEYS-TODO.md'))
             ->toContain('php artisan migrate')
             ->toContain('PASSKEYS_RP_ID=')
-            ->toContain('PASSKEYS_ALLOWED_ORIGINS=');
+            ->toContain('PASSKEYS_ALLOWED_ORIGINS=')
+            ->toContain('PASSKEYS_USER_HANDLE_SECRET')
+            ->toContain("php -r 'echo bin2hex(random_bytes(32));'");
     });
 
     it('writes the TODO as a checklist to delete when done', function (): void {

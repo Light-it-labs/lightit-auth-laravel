@@ -45,11 +45,18 @@ anywhere else a missing value makes the first passkey request fail with a report
 the variable, instead of a `422` that looks like a bad device.
 `PASSKEYS_CHALLENGE_TTL_SECONDS` (default `300`) is how long a registration challenge lives.
 
-#### 3. Optional: set the user handle secret
+#### 3. Set the user handle secret
 
-`PASSKEYS_USER_HANDLE_SECRET` falls back to `APP_KEY`. It keys the user handle stored on every
-authenticator, so changing it (or rotating `APP_KEY` while it is the fallback) breaks every
-passkey registered before the change.
+`PASSKEYS_USER_HANDLE_SECRET` is required and has no fallback: without it every passkey request
+fails with a reported `500`. Generate it once:
+
+```bash
+php -r 'echo bin2hex(random_bytes(32));'
+```
+
+It keys the user handle stored on every authenticator, so never rotate it: changing it
+invalidates every passkey registered before the change. It is deliberately not `APP_KEY`, which
+does get rotated.
 
 #### 4. Use a shared cache store
 

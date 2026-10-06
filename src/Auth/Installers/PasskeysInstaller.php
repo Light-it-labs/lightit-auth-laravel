@@ -164,7 +164,8 @@ final class PasskeysInstaller implements AuthInstallerInterface
         $this->report($outcome, self::TODO_FILE);
 
         $this->command->line(
-            'Run php artisan migrate, then set PASSKEYS_RP_ID and PASSKEYS_ALLOWED_ORIGINS in .env - see '
+            'Run php artisan migrate, then set PASSKEYS_RP_ID, PASSKEYS_ALLOWED_ORIGINS and '
+            . 'PASSKEYS_USER_HANDLE_SECRET in .env - see '
             . self::TODO_FILE . '.'
         );
     }

@@ -26,10 +26,10 @@ return [
     ))),
 
     /*
-     * Keys the user handle stored on every authenticator. Changing it later breaks
-     * every passkey registered before the change.
+     * Keys the user handle stored on every authenticator. Required, with no APP_KEY
+     * fallback: never rotate it, since changing it invalidates every registered passkey.
      */
-    'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET', env('APP_KEY')),
+    'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET'),
 
     /*
      * How long a registration challenge stays valid, in seconds.

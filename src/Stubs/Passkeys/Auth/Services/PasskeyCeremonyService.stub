@@ -127,7 +127,12 @@ final readonly class PasskeyCeremonyService
 
     private function userHandle(User $user): string
     {
-        return hash_hmac('sha256', 'passkey-user:' . $user->id, Config::string('passkeys.user_handle_secret'), true);
+        return hash_hmac(
+            'sha256',
+            'passkey-user:' . $user->id,
+            $this->requiredConfig('passkeys.user_handle_secret', 'PASSKEYS_USER_HANDLE_SECRET'),
+            true,
+        );
     }
 
     /**

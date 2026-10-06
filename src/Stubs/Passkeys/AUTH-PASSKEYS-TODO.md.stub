@@ -17,8 +17,9 @@ PASSKEYS_RP_NAME="${APP_NAME}"
 PASSKEYS_ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-- [ ] **Optional:** set `PASSKEYS_USER_HANDLE_SECRET`. It falls back to `APP_KEY`; changing it
-  later (or rotating `APP_KEY` while it is the fallback) invalidates every registered passkey.
+- [ ] **Set `PASSKEYS_USER_HANDLE_SECRET`** in `.env` (required, no fallback; passkeys answer
+  `500` without it). Generate it once with `php -r 'echo bin2hex(random_bytes(32));'` and
+  **never rotate it**: changing it invalidates every registered passkey.
 - [ ] **Use a shared cache store** in production (the boilerplate's `database` store is fine;
   `array` is not): the registration challenge lives there.
 

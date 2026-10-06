@@ -37,4 +37,8 @@ describe('config/passkeys.php stub', function (): void {
         expect($config['relying_party']['id'])->toBeNull()
             ->and($config['allowed_origins'])->toBe([]);
     })->with(['production', 'staging']);
+
+    it('has no user handle secret fallback, APP_KEY included', function (string $appEnv): void {
+        expect(passkeysConfigIn($appEnv)['user_handle_secret'])->toBeNull();
+    })->with(['local', 'production']);
 });

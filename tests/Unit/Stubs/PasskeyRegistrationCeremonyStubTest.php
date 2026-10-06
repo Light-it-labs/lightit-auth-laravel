@@ -183,5 +183,11 @@ describe('PasskeyCeremonyService stub without its relying party configured', fun
             ),
         ))->toThrow(RuntimeException::class, 'Set PASSKEYS_ALLOWED_ORIGINS');
     });
-});
 
+    it('refuses to issue options without PASSKEYS_USER_HANDLE_SECRET', function (?string $secret): void {
+        Config::set('passkeys.user_handle_secret', $secret);
+
+        expect(fn () => $this->service->creationOptions($this->user))
+            ->toThrow(RuntimeException::class, 'Set PASSKEYS_USER_HANDLE_SECRET');
+    })->with(['unset' => [null], 'empty' => ['']]);
+});
