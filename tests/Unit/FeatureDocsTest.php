@@ -18,16 +18,17 @@ describe('feature docs', function (): void {
         }
     });
 
-    it('explains, for each feature with checklists, which files auth:setup leaves and what to do with them', function (
+    it('points to the checklists auth:setup leaves instead of repeating their steps', function (
         string $page,
         array $checklists,
     ): void {
         $doc = (string) file_get_contents($this->packageRoot . '/docs/' . $page);
 
         expect($doc)
-            ->toContain('### After `auth:setup`')
+            ->toContain('### Install')
+            ->toContain('**The steps live there, not on this page:**')
             ->toContain('**delete the file when every box is ticked**')
-            ->toContain('Running `auth:setup` again never overwrites it.');
+            ->not->toMatch('/^#{2,4} \d+\./m');
 
         foreach ($checklists as $checklist) {
             expect($doc)->toContain('| `' . $checklist . '` |');
