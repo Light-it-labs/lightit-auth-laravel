@@ -21,17 +21,6 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
 
     private const LOGIN_FORM_FILE = 'src/routes/(public)/_guest/login/-components/login-form.tsx';
 
-    private const SIGN_IN_HOOK_STUB = 'routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey';
-
-    private const SIGN_IN_HOOK_FILE = 'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts';
-
-    private const TWO_FACTOR_FRONTEND_FILES = [
-        'src/stores/use-two-factor-challenge-store.ts',
-        'src/services/auth/two-factor/types.ts',
-        'src/routes/(public)/_guest/two-factor/page.tsx',
-        'src/routes/(public)/_guest/two-factor/setup/page.tsx',
-    ];
-
     private const REQUIRED_DEPENDENCIES = [
         '@hookform/resolvers',
         '@simplewebauthn/browser',
@@ -55,6 +44,7 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         'routes/_private/account/passkeys/-components/delete-passkey-dialog.tsx.stub' => 'src/routes/_private/account/passkeys/-components/delete-passkey-dialog.tsx',
         'routes/_private/account/passkeys/page.tsx.stub' => 'src/routes/_private/account/passkeys/page.tsx',
         'routes/(public)/_guest/login/-components/passkey-login-button.tsx.stub' => 'src/routes/(public)/_guest/login/-components/passkey-login-button.tsx',
+        'routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts.stub' => 'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts',
     ];
 
     private readonly FrontendStubWriter $writer;
@@ -86,17 +76,7 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         $missing = $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES);
         $tokens = $this->writer->tokens($root, $missing);
 
-        $signInHookStub = $this->hasTwoFactorFrontend($root)
-            ? self::SIGN_IN_HOOK_STUB . '.two-factor.ts.stub'
-            : self::SIGN_IN_HOOK_STUB . '.ts.stub';
-
-        $files = [
-            ...self::FILES,
-            $signInHookStub => self::SIGN_IN_HOOK_FILE,
-            self::TODO_FILE . '.stub' => self::TODO_FILE,
-        ];
-
-        foreach ($files as $stub => $relative) {
+        foreach ([...self::FILES, self::TODO_FILE . '.stub' => self::TODO_FILE] as $stub => $relative) {
             $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
         }
 
@@ -120,17 +100,6 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         $this->command->warn('Manual step: link the passkeys page from the sidebar.');
         $this->command->line('In ' . self::SIDEBAR_FILE . ', add at the end of the links array:');
         $this->command->line('  ' . self::SIDEBAR_LINK);
-    }
-
-    private function hasTwoFactorFrontend(string $root): bool
-    {
-        foreach (self::TWO_FACTOR_FRONTEND_FILES as $relative) {
-            if (! is_file($root . '/' . $relative)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     private function printLoginFormManualStep(): void

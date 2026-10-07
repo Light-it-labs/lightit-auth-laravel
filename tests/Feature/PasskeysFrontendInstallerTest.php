@@ -234,38 +234,33 @@ describe('PasskeysFrontendInstaller', function (): void {
             ->toContain('pnpm add @simplewebauthn/browser date-fns');
     });
 
-    it('signs in with the user-only hook when the 2FA frontend is not there', function (): void {
-        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+    it(
+        'writes a sign-in hook that refetches the user and never routes to the 2FA screens, even with the 2FA frontend there',
+        function (bool $withTwoFactorFrontend): void {
+            if ($withTwoFactorFrontend) {
+                foreach ([
+                    'src/stores/use-two-factor-challenge-store.ts',
+                    'src/services/auth/two-factor/types.ts',
+                    'src/routes/(public)/_guest/two-factor/page.tsx',
+                    'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+                ] as $relative) {
+                    File::ensureDirectoryExists(\dirname($this->root . '/' . $relative));
+                    file_put_contents($this->root . '/' . $relative, 'export {};' . PHP_EOL);
+                }
+            }
 
-        expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
-            ->toContain('await authenticateWithPasskey();')
-            ->not->toContain('.parse(')
-            ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
-            ->not->toContain('two-factor');
-    });
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
 
-    it('routes a 2FA challenge to the 2FA screens when the 2FA frontend is already there', function (): void {
-        foreach ([
-            'src/stores/use-two-factor-challenge-store.ts',
-            'src/services/auth/two-factor/types.ts',
-            'src/routes/(public)/_guest/two-factor/page.tsx',
-            'src/routes/(public)/_guest/two-factor/setup/page.tsx',
-        ] as $relative) {
-            File::ensureDirectoryExists(\dirname($this->root . '/' . $relative));
-            file_put_contents($this->root . '/' . $relative, 'export {};' . PHP_EOL);
+            expect(
+                file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts')
+            )
+                ->toContain('await authenticateWithPasskey();')
+                ->not->toContain('.parse(')
+                ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
+                ->not->toContain('two-factor')
+                ->not->toContain('TwoFactor');
         }
-
-        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
-
-        expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'))
-            ->toContain('from "@/services/auth/two-factor/types"')
-            ->toContain('from "@/stores/use-two-factor-challenge-store"')
-            ->toContain('return isTwoFactorChallenge(body) ? body : null;')
-            ->toContain('startChallenge(challenge);')
-            ->toContain('to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor"')
-            ->not->toContain('.parse(')
-            ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })');
-    });
+    )->with(['without the 2FA frontend' => [false], 'with the 2FA frontend' => [true]]);
 
     it('prints the login form step with the exact import and JSX the TODO documents', function (): void {
         $this->artisan('passkeys-frontend-fake')
