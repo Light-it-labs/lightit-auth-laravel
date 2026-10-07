@@ -581,7 +581,7 @@ describe('Google2FAFrontendInstaller', function (): void {
 
         $this->artisan('google2fa-frontend-fake')
             ->expectsOutputToContain('Skipped src/routes/(public)/_guest/two-factor/page.tsx')
-            ->expectsOutputToContain('Created: src/routes/(public)/_guest/two-factor/setup/page.tsx')
+            ->expectsOutputToContain('Wrote src/routes/(public)/_guest/two-factor/setup/page.tsx')
             ->assertSuccessful();
 
         expect(file_get_contents($existing))->toBe("export const Route = {};\n");

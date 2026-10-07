@@ -2,16 +2,14 @@
 
 declare(strict_types=1);
 
-use Illuminate\Console\Command;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Tests\Fixtures\Google2FAUserModel\FakeTwoFactorAuthenticatable;
 use Lightitlabs\Tests\Fixtures\Google2FAUserModel\UserExtendingFakeTwoFactorAuthenticatable;
 use Lightitlabs\Tests\Fixtures\Google2FAUserModel\UserNotExtendingFakeTwoFactorAuthenticatable;
+use Lightitlabs\Tests\Fixtures\RecordingSetupReporter;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\NullOutput;
 
 /**
  * `IssueTwoFactorChallengeAction::execute()` - wired manually into the
@@ -25,23 +23,11 @@ use Symfony\Component\Console\Output\NullOutput;
  */
 function invokeUserModelWarningGuard(string $userModelClass, string $requiredParentClass): array
 {
-    $command = new class() extends Command {
-        protected $signature = 'google2fa-user-model-warning-test';
-
-        /** @var list<string> */
-        public array $warnings = [];
-
-        public function warn($string, $verbosity = null): void
-        {
-            $this->warnings[] = (string) $string;
-        }
-    };
+    $reporter = new RecordingSetupReporter();
 
     $installer = new Google2FAInstaller(
-        $command,
-        new ComposerInstaller(new class() extends Command {
-            protected $signature = 'google2fa-user-model-warning-test-composer';
-        }),
+        $reporter,
+        new ComposerInstaller($reporter),
         new StubCopier(new OriginMarker('0.0.0-test')),
     );
 
@@ -49,7 +35,7 @@ function invokeUserModelWarningGuard(string $userModelClass, string $requiredPar
     $guard->setAccessible(true);
     $guard->invoke($installer, $userModelClass, $requiredParentClass);
 
-    return $command->warnings;
+    return $reporter->warnings;
 }
 
 describe('Google2FAInstaller warns instead of failing when the User model cannot support 2FA', function (): void {
@@ -117,50 +103,30 @@ describe("install()'s real create-then-warn sequence, against a real fresh proje
     it(
         'writes TwoFactorAuthenticatable.php, then warns against the real User model FQCN instead of failing the install',
         function (): void {
-            $command = new class() extends Command {
-                protected $signature = 'google2fa-user-model-warning-sequence-test';
+            $reporter = new RecordingSetupReporter();
+            $installer = new Google2FAInstaller(
+                $reporter,
+                new ComposerInstaller($reporter),
+                new StubCopier(new OriginMarker('0.0.0-test'))
+            );
     
-                /** @var list<string> */
-                public array $warnings = [];
+            // Mirrors install()'s own order: write the auth files - the
+            // step that produces TwoFactorAuthenticatable.php - before
+            // checking whether the User model extends it.
+            $createAuthFiles = new ReflectionMethod($installer, 'createAuthFiles');
+            $createAuthFiles->setAccessible(true);
+            $createAuthFiles->invoke($installer);
     
-                public function warn($string, $verbosity = null): void
-                {
-                    $this->warnings[] = (string) $string;
-                }
-    
-                public function handle(): int
-                {
-                    $composerInstaller = new ComposerInstaller($this);
-                    $installer = new Google2FAInstaller(
-                        $this,
-                        $composerInstaller,
-                        new StubCopier(new OriginMarker('0.0.0-test'))
-                    );
-    
-                    // Mirrors install()'s own order: write the auth files - the
-                    // step that produces TwoFactorAuthenticatable.php - before
-                    // checking whether the User model extends it.
-                    $createAuthFiles = new ReflectionMethod($installer, 'createAuthFiles');
-                    $createAuthFiles->setAccessible(true);
-                    $createAuthFiles->invoke($installer);
-    
-                    $warnGuard = new ReflectionMethod($installer, 'warnIfUserModelCannotSupportTwoFactor');
-                    $warnGuard->setAccessible(true);
-                    $warnGuard->invoke($installer);
-    
-                    return self::SUCCESS;
-                }
-            };
-    
-            $command->setLaravel($this->app);
-            $command->run(new ArrayInput([]), new NullOutput());
+            $warnGuard = new ReflectionMethod($installer, 'warnIfUserModelCannotSupportTwoFactor');
+            $warnGuard->setAccessible(true);
+            $warnGuard->invoke($installer);
     
             expect(
                 file_exists($this->tempBase . '/src/Authentication/Domain/TwoFactorAuthenticatable.php')
             )->toBeTrue();
     
-            expect($command->warnings)->toHaveCount(1);
-            expect($command->warnings[0])
+            expect($reporter->warnings)->toHaveCount(1);
+            expect($reporter->warnings[0])
                 ->toContain('Lightit\Users\Domain\Models\User')
                 ->toContain('does not extend')
                 ->toContain('Lightit\Authentication\Domain\TwoFactorAuthenticatable');

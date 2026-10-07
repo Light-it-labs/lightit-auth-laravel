@@ -4,20 +4,13 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
-use Lightitlabs\Console\LightitConsoleOutput;
+use Lightitlabs\Contracts\SetupReporter;
 use Symfony\Component\Process\Process;
-
-use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
 
 final class ComposerInstaller
 {
-    use LightitConsoleOutput;
-
-    public function __construct(protected Command $command)
+    public function __construct(private readonly SetupReporter $reporter)
     {
-        $this->initializeOutput($this->command);
     }
 
     /**
@@ -25,37 +18,22 @@ final class ComposerInstaller
      */
     public function requirePackages(array $packages): bool
     {
-        $command = array_merge(['composer', 'require'], $packages);
-
-        $process = new Process($command, base_path(), ['COMPOSER_MEMORY_LIMIT' => '-1']);
+        $process = new Process(
+            array_merge(['composer', 'require', '--no-interaction'], $packages),
+            base_path(),
+            ['COMPOSER_MEMORY_LIMIT' => '-1'],
+        );
         $process->setTimeout(null);
 
-        $this->command->newLine();
-        info('📦 Installing composer packages: ' . implode(', ', $packages));
-        $this->command->line(str_repeat('-', 60));
+        if ($process->run() === 0) {
+            return true;
+        }
 
-        return $process->run(function ($type, $buffer): void {
-            foreach (explode("\n", $buffer) as $line) {
-                $line = trim($line);
+        $this->reporter->warning(
+            'composer require ' . implode(' ', $packages) . " exited with code {$process->getExitCode()}. "
+            . 'Run it yourself to see why.'
+        );
 
-                if ($line === '') {
-                    return;
-                }
-
-                if (
-                    str_contains($line, 'Installing')
-                    || str_contains($line, 'Generating optimized autoload')
-                    || str_contains($line, 'Writing lock file')
-                    || str_contains($line, 'Package operations')
-                    || str_contains($line, 'Nothing to install')
-                    || str_contains($line, 'Extracting archive')) {
-                    info("   💡 $line");
-                }
-
-                if ($type === Process::ERR) {
-                    error($line);
-                }
-            }
-        }) === 0;
+        return false;
     }
 }

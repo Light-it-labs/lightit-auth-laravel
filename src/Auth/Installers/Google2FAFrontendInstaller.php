@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
 use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendStubTokens;
-use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\SetupReporter;
 use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
 
 final class Google2FAFrontendInstaller implements AuthInstallerInterface
 {
-    use LightitConsoleOutput;
-
     private const TODO_FILE = 'AUTH-2FA-FRONTEND-TODO.md';
 
     private const REQUIRED_DEPENDENCIES = [
@@ -62,14 +59,13 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        protected Command $command,
+        private readonly SetupReporter $reporter,
         private readonly StubRenderer $stubRenderer,
         private readonly FrontendProjectLocator $locator,
         private readonly FrontendPackageManifest $manifest,
         private readonly string $laravelRoot,
         private readonly string|null $frontendPath = null,
     ) {
-        $this->initializeOutput($this->command);
     }
 
     public static function stubDirectory(): string
@@ -87,8 +83,6 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             return;
         }
 
-        $this->command->info("Frontend project resolved: {$root}");
-
         $tokens = $this->tokens($root);
 
         foreach (self::FILES as $stub => $relative) {
@@ -97,30 +91,28 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->write($root, self::TODO_FILE . '.stub', self::TODO_FILE, $tokens);
 
-        $this->command->info('Frontend two-factor authentication services, login screens and account page generated.');
-
-        $this->printLoginFormManualStep();
-        $this->printSidebarManualStep();
+        $this->reportLoginFormManualStep();
+        $this->reportSidebarManualStep();
     }
 
-    private function printSidebarManualStep(): void
+    private function reportSidebarManualStep(): void
     {
-        $this->command->warn('Manual step: link the account page from the sidebar.');
-        $this->command->line('In ' . self::SIDEBAR_FILE . ', add at the end of the links array:');
-        $this->command->line('  ' . self::SIDEBAR_LINK);
+        $this->reporter->manualStep('Manual step: link the account page from the sidebar.', [
+            'In ' . self::SIDEBAR_FILE . ', add at the end of the links array:',
+            '  ' . self::SIDEBAR_LINK,
+        ]);
     }
 
-    private function printLoginFormManualStep(): void
+    private function reportLoginFormManualStep(): void
     {
-        $this->command->warn('Manual step: route the login form through the 2FA-aware login hook.');
-        $this->command->line('In ' . self::LOGIN_FORM_FILE . ':');
-        $this->command->line('  1. Remove:   import { useLogin } from "@/services/auth/actions";');
-        $this->command->line(
-            '  2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";'
-        );
-        $this->command->line('  3. Replace:  const loginMutation = useLogin();');
-        $this->command->line('     with:     const loginMutation = useTwoFactorLogin();');
-        $this->command->line('Then add the i18n keys listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.');
+        $this->reporter->manualStep('Manual step: route the login form through the 2FA-aware login hook.', [
+            'In ' . self::LOGIN_FORM_FILE . ':',
+            '  1. Remove:   import { useLogin } from "@/services/auth/actions";',
+            '  2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";',
+            '  3. Replace:  const loginMutation = useLogin();',
+            '     with:     const loginMutation = useTwoFactorLogin();',
+            'Then add the i18n keys listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.',
+        ]);
     }
 
     /**
@@ -133,22 +125,22 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         $outcome = $this->stubRenderer->renderTo(self::stubDirectory() . '/' . $stub, $destination, $tokens);
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->command->line("Created: {$relative}"),
-            StubCopyOutcome::Skipped => $this->printSkipped($relative),
+            StubCopyOutcome::Written => $this->reporter->written($relative),
+            StubCopyOutcome::Skipped => $this->reporter->skipped($relative),
         };
     }
 
     private function reportUnresolvedRoot(): void
     {
         if ($this->frontendPath !== null && $this->frontendPath !== '') {
-            $this->command->error(
+            $this->reporter->warning(
                 'Invalid --frontend-path: ' . $this->locator->rejectionReason($this->laravelRoot, $this->frontendPath)
             );
 
             return;
         }
 
-        $this->command->warn(
+        $this->reporter->warning(
             'No React project found next to the application. Skipping the 2FA frontend step. '
             . 'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
         );

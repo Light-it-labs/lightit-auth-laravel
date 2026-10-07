@@ -6,6 +6,8 @@ namespace Lightitlabs\Auth\Installers;
 
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\SetupReporter;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubCopyOutcome;
 
@@ -13,66 +15,56 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
     public function __construct(
         private readonly Command $command,
+        private readonly SetupReporter $reporter,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
     ) {}
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function install(): void
     {
         if (! $this->composerInstaller->requirePackages([
             'spatie/laravel-permission',
         ])) {
-            $this->command->error('Failed to install Laravel Permissions.');
-
-            return;
+            throw new SetupAbortedException('Failed to install spatie/laravel-permission');
         }
 
         $this->copyConfigFile();
         $this->clearCacheConfig();
         $this->copyMigration();
         $this->copyPackageFiles();
-
-        $this->composerInstaller->printSuccess('Laravel Permissions installed successfully!');
     }
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(1, 4, 'Copying config files');
-
         $source = base_path('vendor/spatie/laravel-permission/config/permission.php');
         $destination = config_path('permission.php');
 
         if (! file_exists($source)) {
-            $this->command->error("Spatie config file not found at: $source");
-
-            return;
+            throw new SetupAbortedException("Spatie config file not found at: {$source}");
         }
 
         $outcome = $this->stubCopier->copy($source, $destination);
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished('Config file published: config/permission.php'),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/permission.php'),
+            StubCopyOutcome::Written => $this->reporter->written('config/permission.php'),
+            StubCopyOutcome::Skipped => $this->reporter->skipped('config/permission.php'),
         };
     }
 
     private function clearCacheConfig(): void
     {
-        $this->composerInstaller->printStep(2, 4, 'Clearing cache config files');
-
-        $this->command->call('optimize:clear');
+        $this->command->callSilently('optimize:clear');
     }
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 4, 'Copying Laravel Permission migration file');
-
         $source = base_path('vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub');
 
         if (! file_exists($source)) {
-            $this->command->error("Spatie migration file not found at: $source");
-
-            return;
+            throw new SetupAbortedException("Spatie migration file not found at: {$source}");
         }
 
         $timestamp = date('Y_m_d_His');
@@ -83,15 +75,13 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $outcome = $this->stubCopier->copy($source, $destination);
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Migration copied to: {$relativePath}"),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($relativePath),
+            StubCopyOutcome::Written => $this->reporter->written($relativePath),
+            StubCopyOutcome::Skipped => $this->reporter->skipped($relativePath),
         };
     }
 
     private function copyPackageFiles(): void
     {
-        $this->composerInstaller->printStep(4, 4, 'Copying permission structure');
-
         $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
         $seederBase = base_path('database/seeders');
@@ -116,8 +106,8 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: {$relativeTarget}"),
-                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($relativeTarget),
+                StubCopyOutcome::Written => $this->reporter->written($relativeTarget),
+                StubCopyOutcome::Skipped => $this->reporter->skipped($relativeTarget),
             };
         }
     }

@@ -14,25 +14,19 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
-use Lightitlabs\Console\LightitConsoleOutput;
+use Lightitlabs\Console\SetupOutput;
+use Lightitlabs\Console\SetupTheme;
 use Lightitlabs\Enums\Feature;
-use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\PackageVersion;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubRenderer;
-use Throwable;
 
 use function Laravel\Prompts\multiselect;
 
 class AuthSetupCommand extends Command
 {
-    use LightitConsoleOutput;
-
-    public function __construct()
-    {
-        parent::__construct();
-        $this->initializeOutput($this);
-    }
+    private SetupOutput|null $setupOutput = null;
 
     protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication is selected; an invalid path fails the whole command even if Two-Factor Authentication is not selected}';
 
@@ -40,54 +34,47 @@ class AuthSetupCommand extends Command
 
     public function handle(): int
     {
-        if (! $this->frontendPathIsValid()) {
-            return self::FAILURE;
-        }
+        return SetupTheme::during($this->output->isDecorated(), function (): int {
+            if (! $this->frontendPathIsValid()) {
+                return self::FAILURE;
+            }
 
-        $this->output->writeln('');
-        $this->output->writeln("\e[0;31m     _         _   _       ____            _                     \e[0m");
-        $this->output->writeln("\e[0;31m    / \  _   _| |_| |__   |  _ \ __ _  ___| | ____ _  __ _  ___  \e[0m");
-        $this->output->writeln("\e[0;31m   / _ \| | | | __| '_ \  | |_) / _` |/ __| |/ / _` |/ _` |/ _ \ \e[0m");
-        $this->output->writeln("\e[0;31m  / ___ \ |_| | |_| | | | |  __/ (_| | (__|   < (_| | (_| |  __/ \e[0m");
-        $this->output->writeln("\e[0;31m /_/   \_\__,_|\__|_| |_| |_|   \__,_|\___|_|\_\__,_|\__, |\___|  \e[0m");
-        $this->output->writeln("\e[0;31m                                                     |___/       \e[0m");
-        $this->output->writeln('');
-        $this->output->writeln("\e[0;35mLight-it's package to add optional auth features - 2FA, roles and\e[0m");
-        $this->output->writeln("\e[0;35mpermissions, OTP and social login - on top of Laravel boilerplates.\e[0m");
-        $this->output->writeln('');
+            $this->setupOutput()->header(
+                (new PackageVersion())->resolve(),
+                base_path(),
+                (new FrontendProjectLocator(new FrontendPackageManifest()))->locate(
+                    base_path(),
+                    $this->frontendPathOption()
+                ),
+            );
 
-        $featureOptions = array_column(
-            array_map(
-                fn (Feature $f) => ['value' => $f->value, 'label' => $f->label()],
-                Feature::selectable()
-            ),
-            'label',
-            'value'
-        );
+            $selected = array_map(
+                static fn (int|string $value): Feature => Feature::from((string) $value),
+                multiselect(
+                    label: 'Select features',
+                    options: array_column(
+                        array_map(
+                            static fn (Feature $feature): array => ['value' => $feature->value, 'label' => $feature->label()],
+                            Feature::selectable(),
+                        ),
+                        'label',
+                        'value',
+                    ),
+                    hint: 'Press [space] to select, [enter] to confirm.'
+                ),
+            );
 
-        $selectedValues = multiselect(
-            label: 'Select features',
-            options: $featureOptions,
-            hint: 'Press [space] to select, [enter] to confirm.'
-        );
+            $failedFeatures = $this->setupFeatures($selected);
 
-        $selected = [];
+            $this->setupOutput()->summary();
 
-        foreach ($selectedValues as $value) {
-            $selected[] = Feature::from((string) $value);
-        }
+            return $failedFeatures === [] ? self::SUCCESS : self::FAILURE;
+        });
+    }
 
-        $failedFeatures = $this->setupFeatures($selected);
-
-        if ($failedFeatures !== []) {
-            $this->reportIncompleteSetup($failedFeatures);
-
-            return self::FAILURE;
-        }
-
-        $this->printSuccess('Authentication setup completed!');
-
-        return self::SUCCESS;
+    protected function setupOutput(): SetupOutput
+    {
+        return $this->setupOutput ??= SetupOutput::for($this->output);
     }
 
     /**
@@ -103,10 +90,9 @@ class AuthSetupCommand extends Command
         $failedFeatures = [];
 
         foreach ($features as $feature) {
-            try {
-                $this->setupFeature($feature);
-            } catch (Throwable $exception) {
-                $this->reportFailedFeature($feature, $exception);
+            $succeeded = $this->setupOutput()->feature($feature->label(), fn () => $this->setupFeature($feature));
+
+            if (! $succeeded) {
                 $failedFeatures[] = $feature;
             }
         }
@@ -125,64 +111,30 @@ class AuthSetupCommand extends Command
         };
     }
 
-    private function reportFailedFeature(Feature $feature, Throwable $exception): void
-    {
-        $this->printFailure("{$feature->label()} setup failed: {$exception->getMessage()}");
-        $this->warn('The files it wrote before failing were kept. Continuing with the remaining features.');
-
-        if (! $exception instanceof SetupAbortedException && $this->output->isVerbose()) {
-            $this->line((string) $exception);
-        }
-
-        $this->printSectionSeparator();
-    }
-
-    /**
-     * @param array<Feature> $failedFeatures
-     */
-    private function reportIncompleteSetup(array $failedFeatures): void
-    {
-        $labels = array_map(static fn (Feature $feature): string => $feature->label(), $failedFeatures);
-
-        $this->printFailure('Authentication setup did not complete: ' . implode(', ', $labels) . ' failed.');
-        $this->line(
-            'Fix the cause above and run php artisan auth:setup again with the same features. It is safe to re-run: '
-            . 'files that already exist are reported as Skipped and never overwritten.'
-        );
-    }
-
     protected function setupGoogleSSO(): void
     {
-        $this->printBoxedMessage('Setting up Google SSO...');
-
-        $composerInstaller = new ComposerInstaller($this);
+        $composerInstaller = new ComposerInstaller($this->setupOutput());
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
+        $googleSSOInstaller = new GoogleSSOInstaller($this->setupOutput(), $composerInstaller, $stubCopier);
         $googleSSOInstaller->install();
-        $this->printSectionSeparator();
     }
 
     protected function setup2FA(): void
     {
-        $this->printBoxedMessage('Setting up 2FA...');
-
-        $composerInstaller = new ComposerInstaller($this);
+        $composerInstaller = new ComposerInstaller($this->setupOutput());
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $google2FAInstaller = new Google2FAInstaller($this, $composerInstaller, $stubCopier);
+        $google2FAInstaller = new Google2FAInstaller($this->setupOutput(), $composerInstaller, $stubCopier);
         $google2FAInstaller->install();
-        $this->printSectionSeparator();
 
         $this->setup2FAFrontend();
     }
 
     protected function setup2FAFrontend(): void
     {
-        $this->printBoxedMessage('🛠 Setting up 2FA frontend...');
-
         $manifest = new FrontendPackageManifest();
 
         $frontendInstaller = new Google2FAFrontendInstaller(
-            $this,
+            $this->setupOutput(),
             new StubRenderer(),
             new FrontendProjectLocator($manifest),
             $manifest,
@@ -191,8 +143,6 @@ class AuthSetupCommand extends Command
         );
 
         $frontendInstaller->install();
-
-        $this->printSectionSeparator();
     }
 
     private function frontendPathOption(): string|null
@@ -223,34 +173,28 @@ class AuthSetupCommand extends Command
 
     protected function setupRolesAndPermissions(): void
     {
-        $this->printBoxedMessage('Setting up Roles and Permissions...');
-
-        $composerInstaller = new ComposerInstaller($this);
+        $composerInstaller = new ComposerInstaller($this->setupOutput());
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $laravelPermission = new LaravelPermissionInstaller($this, $composerInstaller, $stubCopier);
+        $laravelPermission = new LaravelPermissionInstaller(
+            $this,
+            $this->setupOutput(),
+            $composerInstaller,
+            $stubCopier
+        );
         $laravelPermission->install();
-        $this->printSectionSeparator();
     }
 
     protected function setupOtp(): void
     {
-        $this->printBoxedMessage('Setting up OTP...');
-
-        $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $otpInstaller = new OtpInstaller($composerInstaller, $stubCopier);
+        $otpInstaller = new OtpInstaller($this->setupOutput(), $stubCopier);
         $otpInstaller->install();
-        $this->printSectionSeparator();
     }
 
     protected function setupForgotPassword(): void
     {
-        $this->printBoxedMessage('Setting up Forgot Password...');
-
-        $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $forgotPasswordInstaller = new ForgotPasswordInstaller($composerInstaller, $stubCopier);
+        $forgotPasswordInstaller = new ForgotPasswordInstaller($this->setupOutput(), $stubCopier);
         $forgotPasswordInstaller->install();
-        $this->printSectionSeparator();
     }
 }

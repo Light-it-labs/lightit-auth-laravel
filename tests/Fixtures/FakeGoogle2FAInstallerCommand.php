@@ -7,6 +7,7 @@ namespace Lightitlabs\Tests\Fixtures;
 use Illuminate\Console\Command;
 use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
+use Lightitlabs\Console\SetupOutput;
 use Lightitlabs\Tools\OriginMarker;
 use Lightitlabs\Tools\StubCopier;
 use ReflectionMethod;
@@ -20,6 +21,8 @@ use ReflectionMethod;
  */
 final class FakeGoogle2FAInstallerCommand extends Command
 {
+    use RunsInstallerThroughSetupOutput;
+
     protected $signature = 'google2fa-installer-fake';
 
     private const STEPS = [
@@ -35,18 +38,18 @@ final class FakeGoogle2FAInstallerCommand extends Command
 
     public function handle(): int
     {
-        $installer = new Google2FAInstaller(
-            $this,
-            new ComposerInstaller($this),
-            new StubCopier(new OriginMarker('0.0.0-test')),
-        );
+        return $this->runThroughSetupOutput(static function (SetupOutput $setupOutput): void {
+            $installer = new Google2FAInstaller(
+                $setupOutput,
+                new ComposerInstaller($setupOutput),
+                new StubCopier(new OriginMarker('0.0.0-test')),
+            );
 
-        foreach (self::STEPS as $step) {
-            $method = new ReflectionMethod($installer, $step);
-            $method->setAccessible(true);
-            $method->invoke($installer);
-        }
-
-        return self::SUCCESS;
+            foreach (self::STEPS as $step) {
+                $method = new ReflectionMethod($installer, $step);
+                $method->setAccessible(true);
+                $method->invoke($installer);
+            }
+        });
     }
 }

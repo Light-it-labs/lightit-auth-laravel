@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\SetupReporter;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubCopyOutcome;
 
@@ -22,7 +23,7 @@ final class OtpInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly ComposerInstaller $composerInstaller,
+        private readonly SetupReporter $reporter,
         private readonly StubCopier $stubCopier,
     ) {
     }
@@ -33,14 +34,10 @@ final class OtpInstaller implements AuthInstallerInterface
         $this->copySharedFiles();
         $this->copyMigration();
         $this->copyConfigFile();
-
-        $this->composerInstaller->printSuccess('OTP installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 4, 'Creating OTP files');
-
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
                 mkdir($path, 0755, true);
@@ -61,8 +58,6 @@ final class OtpInstaller implements AuthInstallerInterface
      */
     private function copySharedFiles(): void
     {
-        $this->composerInstaller->printStep(2, 4, 'Creating shared login primitives');
-
         foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
                 SharedLoginFiles::stubsPath() . $stub,
@@ -70,10 +65,8 @@ final class OtpInstaller implements AuthInstallerInterface
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
-                    "Created: src/Authentication/{$destination}"
-                ),
-                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->reporter->written("src/Authentication/{$destination}"),
+                StubCopyOutcome::Skipped => $this->reporter->skipped("src/Authentication/{$destination}"),
             };
         }
     }
@@ -101,23 +94,19 @@ final class OtpInstaller implements AuthInstallerInterface
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated(
-                    "Created: src/Authentication/{$destination}"
-                ),
-                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->reporter->written("src/Authentication/{$destination}"),
+                StubCopyOutcome::Skipped => $this->reporter->skipped("src/Authentication/{$destination}"),
             };
         }
     }
 
     private function copyMigration(): void
     {
-        $this->composerInstaller->printStep(3, 4, 'Copying migration files');
-
         $migrationName = 'create_otps_table';
         $migrationsDirectory = base_path('database/migrations');
 
         if ($this->migrationAlreadyExists($migrationsDirectory, $migrationName)) {
-            $this->composerInstaller->printSkipped("database/migrations/*_{$migrationName}.php");
+            $this->reporter->skipped("database/migrations/*_{$migrationName}.php");
 
             return;
         }
@@ -132,8 +121,8 @@ final class OtpInstaller implements AuthInstallerInterface
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Created: {$destination}"),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($destination),
+            StubCopyOutcome::Written => $this->reporter->written($destination),
+            StubCopyOutcome::Skipped => $this->reporter->skipped($destination),
         };
     }
 
@@ -151,8 +140,6 @@ final class OtpInstaller implements AuthInstallerInterface
 
     private function copyConfigFile(): void
     {
-        $this->composerInstaller->printStep(4, 4, 'Copying config file');
-
         if (! is_dir(config_path())) {
             mkdir(config_path(), 0755, true);
         }
@@ -163,10 +150,8 @@ final class OtpInstaller implements AuthInstallerInterface
         );
 
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printConfigPublished(
-                'Config file published: config/otp.php'
-            ),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped('config/otp.php'),
+            StubCopyOutcome::Written => $this->reporter->written('config/otp.php'),
+            StubCopyOutcome::Skipped => $this->reporter->skipped('config/otp.php'),
         };
     }
 }
