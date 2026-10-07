@@ -85,6 +85,8 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $tokens = $this->writer->tokens($root, $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES));
 
+        $this->writer->writeTwoFactorChallengeRouting($root, $tokens);
+
         foreach ([...self::FILES, self::TODO_FILE . '.stub' => self::TODO_FILE] as $stub => $relative) {
             $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
         }

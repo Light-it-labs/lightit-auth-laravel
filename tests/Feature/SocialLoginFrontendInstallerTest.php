@@ -219,6 +219,10 @@ describe('SocialLoginFrontendInstaller', function (): void {
             ->toContain('await signInWithSocialProvider("google", credential);')
             ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
             ->not->toContain('two-factor');
+
+        expect(
+            file_exists($this->root . '/src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts')
+        )->toBeFalse();
     });
 
     it('routes a 2FA challenge to the 2FA screens when the 2FA frontend is already there', function (): void {
@@ -234,12 +238,48 @@ describe('SocialLoginFrontendInstaller', function (): void {
 
         $this->artisan('social-frontend-fake')->assertSuccessful();
 
+        $routing = (string) file_get_contents(
+            $this->root . '/src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts'
+        );
+
         expect(file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts'))
             ->toContain('from "@/services/auth/two-factor/types"')
-            ->toContain('from "@/stores/use-two-factor-challenge-store"')
+            ->toContain('import { useTwoFactorChallengeRouting } from "./use-two-factor-challenge-routing";')
             ->toContain('return isTwoFactorChallenge(body) ? body : null;')
+            ->toContain('if (await routeChallenge(challenge)) {')
+            ->not->toContain('startChallenge')
+            ->not->toContain('.parse(')
+            ->and($routing)
+            ->toContain('from "@/stores/use-two-factor-challenge-store"')
             ->toContain('startChallenge(challenge);')
             ->toContain('to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor"')
             ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })');
+    });
+
+    it('keeps a challenge-routing hook the project already has and reports it as Skipped', function (): void {
+        foreach ([
+            'src/stores/use-two-factor-challenge-store.ts',
+            'src/services/auth/two-factor/types.ts',
+            'src/routes/(public)/_guest/two-factor/page.tsx',
+            'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+            'src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts',
+        ] as $relative) {
+            File::ensureDirectoryExists(\dirname($this->root . '/' . $relative));
+            file_put_contents($this->root . '/' . $relative, 'export const appOwned = true;' . PHP_EOL);
+        }
+
+        $this->artisan('social-frontend-fake')
+            ->expectsOutputToContain(
+                'Skipped src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts'
+            )
+            ->assertSuccessful();
+
+        expect(
+            file_get_contents(
+                $this->root . '/src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts'
+            )
+        )->toBe(
+            'export const appOwned = true;' . PHP_EOL
+        );
     });
 });

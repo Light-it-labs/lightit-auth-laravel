@@ -64,7 +64,8 @@ final class SocialLoginFrontendInstaller implements AuthInstallerInterface
         $missing = $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES);
         $tokens = $this->writer->tokens($root, $missing);
 
-        $signInHookStub = $this->writer->hasTwoFactorFrontend($root)
+        $hasTwoFactorFrontend = $this->writer->hasTwoFactorFrontend($root);
+        $signInHookStub = $hasTwoFactorFrontend
             ? self::SIGN_IN_HOOK_STUB . '.two-factor.ts.stub'
             : self::SIGN_IN_HOOK_STUB . '.ts.stub';
 
@@ -76,6 +77,10 @@ final class SocialLoginFrontendInstaller implements AuthInstallerInterface
 
         foreach ($files as $stub => $relative) {
             $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
+        }
+
+        if ($hasTwoFactorFrontend) {
+            $this->writer->writeTwoFactorChallengeRouting($root, $tokens);
         }
 
         $this->command->info('Frontend social login service and "Sign in with Google" button generated.');

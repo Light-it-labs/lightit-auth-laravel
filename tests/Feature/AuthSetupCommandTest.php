@@ -194,7 +194,10 @@ describe('AuthSetupCommand with 2FA and Social Login selected', function (): voi
                     $this->tempDir . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts'
                 )
             )
-                ->toContain('from "@/stores/use-two-factor-challenge-store"')
+                ->toContain('import { useTwoFactorChallengeRouting } from "./use-two-factor-challenge-routing";')
+                ->and(file_get_contents(
+                    $this->tempDir . '/src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts'
+                ))
                 ->toContain('startChallenge(challenge);');
         }
     )->with([
