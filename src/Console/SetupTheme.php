@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Console;
 
 use Closure;
+use Laravel\Prompts\MultiSelectPrompt;
 use Laravel\Prompts\Prompt;
 use Laravel\Prompts\Spinner;
 use Symfony\Component\Console\Color;
@@ -45,6 +46,7 @@ final class SetupTheme
         self::$colors = $colors;
 
         Prompt::addTheme(self::NAME, [
+            MultiSelectPrompt::class => FeatureSelectRenderer::class,
             Spinner::class => SetupSpinnerRenderer::class,
         ]);
 

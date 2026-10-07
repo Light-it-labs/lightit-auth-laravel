@@ -14,6 +14,7 @@ use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
+use Lightitlabs\Console\FeatureChoices;
 use Lightitlabs\Console\SetupOutput;
 use Lightitlabs\Console\SetupTheme;
 use Lightitlabs\Enums\Feature;
@@ -28,7 +29,8 @@ class AuthSetupCommand extends Command
 {
     private SetupOutput|null $setupOutput = null;
 
-    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication is selected; an invalid path fails the whole command even if Two-Factor Authentication is not selected}';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication is selected; an invalid path fails the whole command even if Two-Factor Authentication is not selected}
+        {--feature=* : Feature to install without asking (two-factor-authentication, roles-and-permissions, forgot-password); repeat it for more than one}';
 
     protected $description = 'Setup the authentication structure';
 
@@ -48,21 +50,11 @@ class AuthSetupCommand extends Command
                 ),
             );
 
-            $selected = array_map(
-                static fn (int|string $value): Feature => Feature::from((string) $value),
-                multiselect(
-                    label: 'Select features',
-                    options: array_column(
-                        array_map(
-                            static fn (Feature $feature): array => ['value' => $feature->value, 'label' => $feature->label()],
-                            Feature::selectable(),
-                        ),
-                        'label',
-                        'value',
-                    ),
-                    hint: 'Press [space] to select, [enter] to confirm.'
-                ),
-            );
+            $selected = $this->selectedFeatures();
+
+            if ($selected === null) {
+                return self::FAILURE;
+            }
 
             $failedFeatures = $this->setupFeatures($selected);
 
@@ -78,6 +70,36 @@ class AuthSetupCommand extends Command
     }
 
     /**
+     * @return array<Feature>|null null when the --feature values are not valid
+     */
+    private function selectedFeatures(): array|null
+    {
+        $requested = array_map(strval(...), (array) $this->option('feature'));
+        $selectable = array_map(static fn (Feature $feature): string => $feature->value, Feature::selectable());
+
+        if ($requested === [] && $this->input->isInteractive()) {
+            $requested = array_map(strval(...), multiselect(
+                label: 'Select features',
+                options: (new FeatureChoices(base_path()))->options(Feature::selectable()),
+                hint: 'Press [space] to select, [enter] to confirm.'
+            ));
+        }
+
+        $unknown = array_diff($requested, $selectable);
+
+        if ($unknown !== [] || ($requested === [] && ! $this->input->isInteractive())) {
+            $this->error(
+                ($unknown === [] ? 'No feature selected.' : 'Unknown --feature: ' . implode(', ', $unknown) . '.')
+                . ' Pass --feature with one of: ' . implode(', ', $selectable) . '.'
+            );
+
+            return null;
+        }
+
+        return array_map(static fn (string $value): Feature => Feature::from($value), array_values($requested));
+    }
+
+    /**
      * Runs every feature even when one fails: they are independent, and every installer
      * skips the files that already exist, so re-running the failed ones afterwards is safe.
      *
@@ -90,7 +112,11 @@ class AuthSetupCommand extends Command
         $failedFeatures = [];
 
         foreach ($features as $feature) {
-            $succeeded = $this->setupOutput()->feature($feature->label(), fn () => $this->setupFeature($feature));
+            $succeeded = $this->setupOutput()->feature(
+                $feature->label(),
+                fn () => $this->setupFeature($feature),
+                FeatureChoices::docs($feature),
+            );
 
             if (! $succeeded) {
                 $failedFeatures[] = $feature;
