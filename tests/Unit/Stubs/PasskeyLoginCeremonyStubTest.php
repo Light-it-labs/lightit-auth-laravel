@@ -103,6 +103,27 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
             ->and($grammar->lockedForUpdate)->toBe(['passkeys']);
     });
 
+    it(
+        'asks for user verification and rejects an assertion signed without it, so a passkey counts as multi-factor',
+        function (): void {
+            $unverified = $this->authenticator->assertion(
+                json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+                PASSKEY_LOGIN_TEST_ORIGIN,
+                $this->userHandle,
+                1,
+                userVerified: false,
+            );
+
+            $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $unverified));
+
+            expect(json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR)['userVerification'])
+                ->toBe('required')
+                ->and($exception->statusCode())->toBe(422)
+                ->and($exception->errorCode())->toBe('passkey_login_failed')
+                ->and($this->passkey->refresh()->sign_count)->toBe(0);
+        }
+    );
+
     it('rejects an assertion whose counter does not move past the stored one', function (): void {
         $this->passkey->sign_count = 5;
         $this->passkey->saveOrFail();

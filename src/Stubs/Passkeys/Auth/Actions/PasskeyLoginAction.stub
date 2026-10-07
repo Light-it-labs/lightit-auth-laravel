@@ -12,7 +12,6 @@ use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyAssertionDt
 use Lightit\Authentication\Domain\Exceptions\PasskeyChallengeExpiredException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
-use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
 use Lightit\Authentication\Domain\PasskeyChallengeStore;
 use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
 use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
@@ -32,7 +31,6 @@ final readonly class PasskeyLoginAction
      * @throws PasskeyChallengeExpiredException
      * @throws PasskeyLoginFailedException
      * @throws PasskeyNotRecognisedException
-     * @throws TwoFactorChallengeException
      */
     public function execute(PasskeyLoginDto $passkeyLoginDto): User
     {
@@ -57,7 +55,9 @@ final readonly class PasskeyLoginAction
             return $verified;
         });
 
-        $this->loginByUserAction->execute($verified->passkey->user);
+        // A passkey verified with user verification is already multi-factor (device + biometric or PIN),
+        // so it skips the 2FA challenge, also when 2FA is mandatory and the user has no TOTP yet.
+        $this->loginByUserAction->executeAfterChallenge($verified->passkey->user);
 
         return $verified->passkey->user;
     }

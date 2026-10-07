@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 /**
- * Every login-adjacent feature (2FA, OTP, Google SSO, passkeys) routes through
- * the same challenge action, so each of their installers writes the same set of
+ * Every login-adjacent feature (2FA, OTP, Google SSO, passkeys) signs in
+ * through the same login action, so each of their installers writes the same set of
  * shared stubs - kept in one place instead of a separately maintained copy of
  * this map per installer.
  */

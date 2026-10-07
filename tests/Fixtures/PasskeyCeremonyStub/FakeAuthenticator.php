@@ -89,6 +89,7 @@ final class FakeAuthenticator
         string $origin,
         string $userHandle,
         int $counter,
+        bool $userVerified = true,
     ): string {
         $clientDataJson = (string) json_encode([
             'type' => 'webauthn.get',
@@ -98,7 +99,7 @@ final class FakeAuthenticator
         ], \JSON_UNESCAPED_SLASHES);
 
         $authenticatorData = hash('sha256', $requestOptions['rpId'], true)
-            . \chr(self::FLAG_USER_PRESENT|self::FLAG_USER_VERIFIED)
+            . \chr(self::FLAG_USER_PRESENT|($userVerified ? self::FLAG_USER_VERIFIED : 0))
             . pack('N', $counter);
 
         openssl_sign(
