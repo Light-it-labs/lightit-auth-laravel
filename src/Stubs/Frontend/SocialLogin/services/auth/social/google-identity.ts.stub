@@ -1,0 +1,99 @@
+const GOOGLE_IDENTITY_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+
+type GoogleCredentialResponse = {
+  credential?: string;
+};
+
+type GoogleIdentityConfig = {
+  client_id: string;
+  callback: (response: GoogleCredentialResponse) => void;
+};
+
+type GoogleButtonOptions = {
+  type: "standard";
+  theme: "outline";
+  size: "large";
+  text: "signin_with";
+  shape: "rectangular";
+};
+
+export type GoogleIdentity = {
+  initialize: (config: GoogleIdentityConfig) => void;
+  renderButton: (parent: HTMLElement, options: GoogleButtonOptions) => void;
+};
+
+type WindowWithGoogleIdentity = Window & {
+  google?: { accounts?: { id?: GoogleIdentity } };
+};
+
+let loadingGoogleIdentity: Promise<GoogleIdentity> | null = null;
+
+const loadedGoogleIdentity = () => {
+  return (window as WindowWithGoogleIdentity).google?.accounts?.id;
+};
+
+const injectScript = () => {
+  return new Promise<GoogleIdentity>((resolve, reject) => {
+    const script = document.createElement("script");
+
+    script.src = GOOGLE_IDENTITY_SCRIPT_URL;
+    script.async = true;
+    script.onload = () => {
+      const identity = loadedGoogleIdentity();
+
+      if (identity) {
+        resolve(identity);
+
+        return;
+      }
+
+      script.remove();
+      reject(new Error("Google Identity Services loaded without its API."));
+    };
+    script.onerror = () => {
+      script.remove();
+      reject(new Error("Google Identity Services could not be loaded."));
+    };
+
+    document.head.append(script);
+  });
+};
+
+export const loadGoogleIdentity = () => {
+  const identity = loadedGoogleIdentity();
+
+  if (identity) {
+    return Promise.resolve(identity);
+  }
+
+  loadingGoogleIdentity ??= injectScript().catch((error: unknown) => {
+    loadingGoogleIdentity = null;
+
+    throw error;
+  });
+
+  return loadingGoogleIdentity;
+};
+
+export const renderGoogleButton = (
+  identity: GoogleIdentity,
+  parent: HTMLElement,
+  clientId: string,
+  onCredential: (credential: string) => void,
+) => {
+  identity.initialize({
+    client_id: clientId,
+    callback: ({ credential }) => {
+      if (credential) {
+        onCredential(credential);
+      }
+    },
+  });
+  identity.renderButton(parent, {
+    type: "standard",
+    theme: "outline",
+    size: "large",
+    text: "signin_with",
+    shape: "rectangular",
+  });
+};

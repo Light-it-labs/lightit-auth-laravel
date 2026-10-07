@@ -1,0 +1,12 @@
+import { api, ensureCsrf } from "@/config/api";
+import type { SocialProvider } from "./types";
+
+export const signInWithSocialProvider = async (
+  provider: SocialProvider,
+  token: string,
+): Promise<unknown> => {
+  await ensureCsrf();
+  const response = await api.post(`auth/social/${provider}`, { token });
+
+  return response.data.data;
+};

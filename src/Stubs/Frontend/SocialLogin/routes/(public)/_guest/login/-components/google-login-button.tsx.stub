@@ -1,0 +1,83 @@
+import { useEffect, useRef, useState } from "react";
+import { useNavigate, useRouter, useSearch } from "@tanstack/react-router";
+import { toast } from "sonner";
+
+import { ErrorMessage } from "@/components/ui/error-message";
+import { env } from "@/config/env";
+import { useTranslation } from "@/i18n";
+import { loadGoogleIdentity, renderGoogleButton } from "@/services/auth/social/google-identity";
+import { getSocialSignInFailure, type SocialSignInFailure } from "@/services/auth/social/types";
+import { redirectTarget } from "@/utils";
+import { useSignInWithGoogle } from "../-hooks/use-sign-in-with-google";
+
+export const GoogleLoginButton = () => {
+  const { t } = useTranslation();
+
+  const router = useRouter();
+  const search = useSearch({ from: "/(public)/_guest/login/" });
+  const navigate = useNavigate();
+
+  const buttonContainer = useRef<HTMLDivElement>(null);
+  const isSigningIn = useRef(false);
+  const [isUnavailable, setIsUnavailable] = useState(false);
+
+  const failureMessages: Record<SocialSignInFailure, string> = {
+    invalidToken: t("socialLogin.errors.invalidToken"),
+    emailNotVerified: t("socialLogin.errors.emailNotVerified"),
+    providerUnavailable: t("socialLogin.errors.providerUnavailable"),
+  };
+
+  const { isPending, mutate } = useSignInWithGoogle({
+    onSuccess: async () => {
+      toast.success(t("login.success"));
+      await router.invalidate();
+      await navigate(redirectTarget(search.redirect));
+    },
+    onError: (error) => {
+      const failure = getSocialSignInFailure(error);
+
+      toast.error(failure ? failureMessages[failure] : t("common.requestError"));
+    },
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const signIn = (credential: string) => {
+      if (isSigningIn.current) {
+        return;
+      }
+
+      isSigningIn.current = true;
+      mutate(credential, {
+        onSettled: () => {
+          isSigningIn.current = false;
+        },
+      });
+    };
+
+    loadGoogleIdentity()
+      .then((identity) => {
+        if (isMounted && buttonContainer.current) {
+          renderGoogleButton(identity, buttonContainer.current, env.VITE_GOOGLE_CLIENT_ID, signIn);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setIsUnavailable(true);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [mutate]);
+
+  if (isUnavailable) {
+    return <ErrorMessage errorMessage={t("socialLogin.googleUnavailable")} />;
+  }
+
+  return (
+    <div ref={buttonContainer} aria-busy={isPending} className="flex min-h-10 justify-center" />
+  );
+};
