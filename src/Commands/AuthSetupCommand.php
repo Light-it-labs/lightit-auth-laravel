@@ -102,16 +102,9 @@ class AuthSetupCommand extends Command
      */
     protected function setupFeatures(array $features): array
     {
-        // Declaration order, not selection order: the passkeys frontend reads whether the
-        // 2FA frontend is already in place to pick its login hook.
-        $ordered = array_filter(
-            Feature::cases(),
-            static fn (Feature $feature): bool => \in_array($feature, $features, true),
-        );
-
         $failedFeatures = [];
 
-        foreach ($ordered as $feature) {
+        foreach ($features as $feature) {
             try {
                 $this->setupFeature($feature);
             } catch (Throwable $exception) {

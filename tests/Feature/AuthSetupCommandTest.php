@@ -153,7 +153,7 @@ describe('AuthSetupCommand with 2FA and Passkeys selected', function (): void {
         File::deleteDirectory($this->tempDir);
     });
     it(
-        'writes the 2FA-aware passkey sign-in hook whichever feature was ticked first',
+        'writes the passkey sign-in hook that skips the 2FA screens whichever feature was ticked first',
         function (array $selection): void {
             $this->tempDir = sys_get_temp_dir() . '/lightit-auth-setup-both-' . bin2hex(random_bytes(6));
             File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->tempDir);
@@ -193,8 +193,9 @@ describe('AuthSetupCommand with 2FA and Passkeys selected', function (): void {
                     $this->tempDir . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'
                 )
             )
-                ->toContain('from "@/stores/use-two-factor-challenge-store"')
-                ->toContain('startChallenge(challenge);');
+                ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
+                ->not->toContain('two-factor')
+                ->and($this->tempDir . '/src/routes/(public)/_guest/two-factor/page.tsx')->toBeFile();
         }
     )->with([
         'Passkeys ticked first' => [[Feature::Passkeys, Feature::TwoFactorAuthentication]],
