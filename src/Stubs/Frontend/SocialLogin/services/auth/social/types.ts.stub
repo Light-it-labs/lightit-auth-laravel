@@ -1,0 +1,23 @@
+import { isAxiosError } from "axios";
+
+export type SocialProvider = "google";
+
+export type SocialSignInFailure = "invalidToken" | "emailNotVerified" | "providerUnavailable";
+
+const failureByApiErrorCode: Partial<Record<string, SocialSignInFailure>> = {
+  invalid_social_token: "invalidToken",
+  social_email_not_verified: "emailNotVerified",
+  social_provider_unavailable: "providerUnavailable",
+};
+
+type SocialErrorBody = {
+  error?: { code?: string };
+};
+
+export const getSocialSignInFailure = (error: unknown): SocialSignInFailure | null => {
+  if (!isAxiosError<SocialErrorBody>(error)) {
+    return null;
+  }
+
+  return failureByApiErrorCode[error.response?.data.error?.code ?? ""] ?? null;
+};

@@ -1,0 +1,21 @@
+import { useMutation } from "@tanstack/react-query";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { signInWithSocialProvider } from "@/services/auth/social/api";
+import type { UseMutationProps } from "@/services/types";
+
+const signInWithGoogle = async (credential: string) => {
+  await signInWithSocialProvider("google", credential);
+};
+
+export const useSignInWithGoogle = (props?: UseMutationProps<typeof signInWithGoogle>) => {
+  return useMutation({
+    mutationFn: signInWithGoogle,
+    ...props,
+    onSuccess: async (...args) => {
+      await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+      await props?.onSuccess?.(...args);
+    },
+  });
+};

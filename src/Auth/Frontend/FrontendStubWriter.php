@@ -17,6 +17,13 @@ final class FrontendStubWriter
 {
     use LightitConsoleOutput;
 
+    private const TWO_FACTOR_FRONTEND_FILES = [
+        'src/stores/use-two-factor-challenge-store.ts',
+        'src/services/auth/two-factor/types.ts',
+        'src/routes/(public)/_guest/two-factor/page.tsx',
+        'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+    ];
+
     public function __construct(
         protected Command $command,
         private readonly StubRenderer $stubRenderer,
@@ -113,5 +120,20 @@ final class FrontendStubWriter
     public function addCommand(string $root, array $missingDependencies): string
     {
         return $this->manifest->addCommand($root) . ' ' . implode(' ', $missingDependencies);
+    }
+
+    /**
+     * Whether the 2FA challenge store, types and screens a sign-in hook needs to route a
+     * challenge are already in the project.
+     */
+    public function hasTwoFactorFrontend(string $root): bool
+    {
+        foreach (self::TWO_FACTOR_FRONTEND_FILES as $relative) {
+            if (! is_file($root . '/' . $relative)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
