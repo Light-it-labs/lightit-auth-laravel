@@ -4,6 +4,9 @@
 > package could not do for you, because it never edits your files. Tick each box,
 > then **delete this file**. How passkeys work:
 > https://github.com/Light-it-labs/lightit-auth-laravel/blob/main/docs/passkeys.md
+>
+> Signing in with a passkey skips the 2FA code: a passkey with user verification is already
+> multi-factor. Password and Google sign-in still ask for it.
 
 - [ ] **Run `php artisan migrate`** (creates the `passkeys` table).
 - [ ] **Set the relying party** in `.env` (read by `config/passkeys.php`). `PASSKEYS_RP_ID` is
