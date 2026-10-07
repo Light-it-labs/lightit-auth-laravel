@@ -139,7 +139,7 @@ dependency (`composer require`, never `--dev`).
 | Method | Path | Body | Answer |
 | --- | --- | --- | --- |
 | `POST` | `/auth/passkeys/login-options` | - | `200`: `ceremony_id` and the WebAuthn request options |
-| `POST` | `/auth/passkeys/login` | `{ ceremony_id, credential }` | `200`: the user (session created) or the 2FA challenge; `410` expired or replayed challenge, `422` unknown passkey (`passkey_not_recognised`) or failed verification (`passkey_login_failed`) |
+| `POST` | `/auth/passkeys/login` | `{ ceremony_id, credential }` | `200`: the user (session created), never a 2FA challenge; `410` expired or replayed challenge, `422` unknown passkey (`passkey_not_recognised`) or failed verification (`passkey_login_failed`) |
 | `GET` | `/passkeys` | - | `200`: `id`, `name`, `created_at`, `last_used_at` per passkey |
 | `POST` | `/passkeys/registration-options` | `{ password }` | `200`: WebAuthn creation options |
 | `POST` | `/passkeys` | `{ name, credential }` | `201`: the new passkey; `410` expired or replayed challenge, `422` failed verification, `409` already registered |
@@ -194,11 +194,15 @@ signature counter that goes backwards fails the ceremony. A valid assertion stor
 counter and `last_used_at`.
 
 The user is then signed in through
-`\Lightit\Authentication\Domain\Actions\LoginByUserAction::execute()`, the same gate the
-password login goes through with 2FA installed. A user without 2FA gets the cookie session and
-the boilerplate's `\Lightit\Users\App\Resources\UserResource`. A user with 2FA gets the same
-`200` challenge as the password login (`access_token`, `token_type` `verification_required` or
-`setup_required`, `expires_in`) and no session: a passkey never skips the second factor. Like
+`\Lightit\Authentication\Domain\Actions\LoginByUserAction::executeAfterChallenge()`, with no
+2FA challenge: a passkey verified with user verification is already multi-factor (the device
+plus its biometric or PIN), stronger than a TOTP code. Every user, with or without 2FA, gets the
+cookie session and the boilerplate's `\Lightit\Users\App\Resources\UserResource`. The
+password login (and Google sign-in) still ask for the code, so a user with both configured signs
+in either with password + code or with the passkey alone. With mandatory 2FA, a user who has not
+enrolled TOTP yet also signs in with a passkey directly, because the passkey already satisfies
+the second factor. Both ceremonies ask for `userVerification: required` and the server rejects
+an assertion without the UV flag, which is what makes the passkey count as multi-factor. Like
 the boilerplate's `LoginAction`, a request without a session (not from a Sanctum stateful
 domain) is a `401`.
 
@@ -210,18 +214,12 @@ domain) is a `401`.
    anonymous, single-use challenge and its `ceremony_id`. `startAuthentication` lets the user
    pick any passkey the device holds for the site. The result goes with the `ceremony_id` to
    `POST auth/passkeys/login`.
-2. A normal sign-in creates the cookie session. `useSignInWithPasskey` ignores the response
+2. The sign-in creates the cookie session. `useSignInWithPasskey` ignores the response
    body and fetches the current-user query again, like the template's `useLogin`, and the
    button navigates to the `redirect` search param (or `/`) through `redirectTarget`, like the
    login form.
-3. When the user has 2FA, the backend answers with the same challenge as the password login.
-   If the 2FA frontend was already generated when the hook was, the hook puts it in the 2FA
-   challenge store and navigates to `/two-factor` or `/two-factor/setup`, keeping `redirect`,
-   so a passkey never skips the second factor. Otherwise the hook does not know about
-   challenges: the backend still creates no session, so the current user stays empty and the
-   app's guards send the user back to `/login`, exactly like the template's `useLogin` without
-   the 2FA hook. If you add 2FA later, delete `-hooks/use-sign-in-with-passkey.ts` and run
-   `auth:setup` with Passkeys again: it writes the 2FA-aware hook and skips every other file.
+3. A user with 2FA signs in the same way: the backend never answers a passkey sign-in with a
+   2FA challenge, so the hook never routes to `/two-factor`.
 4. A cancelled or timed-out prompt, a browser without WebAuthn, a passkey the backend doesn't
    know (`422` `passkey_not_recognised`, e.g. deleted from the account) and an expired
    challenge (`410`) get their own toast; anything else shows `common.requestError`.

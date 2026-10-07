@@ -4,6 +4,9 @@
 > lists what the package could not do for you, because it never edits your files. Tick
 > each box, then **delete this file**. How passkeys work: `docs/passkeys.md` in the
 > package.
+>
+> Signing in with a passkey skips the 2FA code: a passkey with user verification is already
+> multi-factor. Password and Google sign-in still ask for it.
 
 - [ ] **Install dependencies** (`{{ packageManager }}`): {{ dependencyReport }}
 - [ ] **Add the "Sign in with passkey" button** in `src/routes/(public)/_guest/login/-components/login-form.tsx`:
