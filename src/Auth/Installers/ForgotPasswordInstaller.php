@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\SetupReporter;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubCopyOutcome;
 
@@ -19,21 +20,17 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly ComposerInstaller $composerInstaller,
+        private readonly SetupReporter $reporter,
         private readonly StubCopier $stubCopier,
     ) {}
 
     public function install(): void
     {
         $this->createAuthFiles();
-
-        $this->composerInstaller->printSuccess('Forgot Password installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 1, 'Creating forgot password files');
-
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
                 mkdir($path, 0755, true);
@@ -65,8 +62,8 @@ final class ForgotPasswordInstaller implements AuthInstallerInterface
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: src/Authentication/{$destination}"),
-                StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped("src/Authentication/{$destination}"),
+                StubCopyOutcome::Written => $this->reporter->written("src/Authentication/{$destination}"),
+                StubCopyOutcome::Skipped => $this->reporter->skipped("src/Authentication/{$destination}"),
             };
         }
     }

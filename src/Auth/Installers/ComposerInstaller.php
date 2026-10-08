@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
-use Lightitlabs\Console\LightitConsoleOutput;
+use Lightitlabs\Contracts\SetupReporter;
 use Symfony\Component\Process\Process;
-
-use function Laravel\Prompts\error;
-use function Laravel\Prompts\info;
 
 final class ComposerInstaller
 {
-    use LightitConsoleOutput;
-
-    public function __construct(protected Command $command)
-    {
-        $this->initializeOutput($this->command);
+    /**
+     * @param list<string> $composer the command that runs composer
+     */
+    public function __construct(
+        private readonly SetupReporter $reporter,
+        private readonly array $composer = ['composer'],
+    ) {
     }
 
     /**
@@ -25,37 +23,31 @@ final class ComposerInstaller
      */
     public function requirePackages(array $packages): bool
     {
-        $command = array_merge(['composer', 'require'], $packages);
-
-        $process = new Process($command, base_path(), ['COMPOSER_MEMORY_LIMIT' => '-1']);
+        $process = new Process(
+            [...$this->composer, 'require', '--no-interaction', ...$packages],
+            base_path(),
+            ['COMPOSER_MEMORY_LIMIT' => '-1'],
+        );
         $process->setTimeout(null);
 
-        $this->command->newLine();
-        info('📦 Installing composer packages: ' . implode(', ', $packages));
-        $this->command->line(str_repeat('-', 60));
+        $output = '';
 
-        return $process->run(function ($type, $buffer): void {
-            foreach (explode("\n", $buffer) as $line) {
-                $line = trim($line);
+        $exitCode = $process->run(static function (string $type, string $buffer) use (&$output): void {
+            $output .= $buffer;
+        });
 
-                if ($line === '') {
-                    return;
-                }
+        if ($exitCode === 0) {
+            return true;
+        }
 
-                if (
-                    str_contains($line, 'Installing')
-                    || str_contains($line, 'Generating optimized autoload')
-                    || str_contains($line, 'Writing lock file')
-                    || str_contains($line, 'Package operations')
-                    || str_contains($line, 'Nothing to install')
-                    || str_contains($line, 'Extracting archive')) {
-                    info("   💡 $line");
-                }
+        $this->reporter->error(
+            'composer require ' . implode(' ', $packages) . " exited with code {$exitCode}:",
+            array_values(array_filter(
+                array_map(rtrim(...), preg_split('/\R/', $output) ?: []),
+                static fn (string $line): bool => trim($line) !== '',
+            )),
+        );
 
-                if ($type === Process::ERR) {
-                    error($line);
-                }
-            }
-        }) === 0;
+        return false;
     }
 }

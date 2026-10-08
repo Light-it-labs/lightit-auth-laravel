@@ -38,7 +38,6 @@ describe('AuthSetupCommand --frontend-path', function (): void {
         Artisan::registerCommand(new FakeAuthSetupTwoFactorCommand());
 
         $this->artisan('auth-setup-two-factor-fake', ['--frontend-path' => $this->tempDir])
-            ->expectsOutputToContain('Frontend project resolved:')
             ->assertSuccessful();
 
         expect(file_exists($this->tempDir . '/src/services/auth/two-factor/types.ts'))->toBeTrue();
@@ -85,8 +84,13 @@ describe('AuthSetupCommand when a feature fails', function (): void {
                     'Two-Factor Authentication setup failed: Failed to install pragmarx/google2fa-laravel, '
                     . 'pragmarx/google2fa-qrcode, bacon/bacon-qr-code'
                 )
-                ->doesntExpectOutputToContain('Setting up 2FA frontend')
-                ->expectsOutputToContain('Setting up Forgot Password')
+                ->expectsOutputToContain(
+                    '✘ composer require pragmarx/google2fa-laravel pragmarx/google2fa-qrcode bacon/bacon-qr-code '
+                    . 'exited with code'
+                )
+                ->expectsOutputToContain('composer.json')
+                ->doesntExpectOutputToContain('AUTH-2FA-FRONTEND-TODO.md')
+                ->expectsOutputToContain('✔ Forgot Password')
                 ->expectsOutputToContain('Authentication setup did not complete: Two-Factor Authentication failed.')
                 ->expectsOutputToContain('It is safe to re-run')
                 ->doesntExpectOutputToContain('Authentication setup completed!')
@@ -111,7 +115,7 @@ describe('AuthSetupCommand when a feature fails', function (): void {
                 ->expectsQuestion('Select features', ['two-factor-authentication', 'forgot-password'])
                 ->expectsOutputToContain('Two-Factor Authentication setup failed:')
                 ->expectsOutputToContain('The files it wrote before failing were kept.')
-                ->expectsOutputToContain('Setting up Forgot Password')
+                ->expectsOutputToContain('✔ Forgot Password')
                 ->expectsOutputToContain('Authentication setup did not complete: Two-Factor Authentication failed.')
                 ->assertFailed();
     
@@ -120,7 +124,10 @@ describe('AuthSetupCommand when a feature fails', function (): void {
     
             unlink($blockedDirectory);
     
-            $this->artisan('auth-setup-without-composer-fake', ['--frontend-path' => $this->tempDir . '/frontend'])
+            $this->artisan(
+                'auth-setup-without-composer-fake',
+                ['--frontend-path' => $this->tempDir . '/frontend', '-v' => true]
+            )
                 ->expectsQuestion('Select features', ['two-factor-authentication', 'forgot-password'])
                 ->expectsOutputToContain('Skipped src/services/auth/two-factor/api.ts')
                 ->expectsOutputToContain('Authentication setup completed!')
