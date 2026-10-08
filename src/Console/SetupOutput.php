@@ -58,9 +58,9 @@ final class SetupOutput implements SetupReporter
             }
 
             $this->output->writeln('');
-            $this->line(
+            $this->line($this->fit(
                 '  <options=bold>' . $this->escape($title) . '</> ' . $this->paint(SetupTheme::GRAY, $version)
-            );
+            ));
         } else {
             $this->line(
                 $this->fit('<options=bold>' . $this->escape(Banner::NAME . ' · ' . $title . ' ' . $version) . '</>')
