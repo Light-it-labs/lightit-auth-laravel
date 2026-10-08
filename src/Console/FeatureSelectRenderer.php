@@ -13,6 +13,11 @@ use Laravel\Prompts\Themes\Default\MultiSelectPromptRenderer;
  */
 final class FeatureSelectRenderer extends MultiSelectPromptRenderer
 {
+    public function __invoke(MultiSelectPrompt $prompt): string
+    {
+        return SetupTheme::plain(parent::__invoke($prompt));
+    }
+
     public function cyan(string $text): string
     {
         return SetupTheme::paint(SetupTheme::VIOLET, $text);

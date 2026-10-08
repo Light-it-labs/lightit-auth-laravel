@@ -61,6 +61,14 @@ final class SetupTheme
         }
     }
 
+    /**
+     * Prompts' own renderers style text inline, so a colourless frame is cleaned up after.
+     */
+    public static function plain(string $frame): string
+    {
+        return self::$colors ? $frame : (string) preg_replace('/\e\[[0-9;]*m/', '', $frame);
+    }
+
     public static function paint(string $hex, string $text): string
     {
         if (! self::$colors) {
