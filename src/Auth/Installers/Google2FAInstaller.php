@@ -288,7 +288,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
             RouteRegistrationOutcome::Failed => $this->reporter->warning(
                 'Could not edit ' . self::API_ROUTES_PATH . " — add {$requireStatement} to it yourself"
             ),
-            RouteRegistrationOutcome::Corrupted => $this->reporter->warning(
+            RouteRegistrationOutcome::Corrupted => $this->reporter->error(
                 self::API_ROUTES_PATH . " was left inconsistent while adding {$requireStatement} — inspect it"
             ),
         };

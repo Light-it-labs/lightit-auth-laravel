@@ -43,7 +43,9 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $destination = config_path('permission.php');
 
         if (! file_exists($source)) {
-            throw new SetupAbortedException("Spatie config file not found at: {$source}");
+            $this->reporter->error("Spatie config file not found at: {$source}");
+
+            return;
         }
 
         $outcome = $this->stubCopier->copy($source, $destination);
@@ -64,7 +66,9 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         $source = base_path('vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub');
 
         if (! file_exists($source)) {
-            throw new SetupAbortedException("Spatie migration file not found at: {$source}");
+            $this->reporter->error("Spatie migration file not found at: {$source}");
+
+            return;
         }
 
         $timestamp = date('Y_m_d_His');
