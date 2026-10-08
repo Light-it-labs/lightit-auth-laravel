@@ -2,13 +2,9 @@
 
 declare(strict_types=1);
 
-use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Lightitlabs\Auth\Installers\ComposerInstaller;
-use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
-use Lightitlabs\Tests\Fixtures\RecordingSetupReporter;
-use Lightitlabs\Tools\OriginMarker;
-use Lightitlabs\Tools\StubCopier;
+use Lightitlabs\Tests\Fixtures\FakeLaravelPermissionCommand;
 
 describe('LaravelPermissionInstaller', function (): void {
     beforeEach(function (): void {
@@ -23,24 +19,19 @@ describe('LaravelPermissionInstaller', function (): void {
         File::deleteDirectory($this->root);
     });
 
-    it('reports each missing spatie file as an error and still writes the role catalog and seeders', function (): void {
-        $reporter = new RecordingSetupReporter();
-        $installer = new LaravelPermissionInstaller(
-            new class() extends Command {
-            },
-            $reporter,
-            new ComposerInstaller($reporter),
-            new StubCopier(new OriginMarker('0.0.0-test')),
-        );
+    it('fails on a missing spatie file but still writes the role catalog and seeders, as main did', function (): void {
+        Artisan::registerCommand(new FakeLaravelPermissionCommand());
 
-        foreach (['copyConfigFile', 'copyMigration', 'copyPackageFiles'] as $step) {
-            (new ReflectionMethod($installer, $step))->invoke($installer);
-        }
+        $this->artisan('laravel-permission-fake')
+            ->expectsOutputToContain('✘ Fixture · failed')
+            ->expectsOutputToContain('✘ Spatie config file not found at: ')
+            ->expectsOutputToContain('✘ Spatie migration file not found at: ')
+            ->expectsOutputToContain('Wrote /Shared/Roles/RoleManagement.php')
+            ->assertFailed();
 
-        expect($reporter->errors)->toHaveCount(2)
-            ->and($reporter->errors[0])->toStartWith('Spatie config file not found at: ')
-            ->and($reporter->errors[1])->toStartWith('Spatie migration file not found at: ')
-            ->and($this->root . '/src/Shared/Roles/RoleManagement.php')->toBeFile()
-            ->and($this->root . '/database/seeders/RoleSeeder.php')->toBeFile();
+        expect($this->root . '/src/Shared/Roles/RoleManagement.php')->toBeFile()
+            ->and($this->root . '/src/Shared/Permissions/UserPermissions.php')->toBeFile()
+            ->and($this->root . '/database/seeders/RoleSeeder.php')->toBeFile()
+            ->and($this->root . '/database/seeders/PermissionSeeder.php')->toBeFile();
     });
 });
