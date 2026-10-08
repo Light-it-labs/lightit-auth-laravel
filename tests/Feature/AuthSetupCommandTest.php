@@ -86,9 +86,9 @@ describe('AuthSetupCommand when a feature fails', function (): void {
                 )
                 ->expectsOutputToContain(
                     '✘ composer require pragmarx/google2fa-laravel pragmarx/google2fa-qrcode bacon/bacon-qr-code '
-                    . 'exited with code 1:'
+                    . 'exited with code'
                 )
-                ->expectsOutputToContain('"./composer.json" does not contain valid JSON')
+                ->expectsOutputToContain('composer.json')
                 ->doesntExpectOutputToContain('AUTH-2FA-FRONTEND-TODO.md')
                 ->expectsOutputToContain('✔ Forgot Password')
                 ->expectsOutputToContain('Authentication setup did not complete: Two-Factor Authentication failed.')

@@ -9,8 +9,13 @@ use Symfony\Component\Process\Process;
 
 final class ComposerInstaller
 {
-    public function __construct(private readonly SetupReporter $reporter)
-    {
+    /**
+     * @param list<string> $composer the command that runs composer
+     */
+    public function __construct(
+        private readonly SetupReporter $reporter,
+        private readonly array $composer = ['composer'],
+    ) {
     }
 
     /**
@@ -19,7 +24,7 @@ final class ComposerInstaller
     public function requirePackages(array $packages): bool
     {
         $process = new Process(
-            array_merge(['composer', 'require', '--no-interaction'], $packages),
+            [...$this->composer, 'require', '--no-interaction', ...$packages],
             base_path(),
             ['COMPOSER_MEMORY_LIMIT' => '-1'],
         );
