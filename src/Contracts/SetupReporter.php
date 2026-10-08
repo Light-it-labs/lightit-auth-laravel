@@ -8,7 +8,10 @@ interface SetupReporter
 {
     public function written(string $path): void;
 
-    public function skipped(string $path): void;
+    /**
+     * @param string $reason why it was left alone, completing "Skipped <path>: "
+     */
+    public function skipped(string $path, string $reason = 'the file already exists'): void;
 
     /**
      * @param string       $title   the step's bold title in the feature's checklist, word for word

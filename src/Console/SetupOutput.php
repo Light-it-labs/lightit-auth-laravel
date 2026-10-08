@@ -108,8 +108,8 @@ final class SetupOutput implements SetupReporter
                 $this->detail('Wrote ', $path, '');
             }
 
-            foreach ($report->skipped as $path) {
-                $this->detail('Skipped ', $path, ': the file already exists.');
+            foreach ($report->skipped as $path => $reason) {
+                $this->detail('Skipped ', $path, ": {$reason}.");
             }
 
             if ($trace !== null) {
@@ -174,9 +174,9 @@ final class SetupOutput implements SetupReporter
         $this->report()->written[] = $path;
     }
 
-    public function skipped(string $path): void
+    public function skipped(string $path, string $reason = 'the file already exists'): void
     {
-        $this->report()->skipped[] = $path;
+        $this->report()->skipped[$path] = $reason;
     }
 
     public function manualStep(string $title, string|null $file = null, array $details = []): void

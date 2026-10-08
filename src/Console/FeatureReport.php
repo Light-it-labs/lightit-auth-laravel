@@ -12,7 +12,7 @@ final class FeatureReport
     public array $written = [];
 
     /**
-     * @var list<string>
+     * @var array<string, string> path => why it was skipped
      */
     public array $skipped = [];
 
@@ -50,7 +50,7 @@ final class FeatureReport
     public function checklists(): array
     {
         return array_values(array_unique(array_filter(
-            [...$this->written, ...$this->skipped],
+            [...$this->written, ...array_keys($this->skipped)],
             static fn (string $path): bool => preg_match('/(^|\/)AUTH-[A-Z0-9-]+-TODO\.md$/', $path) === 1,
         )));
     }

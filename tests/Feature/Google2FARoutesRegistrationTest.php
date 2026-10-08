@@ -31,7 +31,10 @@ describe('Google2FAInstaller route registration', function (): void {
         $this->artisan('google2fa-routes-fake')->assertSuccessful();
 
         Artisan::registerCommand(new FakeGoogle2FARoutesCommand());
-        $this->artisan('google2fa-routes-fake')->assertSuccessful();
+        $this->artisan('google2fa-routes-fake')
+            ->expectsOutputToContain('Skipped routes/api.php: the 2FA routes are already registered.')
+            ->doesntExpectOutputToContain('Skipped routes/api.php: the file already exists.')
+            ->assertSuccessful();
 
         expect($this->root . '/routes/two-factor-auth.php')->toBeFile();
 

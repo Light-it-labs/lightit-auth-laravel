@@ -281,7 +281,10 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         match ($outcome) {
             RouteRegistrationOutcome::Registered => $this->reporter->written(self::API_ROUTES_PATH),
-            RouteRegistrationOutcome::AlreadyRegistered => $this->reporter->skipped(self::API_ROUTES_PATH),
+            RouteRegistrationOutcome::AlreadyRegistered => $this->reporter->skipped(
+                self::API_ROUTES_PATH,
+                'the 2FA routes are already registered'
+            ),
             RouteRegistrationOutcome::ParentMissing => $this->reporter->warning(
                 self::API_ROUTES_PATH . " not found — add {$requireStatement} to your API routes"
             ),

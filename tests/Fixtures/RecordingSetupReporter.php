@@ -27,7 +27,7 @@ final class RecordingSetupReporter implements SetupReporter
     {
     }
 
-    public function skipped(string $path): void
+    public function skipped(string $path, string $reason = 'the file already exists'): void
     {
     }
 
