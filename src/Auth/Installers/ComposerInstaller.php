@@ -25,13 +25,22 @@ final class ComposerInstaller
         );
         $process->setTimeout(null);
 
-        if ($process->run() === 0) {
+        $output = '';
+
+        $exitCode = $process->run(static function (string $type, string $buffer) use (&$output): void {
+            $output .= $buffer;
+        });
+
+        if ($exitCode === 0) {
             return true;
         }
 
-        $this->reporter->warning(
-            'composer require ' . implode(' ', $packages) . " exited with code {$process->getExitCode()}. "
-            . 'Run it yourself to see why.'
+        $this->reporter->error(
+            'composer require ' . implode(' ', $packages) . " exited with code {$exitCode}:",
+            array_values(array_filter(
+                array_map(rtrim(...), preg_split('/\R/', $output) ?: []),
+                static fn (string $line): bool => trim($line) !== '',
+            )),
         );
 
         return false;
