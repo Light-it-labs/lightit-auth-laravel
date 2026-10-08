@@ -33,9 +33,18 @@ describe('FeatureChoices', function (): void {
         }
     });
 
-    it('points every feature at a page that exists in docs/', function (Feature $feature): void {
-        $page = basename(FeatureChoices::docs($feature));
+    it('links every feature to its docs/ page on GitHub, since docs/ is not shipped to consumers', function (
+        Feature $feature,
+    ): void {
+        $url = FeatureChoices::docs($feature);
 
-        expect(dirname(__DIR__, 3) . '/docs/' . $page)->toBeFile();
+        expect($url)->toStartWith('https://github.com/Light-it-labs/lightit-auth-laravel/blob/main/docs/')
+            ->and(dirname(__DIR__, 3) . '/docs/' . basename($url))->toBeFile();
     })->with(Feature::cases());
+
+    it('uses the same docs URL the 2FA checklist links to', function (): void {
+        $checklist = (string) file_get_contents(dirname(__DIR__, 3) . '/src/Stubs/Google2FA/AUTH-2FA-TODO.md.stub');
+
+        expect($checklist)->toContain(FeatureChoices::docs(Feature::TwoFactorAuthentication));
+    });
 });

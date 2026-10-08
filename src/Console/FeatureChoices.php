@@ -16,7 +16,7 @@ final class FeatureChoices
 
     private const INSTALLED_TAG = ' (installed)';
 
-    private const DOCS_PATH = 'vendor/light-it-labs/lightit-auth-laravel/docs/';
+    private const DOCS_URL = 'https://github.com/Light-it-labs/lightit-auth-laravel/blob/main/docs/';
 
     public function __construct(private readonly string $applicationRoot)
     {
@@ -42,7 +42,7 @@ final class FeatureChoices
 
     public static function docs(Feature $feature): string
     {
-        return self::DOCS_PATH . match ($feature) {
+        return self::DOCS_URL . match ($feature) {
             Feature::TwoFactorAuthentication => 'google-2fa.md',
             Feature::RolesAndPermissions => 'permission.md',
             Feature::Otp => 'otp.md',
