@@ -46,7 +46,22 @@ final class SetupOutput implements SetupReporter
 
     public function header(string $version, string $application, string|null $frontend): void
     {
-        $this->frame(self::PACKAGE . ' ' . $version, [
+        $title = 'Auth Setup · ' . self::PACKAGE . ' ' . $version;
+
+        if ($this->showsBanner()) {
+            $this->output->writeln('');
+
+            foreach (Banner::art() as $line) {
+                $this->line($line);
+            }
+
+            $this->output->writeln('');
+            $this->line('  <options=bold>' . $this->escape($title) . '</>');
+        } else {
+            $this->line($this->fit('<options=bold>' . $this->escape(Banner::NAME . ' · ' . $title) . '</>'));
+        }
+
+        $this->indented([
             $this->row('back   ', $application, truncateFromStart: true),
             $frontend === null
                 ? $this->row('front  ', 'none found, frontend steps are skipped', SetupTheme::GRAY)
@@ -333,10 +348,7 @@ final class SetupOutput implements SetupReporter
     {
         if (! $this->profile->isTerminal()) {
             $this->line('<options=bold>' . $this->escape($title) . '</>');
-
-            foreach ($rows as $row) {
-                $this->line(rtrim('  ' . $row['lead'] . $this->styled($row['text'], $row['style'])));
-            }
+            $this->indented($rows);
 
             return;
         }
@@ -415,6 +427,29 @@ final class SetupOutput implements SetupReporter
         $lines[] = rtrim($current);
 
         return $lines;
+    }
+
+    /**
+     * @param list<array{lead: string, text: string, style: string|null, truncate: bool}> $rows
+     */
+    private function indented(array $rows): void
+    {
+        foreach ($rows as $row) {
+            $lines = $this->profile->isTerminal()
+                ? $this->layout($row, $this->width() - 2)
+                : [$row['lead'] . $this->styled($row['text'], $row['style'])];
+
+            foreach ($lines as $line) {
+                $this->line(rtrim('  ' . $line));
+            }
+        }
+    }
+
+    private function showsBanner(): bool
+    {
+        return $this->profile->isTerminal()
+            && $this->profile->width >= Banner::WIDTH
+            && $this->output->isDecorated();
     }
 
     private function wrapped(string $lead, string $text): void

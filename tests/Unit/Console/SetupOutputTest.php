@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Lightitlabs\Console\Banner;
 use Lightitlabs\Console\ConsoleProfile;
 use Lightitlabs\Console\SetupOutput;
 use Lightitlabs\Exceptions\SetupAbortedException;
@@ -255,27 +256,80 @@ describe('SetupOutput on a terminal', function (): void {
             ->and(mb_strwidth($detail))->toBe(40);
     });
 
-    it('draws the box without colour when NO_COLOR is set', function (): void {
-        putenv('NO_COLOR=1');
+    it('prints no ANSI escape sequence at all when NO_COLOR is set, even where colour is supported', function (
+        string|false $noColor,
+        bool $coloured,
+    ): void {
+        $previousColorTerm = getenv('COLORTERM');
+        putenv('FORCE_COLOR=1');
+        $noColor === false ? putenv('NO_COLOR') : putenv("NO_COLOR={$noColor}");
 
         try {
             $stream = new StreamOutput(fopen('php://memory', 'w+'));
             $setupOutput = new SetupOutput($stream, new ConsoleProfile(80));
 
+            $setupOutput->header('1.4.0', '/home/dev/app', null);
             runTwoFactorFeature($setupOutput);
             $setupOutput->summary();
         } finally {
             putenv('NO_COLOR');
+            putenv('FORCE_COLOR');
+            $previousColorTerm === false ? putenv('COLORTERM') : putenv("COLORTERM={$previousColorTerm}");
         }
 
         rewind($stream->getStream());
         $output = (string) stream_get_contents($stream->getStream());
 
-        expect($stream->isDecorated())->toBeFalse()
-            ->and($output)->not->toContain("\e[")
-            ->and($output)->toContain('┌─ Summary')
-            ->and($output)->toContain('✔ Two-Factor Authentication');
+        expect($stream->isDecorated())->toBe($coloured)
+            ->and(preg_match('/\e\[/', $output))->toBe($coloured ? 1 : 0)
+            ->and(visibleLines($output))->toContain(
+                '✔ Two-Factor Authentication · 3 created · 1 skipped · 1 warning'
+            )
+            ->and(implode("\n", visibleLines($output)))->toContain('┌─ Summary');
+    })->with([
+        'NO_COLOR set' => ['1', false],
+        'NO_COLOR unset (control)' => [false, true],
+    ]);
+
+    it('draws the Light-it banner above the title and paths on a wide colour terminal', function (): void {
+        $buffer = new BufferedOutput(decorated: true);
+        $setupOutput = new SetupOutput($buffer, new ConsoleProfile(80));
+
+        $setupOutput->header('1.4.0', '/home/dev/app', '/home/dev/frontend');
+
+        $raw = $buffer->fetch();
+        $lines = visibleLines($raw);
+
+        expect($raw)->toContain("\e[")
+            ->and($lines)->toContain('  Auth Setup · lightit-auth-laravel 1.4.0')
+            ->and($lines)->toContain('  back   /home/dev/app')
+            ->and($lines)->toContain('  front  /home/dev/frontend')
+            ->and(implode("\n", $lines))->toContain('▄█')
+            ->and(\count($lines))->toBeLessThanOrEqual(10);
+
+        foreach ($lines as $line) {
+            expect(mb_strwidth($line))->toBeLessThanOrEqual(Banner::WIDTH);
+        }
     });
+
+    it('falls back to a one-line banner on a narrow terminal or without colour', function (
+        int $width,
+        bool $decorated,
+    ): void {
+        $buffer = new BufferedOutput(decorated: $decorated);
+        $setupOutput = new SetupOutput($buffer, new ConsoleProfile($width));
+
+        $setupOutput->header('1.4.0', '/home/dev/app', null);
+
+        expect(visibleLines($buffer->fetch()))->toBe([
+            'light-it · Auth Setup · lightit-auth-laravel 1.4.0',
+            '  back   /home/dev/app',
+            '  front  none found, frontend steps are skipped',
+        ]);
+    })->with([
+        'narrow terminal' => [59, true],
+        'no colour' => [80, false],
+    ]);
 
     it('prints the header paths on one line each, keeping the end of a long path', function (): void {
         $buffer = new BufferedOutput();
@@ -284,11 +338,25 @@ describe('SetupOutput on a terminal', function (): void {
         $setupOutput->header('1.4.0', '/home/dev/projects/acme/backend-application', null);
 
         expect(visibleLines($buffer->fetch()))->toBe([
-            '┌─ lightit-auth-laravel 1.4.0 ─────────┐',
-            '│ back   …cts/acme/backend-application │',
-            '│ front  none found, frontend steps    │',
-            '│        are skipped                   │',
-            '└──────────────────────────────────────┘',
+            'light-it · Auth Setup · lightit-auth-la…',
+            '  back   …jects/acme/backend-application',
+            '  front  none found, frontend steps are',
+            '         skipped',
+        ]);
+    });
+});
+
+describe('SetupOutput without a terminal header', function (): void {
+    it('prints the one-line banner and the paths in full, untouched', function (): void {
+        $buffer = new BufferedOutput();
+        $setupOutput = new SetupOutput($buffer, new ConsoleProfile(null));
+
+        $setupOutput->header('1.4.0', '/home/dev/projects/acme/backend-application', '/home/dev/front');
+
+        expect(visibleLines($buffer->fetch()))->toBe([
+            'light-it · Auth Setup · lightit-auth-laravel 1.4.0',
+            '  back   /home/dev/projects/acme/backend-application',
+            '  front  /home/dev/front',
         ]);
     });
 });
