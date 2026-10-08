@@ -222,7 +222,7 @@ describe('SetupOutput on a terminal', function (): void {
             ->and($lines)->toContain('└' . str_repeat('─', 58) . '┘');
 
         foreach ($lines as $line) {
-            expect(mb_strwidth($line))->toBeLessThanOrEqual(60);
+            expect(mb_strwidth($line))->toBeLessThanOrEqual($line === DOCS_URL ? mb_strwidth(DOCS_URL) : 60);
         }
 
         foreach ($boxed as $line) {
@@ -240,6 +240,29 @@ describe('SetupOutput on a terminal', function (): void {
 
         expect(str_replace(' ', '', $warning))->toBe(str_replace(' ', '', LONG_WARNING));
     });
+
+    it('never splits a URL that does not fit the box, printing it whole on its own line', function (
+        int $width,
+    ): void {
+        $buffer = new BufferedOutput(decorated: true);
+        $setupOutput = new SetupOutput($buffer, new ConsoleProfile($width));
+
+        runTwoFactorFeature($setupOutput);
+        $setupOutput->summary();
+
+        $lines = visibleLines($buffer->fetch());
+        $withUrl = array_values(array_filter(
+            $lines,
+            static fn (string $line): bool => str_contains($line, 'https://'),
+        ));
+
+        expect($withUrl)->toHaveCount(1)
+            ->and($withUrl[0])->toContain(DOCS_URL);
+    })->with([
+        'fits after its lead' => [100],
+        'overflows the box' => [80],
+        'overflows the terminal' => [60],
+    ]);
 
     it('keeps one line per file with -v, cutting the start of a long path', function (): void {
         $buffer = new BufferedOutput(OutputInterface::VERBOSITY_VERBOSE);

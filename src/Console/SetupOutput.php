@@ -26,6 +26,8 @@ final class SetupOutput implements SetupReporter
 
     private const ERROR_DETAIL_LINES = 10;
 
+    private const URL_INDENT = '    ';
+
     /**
      * @var list<FeatureReport>
      */
@@ -363,6 +365,12 @@ final class SetupOutput implements SetupReporter
 
         foreach ($rows as $row) {
             foreach ($this->layout($row, $inner) as $line) {
+                if ($this->visibleWidth($line) > $inner) {
+                    $this->line($this->visibleWidth($line) > $width ? ltrim($line) : $line);
+
+                    continue;
+                }
+
                 $padding = str_repeat(' ', max(0, $inner - $this->visibleWidth($line)));
                 $this->line($edge('│') . " {$line}{$padding} " . $edge('│'));
             }
@@ -394,10 +402,27 @@ final class SetupOutput implements SetupReporter
 
         foreach ($this->wrap($row['text'], $room) as $index => $chunk) {
             $lead = $index === 0 ? $row['lead'] : str_repeat(' ', $leadWidth);
+
+            if (mb_strwidth($chunk) > $room) {
+                if ($index === 0) {
+                    $lines[] = rtrim($row['lead']);
+                }
+
+                $lead = self::URL_INDENT;
+            }
+
             $lines[] = $lead . $this->styled($chunk, $row['style']);
         }
 
         return $lines;
+    }
+
+    /**
+     * A URL split across lines can no longer be clicked or copied, so it is never split.
+     */
+    private static function isUrl(string $word): bool
+    {
+        return preg_match('#^https?://\S+\s*$#', $word) === 1;
     }
 
     /**
@@ -418,7 +443,7 @@ final class SetupOutput implements SetupReporter
 
             $current .= $word;
 
-            while (mb_strwidth($current) > $width) {
+            while (mb_strwidth($current) > $width && ! self::isUrl($word)) {
                 $lines[] = mb_strimwidth($current, 0, $width);
                 $current = $indent . mb_substr($current, mb_strlen(mb_strimwidth($current, 0, $width)));
             }
