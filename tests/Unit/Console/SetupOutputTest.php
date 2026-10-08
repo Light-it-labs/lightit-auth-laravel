@@ -314,7 +314,7 @@ describe('SetupOutput on a terminal', function (): void {
         'NO_COLOR unset (control)' => [false, true],
     ]);
 
-    it('draws the Light-it banner above the title and paths on a wide colour terminal', function (): void {
+    it('draws the Light-it lockup above the title and paths on a wide colour terminal', function (): void {
         $buffer = new BufferedOutput(decorated: true);
         $setupOutput = new SetupOutput($buffer, new ConsoleProfile(80));
 
@@ -327,12 +327,26 @@ describe('SetupOutput on a terminal', function (): void {
             ->and($lines)->toContain('  Auth Setup · lightit-auth-laravel 1.4.0')
             ->and($lines)->toContain('  back   /home/dev/app')
             ->and($lines)->toContain('  front  /home/dev/frontend')
-            ->and(implode("\n", $lines))->toContain('▄█')
-            ->and(\count($lines))->toBeLessThanOrEqual(10);
+            ->and($lines)->toContain(
+                '  ████████████░   ███░  ███░ ███     ▀███░███░░   ███░███  ███████ ███░  ███░'
+            );
 
         foreach ($lines as $line) {
-            expect(mb_strwidth($line))->toBeLessThanOrEqual(Banner::WIDTH);
+            expect(mb_strwidth($line))->toBeLessThanOrEqual(Banner::LOCKUP_WIDTH);
         }
+    });
+
+    it('drops the wordmark and keeps the bolt between 60 and 78 columns', function (): void {
+        $buffer = new BufferedOutput(decorated: true);
+        $setupOutput = new SetupOutput($buffer, new ConsoleProfile(70));
+
+        $setupOutput->header('1.4.0', '/home/dev/app', null);
+
+        $lines = visibleLines($buffer->fetch());
+
+        expect($lines)->toContain('  ████████████░')
+            ->and(implode("\n", $lines))->not->toContain('███▀▀▀▀████')
+            ->and($lines)->toContain('  Auth Setup · lightit-auth-laravel 1.4.0');
     });
 
     it('falls back to a one-line banner on a narrow terminal or without colour', function (

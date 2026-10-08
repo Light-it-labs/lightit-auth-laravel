@@ -48,19 +48,23 @@ final class SetupOutput implements SetupReporter
 
     public function header(string $version, string $application, string|null $frontend): void
     {
-        $title = 'Auth Setup · ' . self::PACKAGE . ' ' . $version;
+        $title = 'Auth Setup · ' . self::PACKAGE;
 
         if ($this->showsBanner()) {
             $this->output->writeln('');
 
-            foreach (Banner::art() as $line) {
+            foreach (Banner::art($this->width()) as $line) {
                 $this->line($line);
             }
 
             $this->output->writeln('');
-            $this->line('  <options=bold>' . $this->escape($title) . '</>');
+            $this->line(
+                '  <options=bold>' . $this->escape($title) . '</> ' . $this->paint(SetupTheme::GRAY, $version)
+            );
         } else {
-            $this->line($this->fit('<options=bold>' . $this->escape(Banner::NAME . ' · ' . $title) . '</>'));
+            $this->line(
+                $this->fit('<options=bold>' . $this->escape(Banner::NAME . ' · ' . $title . ' ' . $version) . '</>')
+            );
         }
 
         $this->indented([
