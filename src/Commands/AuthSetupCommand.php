@@ -56,6 +56,12 @@ class AuthSetupCommand extends Command
                 return self::FAILURE;
             }
 
+            if ($selected === [] && ! $this->input->isInteractive()) {
+                $this->line('No feature selected. Pass --feature with one of: ' . $this->selectableList() . '.');
+
+                return self::SUCCESS;
+            }
+
             $failedFeatures = $this->setupFeatures($selected);
 
             $this->setupOutput()->summary();
@@ -74,8 +80,7 @@ class AuthSetupCommand extends Command
      */
     private function selectedFeatures(): array|null
     {
-        $requested = array_map(strval(...), (array) $this->option('feature'));
-        $selectable = array_map(static fn (Feature $feature): string => $feature->value, Feature::selectable());
+        $requested = array_values(array_unique(array_map(strval(...), (array) $this->option('feature'))));
 
         if ($requested === [] && $this->input->isInteractive()) {
             $requested = array_map(strval(...), multiselect(
@@ -85,18 +90,31 @@ class AuthSetupCommand extends Command
             ));
         }
 
-        $unknown = array_diff($requested, $selectable);
+        $unknown = array_diff($requested, $this->selectableValues());
 
-        if ($unknown !== [] || ($requested === [] && ! $this->input->isInteractive())) {
+        if ($unknown !== []) {
             $this->error(
-                ($unknown === [] ? 'No feature selected.' : 'Unknown --feature: ' . implode(', ', $unknown) . '.')
-                . ' Pass --feature with one of: ' . implode(', ', $selectable) . '.'
+                'Unknown --feature: ' . implode(', ', $unknown) . '. Pass --feature with one of: '
+                . $this->selectableList() . '.'
             );
 
             return null;
         }
 
-        return array_map(static fn (string $value): Feature => Feature::from($value), array_values($requested));
+        return array_map(static fn (string $value): Feature => Feature::from($value), $requested);
+    }
+
+    private function selectableList(): string
+    {
+        return implode(', ', $this->selectableValues());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function selectableValues(): array
+    {
+        return array_values(array_map(static fn (Feature $feature): string => $feature->value, Feature::selectable()));
     }
 
     /**

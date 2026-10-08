@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Laravel\Prompts\Prompt;
 
@@ -37,10 +38,26 @@ describe('AuthSetupCommand without the prompt', function (): void {
             ->assertFailed();
     });
 
-    it('fails instead of installing nothing when it cannot ask and no --feature is given', function (): void {
+    it('installs nothing and succeeds, as before --feature existed, when it cannot ask', function (): void {
         $this->artisan('auth:setup', ['--no-interaction' => true])
-            ->expectsOutputToContain('No feature selected.')
-            ->assertFailed();
+            ->expectsOutputToContain(
+                'No feature selected. Pass --feature with one of: '
+                . 'two-factor-authentication, roles-and-permissions, forgot-password.'
+            )
+            ->doesntExpectOutputToContain('Summary')
+            ->assertSuccessful();
+
+        expect($this->tempDir . '/src')->not->toBeDirectory();
+    });
+
+    it('installs a feature passed twice with --feature only once', function (): void {
+        $exitCode = Artisan::call('auth:setup', [
+            '--feature' => ['forgot-password', 'forgot-password'],
+            '--no-interaction' => true,
+        ]);
+
+        expect($exitCode)->toBe(0)
+            ->and(substr_count(Artisan::output(), '✔ Forgot Password'))->toBe(2);
     });
 
     it('restores the prompts theme it found when it finishes', function (): void {
