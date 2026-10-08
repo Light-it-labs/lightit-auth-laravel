@@ -93,11 +93,19 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->write($root, self::TODO_FILE . '.stub', self::TODO_FILE, $tokens);
 
-        $this->reportManualSteps();
+        $this->reportManualSteps($root);
     }
 
-    private function reportManualSteps(): void
+    private function reportManualSteps(string $root): void
     {
+        $missing = $this->missingDependencies($root);
+
+        $this->reporter->manualStep('Install dependencies', 'package.json', [
+            $missing === []
+                ? FrontendStubTokens::defaults()['dependencyReport']
+                : $this->manifest->addCommand($root) . ' ' . implode(' ', $missing),
+        ]);
+
         $this->reporter->manualStep('Use the 2FA-aware login hook', self::LOGIN_FORM_FILE, [
             '1. Remove:   import { useLogin } from "@/services/auth/actions";',
             '2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";',
@@ -159,14 +167,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
     private function dependencyReport(string $root): string
     {
-        $installed = $this->manifest->dependencies($root);
-
-        $missing = array_values(array_filter(
-            self::REQUIRED_DEPENDENCIES,
-            static function (string $dependency) use ($installed): bool {
-                return ! \array_key_exists($dependency, $installed);
-            }
-        ));
+        $missing = $this->missingDependencies($root);
 
         if ($missing === []) {
             return FrontendStubTokens::defaults()['dependencyReport'];
@@ -179,5 +180,18 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
             $this->manifest->addCommand($root) . ' ' . implode(' ', $missing),
             '```',
         ]));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function missingDependencies(string $root): array
+    {
+        $installed = $this->manifest->dependencies($root);
+
+        return array_values(array_filter(
+            self::REQUIRED_DEPENDENCIES,
+            static fn (string $dependency): bool => ! \array_key_exists($dependency, $installed),
+        ));
     }
 }

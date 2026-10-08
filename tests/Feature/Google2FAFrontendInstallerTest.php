@@ -388,7 +388,7 @@ describe('Google2FAFrontendInstaller', function (): void {
     
             $this->artisan('google2fa-frontend-fake')
                 ->expectsOutputToContain(
-                    '3. Link the account page from the sidebar · src/routes/_private/-components/sidebar/sidebar.tsx'
+                    '4. Link the account page from the sidebar · src/routes/_private/-components/sidebar/sidebar.tsx'
                 )
                 ->expectsOutputToContain($link)
                 ->assertSuccessful();
@@ -455,7 +455,7 @@ describe('Google2FAFrontendInstaller', function (): void {
 
         $this->artisan('google2fa-frontend-fake')
             ->expectsOutputToContain(
-                '1. Use the 2FA-aware login hook · src/routes/(public)/_guest/login/-components/login-form.tsx'
+                '2. Use the 2FA-aware login hook · src/routes/(public)/_guest/login/-components/login-form.tsx'
             )
             ->expectsOutputToContain('import { useLogin } from "@/services/auth/actions";')
             ->expectsOutputToContain('import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";')
@@ -479,16 +479,35 @@ describe('Google2FAFrontendInstaller', function (): void {
         $todo = (string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md');
         $offset = 0;
 
-        expect($reporter->manualSteps)->toHaveCount(3);
+        expect($reporter->manualSteps)->toHaveCount(4)
+            ->and($reporter->manualSteps[0]['title'])->toBe('Install dependencies');
 
         foreach ($reporter->manualSteps as $step) {
             $position = strpos($todo, '- [ ] **' . $step['title'] . '**', $offset);
 
             expect($position)->not->toBeFalse("\"{$step['title']}\" is not a checklist item after the previous one")
-                ->and($todo)->toContain((string) $step['file']);
+                ->and(str_contains($todo, (string) $step['file']) || is_file($this->root . '/' . $step['file']))
+                ->toBeTrue("{$step['file']} is neither named in the checklist nor a file of the project");
 
             $offset = (int) $position;
         }
+    });
+
+    it('lists installing the missing dependencies as the first step, as the checklist does', function (): void {
+        $manifest = json_decode((string) file_get_contents($this->root . '/package.json'), true);
+        unset($manifest['dependencies']['zod']);
+        file_put_contents($this->root . '/package.json', json_encode($manifest));
+
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')
+            ->expectsOutputToContain('1. Install dependencies · package.json')
+            ->expectsOutputToContain('pnpm add zod')
+            ->assertSuccessful();
+
+        expect((string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md'))
+            ->toContain('- [ ] **Install dependencies** (`pnpm`): Missing dependencies. Run:')
+            ->toContain('pnpm add zod');
     });
 
     it('prints the full checklist name next to the summarised steps', function (): void {
