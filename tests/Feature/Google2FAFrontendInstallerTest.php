@@ -5,7 +5,12 @@ declare(strict_types=1);
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
+use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
+use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Tests\Fixtures\FakeGoogle2FAFrontendCommand;
+use Lightitlabs\Tests\Fixtures\RecordingSetupReporter;
+use Lightitlabs\Tools\StubRenderer;
 
 describe('Google2FAFrontendInstaller', function (): void {
     beforeEach(function (): void {
@@ -382,9 +387,8 @@ describe('Google2FAFrontendInstaller', function (): void {
             Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
     
             $this->artisan('google2fa-frontend-fake')
-                ->expectsOutputToContain('Manual step: link the account page from the sidebar.')
                 ->expectsOutputToContain(
-                    'In src/routes/_private/-components/sidebar/sidebar.tsx, add at the end of the links array:'
+                    '3. Link the account page from the sidebar · src/routes/_private/-components/sidebar/sidebar.tsx'
                 )
                 ->expectsOutputToContain($link)
                 ->assertSuccessful();
@@ -450,10 +454,48 @@ describe('Google2FAFrontendInstaller', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
 
         $this->artisan('google2fa-frontend-fake')
-            ->expectsOutputToContain('In src/routes/(public)/_guest/login/-components/login-form.tsx:')
+            ->expectsOutputToContain(
+                '1. Use the 2FA-aware login hook · src/routes/(public)/_guest/login/-components/login-form.tsx'
+            )
             ->expectsOutputToContain('import { useLogin } from "@/services/auth/actions";')
             ->expectsOutputToContain('import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";')
             ->expectsOutputToContain('const loginMutation = useTwoFactorLogin();')
+            ->assertSuccessful();
+    });
+
+    it('takes every printed step title word for word from AUTH-2FA-FRONTEND-TODO.md, in its order', function (): void {
+        $reporter = new RecordingSetupReporter();
+        $manifest = new FrontendPackageManifest();
+
+        (new Google2FAFrontendInstaller(
+            $reporter,
+            new StubRenderer(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            sys_get_temp_dir(),
+            $this->root,
+        ))->install();
+
+        $todo = (string) file_get_contents($this->root . '/AUTH-2FA-FRONTEND-TODO.md');
+        $offset = 0;
+
+        expect($reporter->manualSteps)->toHaveCount(3);
+
+        foreach ($reporter->manualSteps as $step) {
+            $position = strpos($todo, '- [ ] **' . $step['title'] . '**', $offset);
+
+            expect($position)->not->toBeFalse("\"{$step['title']}\" is not a checklist item after the previous one")
+                ->and($todo)->toContain((string) $step['file']);
+
+            $offset = (int) $position;
+        }
+    });
+
+    it('prints the full checklist name next to the summarised steps', function (): void {
+        Artisan::registerCommand(new FakeGoogle2FAFrontendCommand($this->root));
+
+        $this->artisan('google2fa-frontend-fake')
+            ->expectsOutputToContain('Full steps AUTH-2FA-FRONTEND-TODO.md (front)')
             ->assertSuccessful();
     });
 
@@ -618,7 +660,9 @@ describe('Google2FAFrontendInstaller', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAFrontendCommand());
 
         $this->artisan('google2fa-frontend-fake')
-            ->expectsOutputToContain('No React project found next to the application.')
+            ->expectsOutputToContain(
+                '! No React project found next to the application — 2FA screens skipped; pass --frontend-path=<path>'
+            )
             ->assertSuccessful();
     });
 

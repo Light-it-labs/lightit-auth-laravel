@@ -17,7 +17,7 @@ final class FeatureReport
     public array $skipped = [];
 
     /**
-     * @var list<array{instruction: string, details: list<string>}>
+     * @var list<array{title: string, file: string|null, details: list<string>}>
      */
     public array $manualSteps = [];
 
@@ -25,6 +25,11 @@ final class FeatureReport
      * @var list<string>
      */
     public array $warnings = [];
+
+    /**
+     * @var list<array{message: string, details: list<string>}>
+     */
+    public array $errors = [];
 
     public string|null $failure = null;
 
@@ -36,7 +41,7 @@ final class FeatureReport
 
     public function failed(): bool
     {
-        return $this->failure !== null;
+        return $this->failure !== null || $this->errors !== [];
     }
 
     /**

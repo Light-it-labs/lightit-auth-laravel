@@ -46,7 +46,7 @@ describe('Google2FAInstaller warns instead of failing when the User model cannot
         );
 
         expect($warnings)->toHaveCount(1);
-        expect($warnings[0])->toContain('Could not find');
+        expect($warnings[0])->toContain('MissingUser not found')->not->toContain("\n");
     });
 
     it(
@@ -127,9 +127,7 @@ describe("install()'s real create-then-warn sequence, against a real fresh proje
     
             expect($reporter->warnings)->toHaveCount(1);
             expect($reporter->warnings[0])
-                ->toContain('Lightit\Users\Domain\Models\User')
-                ->toContain('does not extend')
-                ->toContain('Lightit\Authentication\Domain\TwoFactorAuthenticatable');
+                ->toBe('User does not extend TwoFactorAuthenticatable — logins fail until it does (step 2)');
         }
     );
 });

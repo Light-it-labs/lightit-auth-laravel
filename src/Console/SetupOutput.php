@@ -24,6 +24,8 @@ final class SetupOutput implements SetupReporter
 
     private const PACKAGE = 'lightit-auth-laravel';
 
+    private const ERROR_DETAIL_LINES = 10;
+
     /**
      * @var list<FeatureReport>
      */
@@ -162,14 +164,19 @@ final class SetupOutput implements SetupReporter
         $this->report()->skipped[] = $path;
     }
 
-    public function manualStep(string $instruction, array $details = []): void
+    public function manualStep(string $title, string|null $file = null, array $details = []): void
     {
-        $this->report()->manualSteps[] = ['instruction' => $instruction, 'details' => $details];
+        $this->report()->manualSteps[] = ['title' => $title, 'file' => $file, 'details' => $details];
     }
 
     public function warning(string $message): void
     {
         $this->report()->warnings[] = $message;
+    }
+
+    public function error(string $message, array $details = []): void
+    {
+        $this->report()->errors[] = ['message' => $message, 'details' => $details];
     }
 
     private function report(): FeatureReport
@@ -219,19 +226,22 @@ final class SetupOutput implements SetupReporter
      */
     private function section(FeatureReport $report): array
     {
-        if ($report->failed()) {
-            return [
+        $rows = match (true) {
+            $report->failure !== null => [
                 $this->row(
                     $this->paint(SetupTheme::RED, '✘') . ' ',
                     "{$report->label} setup failed: {$report->failure}",
                     'bold'
                 ),
                 $this->row('  ', 'The files it wrote before failing were kept. Re-running is safe.'),
-                ...$this->warnings($report),
-            ];
-        }
+            ],
+            $report->failed() => [$this->row($this->paint(SetupTheme::RED, '✘') . ' ', $report->label, 'bold')],
+            default => [$this->row($this->paint(SetupTheme::LIME, '✔') . ' ', $report->label, 'bold')],
+        };
 
-        $rows = [$this->row($this->paint(SetupTheme::LIME, '✔') . ' ', $report->label, 'bold')];
+        foreach ($report->errors as $error) {
+            array_push($rows, ...$this->errorRows($error['message'], $error['details']));
+        }
 
         if ($report->manualSteps !== []) {
             $rows[] = $this->row('  ', 'Manual steps', SetupTheme::VIOLET);
@@ -240,26 +250,55 @@ final class SetupOutput implements SetupReporter
         foreach ($report->manualSteps as $number => $step) {
             $rows[] = $this->row(
                 '  ' . $this->paint(SetupTheme::VIOLET, ($number + 1) . '.') . ' ',
-                $step['instruction']
+                str_replace('`', '', $step['title']) . ($step['file'] === null ? '' : " · {$step['file']}")
             );
 
-            foreach ($step['details'] as $detail) {
-                $rows[] = $this->row('       ', $detail);
+            if ($this->output->isVerbose()) {
+                foreach ($step['details'] as $detail) {
+                    $rows[] = $this->row('       ', $detail);
+                }
             }
         }
 
         if ($report->checklists() !== []) {
             $rows[] = $this->row(
-                '  ' . $this->paint(SetupTheme::VIOLET, 'Checklist') . ' ',
-                implode(', ', $report->checklists())
+                '  ' . $this->paint(SetupTheme::VIOLET, 'Full steps') . ' ',
+                implode(', ', array_map(
+                    static fn (string $checklist): string => $checklist
+                        . (str_contains($checklist, '-FRONTEND-') ? ' (front)' : ' (back)'),
+                    $report->checklists(),
+                ))
             );
         }
 
         if ($report->docs !== null) {
-            $rows[] = $this->row('  ' . $this->paint(SetupTheme::VIOLET, 'Docs') . '      ', $report->docs);
+            $rows[] = $this->row('  ' . $this->paint(SetupTheme::VIOLET, 'Docs') . '       ', $report->docs);
         }
 
         return [...$rows, ...$this->warnings($report)];
+    }
+
+    /**
+     * Only the end of a long output by default: that is where a command says what went wrong.
+     *
+     * @param list<string> $details
+     *
+     * @return list<array{lead: string, text: string, style: string|null, truncate: bool}>
+     */
+    private function errorRows(string $message, array $details): array
+    {
+        $rows = [$this->row('  ' . $this->paint(SetupTheme::RED, '✘') . ' ', $message, SetupTheme::RED)];
+        $hidden = $this->output->isVerbose() ? 0 : max(0, \count($details) - self::ERROR_DETAIL_LINES);
+
+        if ($hidden > 0) {
+            $rows[] = $this->row('      ', "… {$hidden} earlier lines, run with -v to see them", SetupTheme::GRAY);
+        }
+
+        foreach (\array_slice($details, $hidden) as $detail) {
+            $rows[] = $this->row('      ', $detail, SetupTheme::GRAY);
+        }
+
+        return $rows;
     }
 
     /**

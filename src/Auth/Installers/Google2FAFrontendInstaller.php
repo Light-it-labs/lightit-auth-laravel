@@ -30,6 +30,8 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
     private const LOGIN_FORM_FILE = 'src/routes/(public)/_guest/login/-components/login-form.tsx';
 
+    private const LOCALE_FILE = 'src/i18n/locales/en.json';
+
     private const SIDEBAR_FILE = 'src/routes/_private/-components/sidebar/sidebar.tsx';
 
     private const SIDEBAR_LINK = '{ path: "/account/two-factor", label: t("navigation.links.twoFactor"), icon: <Icons.Lock /> },';
@@ -91,27 +93,25 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
 
         $this->write($root, self::TODO_FILE . '.stub', self::TODO_FILE, $tokens);
 
-        $this->reportLoginFormManualStep();
-        $this->reportSidebarManualStep();
+        $this->reportManualSteps();
     }
 
-    private function reportSidebarManualStep(): void
+    private function reportManualSteps(): void
     {
-        $this->reporter->manualStep('Manual step: link the account page from the sidebar.', [
-            'In ' . self::SIDEBAR_FILE . ', add at the end of the links array:',
-            '  ' . self::SIDEBAR_LINK,
+        $this->reporter->manualStep('Use the 2FA-aware login hook', self::LOGIN_FORM_FILE, [
+            '1. Remove:   import { useLogin } from "@/services/auth/actions";',
+            '2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";',
+            '3. Replace:  const loginMutation = useLogin();',
+            '   with:     const loginMutation = useTwoFactorLogin();',
         ]);
-    }
 
-    private function reportLoginFormManualStep(): void
-    {
-        $this->reporter->manualStep('Manual step: route the login form through the 2FA-aware login hook.', [
-            'In ' . self::LOGIN_FORM_FILE . ':',
-            '  1. Remove:   import { useLogin } from "@/services/auth/actions";',
-            '  2. Add, after the "@/utils" import:   import { useTwoFactorLogin } from "../-hooks/use-two-factor-login";',
-            '  3. Replace:  const loginMutation = useLogin();',
-            '     with:     const loginMutation = useTwoFactorLogin();',
-            'Then add the i18n keys listed in ' . self::TODO_FILE . ' to src/i18n/locales/en.json.',
+        $this->reporter->manualStep('Add the i18n keys', self::LOCALE_FILE, [
+            'Copy them from ' . self::TODO_FILE . ', and translate them in es.json.',
+        ]);
+
+        $this->reporter->manualStep('Link the account page from the sidebar', self::SIDEBAR_FILE, [
+            'At the end of the links array:',
+            '  ' . self::SIDEBAR_LINK,
         ]);
     }
 
@@ -141,8 +141,7 @@ final class Google2FAFrontendInstaller implements AuthInstallerInterface
         }
 
         $this->reporter->warning(
-            'No React project found next to the application. Skipping the 2FA frontend step. '
-            . 'Pass an explicit frontend path with --frontend-path=<path> to generate it manually.'
+            'No React project found next to the application — 2FA screens skipped; pass --frontend-path=<path>'
         );
     }
 

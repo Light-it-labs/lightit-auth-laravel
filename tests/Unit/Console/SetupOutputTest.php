@@ -12,20 +12,32 @@ use Symfony\Component\Console\Output\StreamOutput;
 const LONG_WARNING = 'Lightit\Users\Domain\Models\User does not extend '
     . 'Lightit\Authentication\Domain\TwoFactorAuthenticatable, so every login throws a LogicException.';
 
+const DOCS_URL = 'https://github.com/Light-it-labs/lightit-auth-laravel/blob/main/docs/google-2fa.md';
+
 function runTwoFactorFeature(SetupOutput $setupOutput): bool
 {
     return $setupOutput->feature('Two-Factor Authentication', static function () use ($setupOutput): void {
-        $setupOutput->written('config/google2fa.php');
-        $setupOutput->written('AUTH-2FA-TODO.md');
-        $setupOutput->skipped('routes/api.php');
-        $setupOutput->manualStep('Inject the challenge action into LoginAction via its constructor:', [
+        reportTwoFactorEvents($setupOutput);
+    }, DOCS_URL);
+}
+
+function reportTwoFactorEvents(SetupOutput $setupOutput): void
+{
+    $setupOutput->written('config/google2fa.php');
+    $setupOutput->written('AUTH-2FA-TODO.md');
+    $setupOutput->written('AUTH-2FA-FRONTEND-TODO.md');
+    $setupOutput->skipped('routes/api.php');
+    $setupOutput->manualStep(
+        'Wire the challenge into `LoginAction`',
+        'src/Authentication/Domain/Actions/LoginAction.php',
+        [
             'public function __construct(',
             '    private readonly IssueTwoFactorChallengeAction $issueTwoFactorChallengeAction,',
             ') {}',
-        ]);
-        $setupOutput->manualStep('Then run php artisan migrate.');
-        $setupOutput->warning(LONG_WARNING);
-    }, 'vendor/light-it-labs/lightit-auth-laravel/docs/google-2fa.md');
+        ]
+    );
+    $setupOutput->manualStep('Run `php artisan migrate`');
+    $setupOutput->warning(LONG_WARNING);
 }
 
 /**
@@ -46,7 +58,7 @@ describe('SetupOutput without a terminal', function (): void {
         runTwoFactorFeature($this->setupOutput);
 
         expect($this->buffer->fetch())
-            ->toBe("✔ Two-Factor Authentication · 2 created · 1 skipped · 1 warning\n");
+            ->toBe("✔ Two-Factor Authentication · 3 created · 1 skipped · 1 warning\n");
     });
 
     it('prints the summary as plain indented text, with no box, colour or wrapping', function (): void {
@@ -56,19 +68,34 @@ describe('SetupOutput without a terminal', function (): void {
         $output = $this->buffer->fetch();
 
         expect($output)
-            ->not->toContain("\e[")
+            ->not->toMatch('/\e\[/')
             ->not->toContain('│')
             ->toContain("Summary\n  ✔ Two-Factor Authentication\n    Manual steps\n")
-            ->toContain("    1. Inject the challenge action into LoginAction via its constructor:\n")
+            ->toContain(
+                "    1. Wire the challenge into LoginAction · src/Authentication/Domain/Actions/LoginAction.php\n"
+            )
+            ->toContain("    2. Run php artisan migrate\n")
+            ->toContain("    Full steps AUTH-2FA-TODO.md (back), AUTH-2FA-FRONTEND-TODO.md (front)\n")
+            ->toContain('    Docs       ' . DOCS_URL . "\n")
+            ->toContain('    ! ' . LONG_WARNING . "\n")
+            ->not->toContain('public function __construct(')
+            ->toEndWith("✔ Authentication setup completed!\n");
+    });
+
+    it('prints the full instructions of every step only with -v', function (): void {
+        $this->buffer->setVerbosity(OutputInterface::VERBOSITY_VERBOSE);
+
+        runTwoFactorFeature($this->setupOutput);
+        $this->setupOutput->summary();
+
+        expect($this->buffer->fetch())
+            ->toContain(
+                "    1. Wire the challenge into LoginAction · src/Authentication/Domain/Actions/LoginAction.php\n"
+            )
             ->toContain("         public function __construct(\n")
             ->toContain(
                 "             private readonly IssueTwoFactorChallengeAction \$issueTwoFactorChallengeAction,\n"
-            )
-            ->toContain("    2. Then run php artisan migrate.\n")
-            ->toContain("    Checklist AUTH-2FA-TODO.md\n")
-            ->toContain("    Docs      vendor/light-it-labs/lightit-auth-laravel/docs/google-2fa.md\n")
-            ->toContain('    ! ' . LONG_WARNING . "\n")
-            ->toEndWith("✔ Authentication setup completed!\n");
+            );
     });
 
     it('lists every written and skipped file only with -v', function (): void {
@@ -86,7 +113,7 @@ describe('SetupOutput without a terminal', function (): void {
         function (): void {
             $failed = $this->setupOutput->feature('Roles and Permissions', function (): void {
                 $this->setupOutput->written('config/permission.php');
-                $this->setupOutput->warning('composer require spatie/laravel-permission exited with code 1.');
+                $this->setupOutput->warning('Something to look at.');
 
                 throw new SetupAbortedException('Failed to install spatie/laravel-permission');
             });
@@ -99,11 +126,69 @@ describe('SetupOutput without a terminal', function (): void {
                 ->toContain('✘ Roles and Permissions · failed')
                 ->toContain('  ✘ Roles and Permissions setup failed: Failed to install spatie/laravel-permission')
                 ->toContain('    The files it wrote before failing were kept. Re-running is safe.')
-                ->toContain('    ! composer require spatie/laravel-permission exited with code 1.')
+                ->toContain('    ! Something to look at.')
                 ->toContain('  ✔ Forgot Password')
                 ->toContain('✘ Authentication setup did not complete: Roles and Permissions failed.');
         }
     );
+
+    it('still lists the manual steps and checklists of a feature that failed half-way', function (): void {
+        $this->setupOutput->feature('Two-Factor Authentication', function (): void {
+            reportTwoFactorEvents($this->setupOutput);
+
+            throw new RuntimeException('Unable to write file: src/routes/x.tsx');
+        });
+
+        expect($this->setupOutput->summary())->toBeFalse()
+            ->and(visibleLines($this->buffer->fetch()))
+            ->toContain('  ✘ Two-Factor Authentication setup failed: Unable to write file: src/routes/x.tsx')
+            ->toContain(
+                '    1. Wire the challenge into LoginAction · src/Authentication/Domain/Actions/LoginAction.php'
+            )
+            ->toContain('    2. Run php artisan migrate')
+            ->toContain('    Full steps AUTH-2FA-TODO.md (back), AUTH-2FA-FRONTEND-TODO.md (front)');
+    });
+
+    it('fails a feature that reports an error, but lets it finish', function (): void {
+        $succeeded = $this->setupOutput->feature('Two-Factor Authentication', function (): void {
+            $this->setupOutput->error('routes/api.php was left inconsistent — inspect it');
+            $this->setupOutput->written('AUTH-2FA-TODO.md');
+        });
+
+        expect($succeeded)->toBeFalse()
+            ->and($this->setupOutput->summary())->toBeFalse()
+            ->and(visibleLines($this->buffer->fetch()))
+            ->toContain('✘ Two-Factor Authentication · failed')
+            ->toContain('  ✘ Two-Factor Authentication')
+            ->toContain('    ✘ routes/api.php was left inconsistent — inspect it')
+            ->toContain('    Full steps AUTH-2FA-TODO.md (back)')
+            ->toContain('✘ Authentication setup did not complete: Two-Factor Authentication failed.');
+    });
+
+    it('shows the last 10 lines of an error\'s output, or all of them with -v', function (
+        int $verbosity,
+        int $firstShown,
+        bool $hint,
+    ): void {
+        $this->buffer->setVerbosity($verbosity);
+        $output = array_map(static fn (int $line): string => "composer line {$line}", range(1, 25));
+
+        $this->setupOutput->feature('Roles and Permissions', function () use ($output): void {
+            $this->setupOutput->error('composer require spatie/laravel-permission exited with code 2:', $output);
+        });
+        $this->setupOutput->summary();
+
+        $lines = visibleLines($this->buffer->fetch());
+
+        expect($lines)->toContain('    ✘ composer require spatie/laravel-permission exited with code 2:')
+            ->toContain('        composer line 25')
+            ->toContain("        composer line {$firstShown}")
+            ->not->toContain('        composer line ' . ($firstShown - 1))
+            ->and(\in_array('        … 15 earlier lines, run with -v to see them', $lines, true))->toBe($hint);
+    })->with([
+        'normal' => [OutputInterface::VERBOSITY_NORMAL, 16, true],
+        'verbose' => [OutputInterface::VERBOSITY_VERBOSE, 1, false],
+    ]);
 
     it('prints the stack trace of an unexpected failure only with -v', function (int $verbosity, bool $traced): void {
         $this->buffer->setVerbosity($verbosity);

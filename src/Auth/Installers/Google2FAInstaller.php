@@ -41,6 +41,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
     private const LOGIN_ACTION_PATH = 'src/Authentication/Domain/Actions/LoginAction.php';
 
+    private const USER_MODEL_PATH = 'src/Users/Domain/Models/User.php';
+
     /**
      * The constructor injection a consumer must add to their own login. `LoginAction` lives in
      * the challenge action's namespace, so no `use` line: the app's Pint would delete it.
@@ -107,9 +109,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
     ): void {
         if (! class_exists($userModelClass)) {
             $this->reporter->warning(
-                "Could not find {$userModelClass}. Two-factor authentication needs this class to exist and "
-                . "extend {$requiredParentClass} - without it, IssueTwoFactorChallengeAction throws a "
-                . 'LogicException on every login instead of ever challenging anyone.'
+                "{$userModelClass} not found — logins fail until it exists and extends "
+                . class_basename($requiredParentClass) . ' (step 2)'
             );
 
             return;
@@ -122,11 +123,8 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->reporter->warning(
-            "{$userModelClass} does not extend {$requiredParentClass}. Both 'enabled' and 'mandatory' default "
-            . 'to true in config/google2fa.php, but IssueTwoFactorChallengeAction only acts on a '
-            . "{$requiredParentClass} instance, so it throws a LogicException on every login instead of ever "
-            . 'challenging anyone. Change ' . $userModelClass . ' to extend ' . $requiredParentClass
-            . ' (instead of Authenticatable) before your first login - see AUTH-2FA-TODO.md.'
+            class_basename($userModelClass) . ' does not extend ' . class_basename($requiredParentClass)
+            . ' — logins fail until it does (step 2)'
         );
     }
 
@@ -285,16 +283,13 @@ final class Google2FAInstaller implements AuthInstallerInterface
             RouteRegistrationOutcome::Registered => $this->reporter->written(self::API_ROUTES_PATH),
             RouteRegistrationOutcome::AlreadyRegistered => $this->reporter->skipped(self::API_ROUTES_PATH),
             RouteRegistrationOutcome::ParentMissing => $this->reporter->warning(
-                'Could not find ' . self::API_ROUTES_PATH . '. '
-                . "Please add {$requireStatement} to your API route file manually."
+                self::API_ROUTES_PATH . " not found — add {$requireStatement} to your API routes"
             ),
             RouteRegistrationOutcome::Failed => $this->reporter->warning(
-                "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. '
-                . 'Please add it manually.'
+                'Could not edit ' . self::API_ROUTES_PATH . " — add {$requireStatement} to it yourself"
             ),
             RouteRegistrationOutcome::Corrupted => $this->reporter->warning(
-                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
-                . 'Please inspect the file.'
+                self::API_ROUTES_PATH . " was left inconsistent while adding {$requireStatement} — inspect it"
             ),
         };
     }
@@ -319,24 +314,24 @@ final class Google2FAInstaller implements AuthInstallerInterface
             StubCopyOutcome::Skipped => $this->reporter->skipped(self::TODO_FILE),
         };
 
-        $this->reporter->manualStep(
-            'Inject the challenge action into LoginAction via its constructor:',
-            explode("\n", self::GATE_CONSTRUCTOR_SNIPPET),
-        );
+        $this->reporter->manualStep('Wire the challenge into `LoginAction`', self::LOGIN_ACTION_PATH, [
+            'Inject the challenge action through the constructor:',
+            ...explode("\n", self::GATE_CONSTRUCTOR_SNIPPET),
+            'Then call it right after "$request->session()->regenerate();", before "return $user;":',
+            self::GATE_CALL_SNIPPET,
+        ]);
 
-        $this->reporter->manualStep(
-            'Then call it right after "$request->session()->regenerate();" and before "return $user;":',
-            [self::GATE_CALL_SNIPPET],
-        );
-
-        $this->reporter->manualStep(
+        $this->reporter->manualStep('Make `User` support 2FA', self::USER_MODEL_PATH, [
             self::USER_MODEL_CLASS . ' must extend ' . self::TWO_FACTOR_AUTHENTICATABLE_CLASS
-            . ' instead of Illuminate\\Foundation\\Auth\\User - see ' . self::TODO_FILE . '.',
-        );
+            . ' instead of Illuminate\\Foundation\\Auth\\User.',
+        ]);
 
-        $this->reporter->manualStep(
-            'Then run php artisan migrate and pick the mode with TWO_FACTOR_AUTHENTICATION_MANDATORY in .env.',
-        );
+        $this->reporter->manualStep('Run `php artisan migrate`');
+
+        $this->reporter->manualStep('Pick the mode', '.env', [
+            'TWO_FACTOR_AUTHENTICATION_MANDATORY=true (every user sets 2FA up at login) '
+            . 'or false (users turn it on from /account/two-factor).',
+        ]);
     }
 
     /**
@@ -352,8 +347,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
 
         if (! is_file($path)) {
             $this->reporter->warning(
-                'Could not find ' . self::LOGIN_ACTION_PATH . '. Password login stays single-factor until '
-                . 'LoginAction injects and calls IssueTwoFactorChallengeAction - see ' . self::TODO_FILE . '.'
+                self::LOGIN_ACTION_PATH . ' not found — password login stays single-factor (step 1)'
             );
 
             return;
@@ -366,8 +360,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         }
 
         $this->reporter->warning(
-            self::LOGIN_ACTION_PATH . ' does not reference IssueTwoFactorChallengeAction. Password login stays '
-            . 'single-factor until LoginAction injects and calls it - see ' . self::TODO_FILE . '.'
+            'LoginAction does not call IssueTwoFactorChallengeAction — password login stays single-factor (step 1)'
         );
     }
 }

@@ -3,7 +3,12 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
+use Lightitlabs\Auth\Installers\ComposerInstaller;
+use Lightitlabs\Auth\Installers\Google2FAInstaller;
 use Lightitlabs\Tests\Fixtures\FakeGoogle2FAInstallerCommand;
+use Lightitlabs\Tests\Fixtures\RecordingSetupReporter;
+use Lightitlabs\Tools\OriginMarker;
+use Lightitlabs\Tools\StubCopier;
 
 describe('Google2FAInstaller', function (): void {
     beforeEach(function (): void {
@@ -127,32 +132,47 @@ describe('Google2FAInstaller', function (): void {
             ->and(substr_count($todo, "\n- [ ] "))->toBe(5);
     });
 
-    it('prints the migrate and mode step the TODO lists', function (): void {
+    it('summarises each manual step as its checklist title and the file it edits', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
 
         $this->artisan('google2fa-installer-fake')
             ->expectsOutputToContain(
-                'Then run php artisan migrate and pick the mode with TWO_FACTOR_AUTHENTICATION_MANDATORY in .env.'
+                '1. Wire the challenge into LoginAction · src/Authentication/Domain/Actions/LoginAction.php'
             )
+            ->expectsOutputToContain('2. Make User support 2FA · src/Users/Domain/Models/User.php')
+            ->expectsOutputToContain('3. Run php artisan migrate')
+            ->expectsOutputToContain('4. Pick the mode · .env')
+            ->expectsOutputToContain('Full steps AUTH-2FA-TODO.md (back)')
             ->assertSuccessful();
-
-        expect(file_get_contents($this->tempBase . '/AUTH-2FA-TODO.md'))
-            ->toContain('**Run `php artisan migrate`**')
-            ->toContain('`TWO_FACTOR_AUTHENTICATION_MANDATORY=true`');
     });
 
-    it('prints and documents the second manual step: extending TwoFactorAuthenticatable', function (): void {
-        Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
+    it('takes every printed step title word for word from AUTH-2FA-TODO.md, in its order', function (): void {
+        $reporter = new RecordingSetupReporter();
+        $installer = new Google2FAInstaller(
+            $reporter,
+            new ComposerInstaller($reporter),
+            new StubCopier(new OriginMarker('0.0.0-test')),
+        );
 
-        $this->artisan('google2fa-installer-fake')
-            ->expectsOutputToContain(
-                'Lightit\Users\Domain\Models\User must extend Lightit\Authentication\Domain\TwoFactorAuthenticatable'
-            )
-            ->assertSuccessful();
+        $writeGuide = new ReflectionMethod($installer, 'writeManualIntegrationGuide');
+        $writeGuide->invoke($installer);
 
-        expect(file_get_contents($this->tempBase . '/AUTH-2FA-TODO.md'))
-            ->toContain('\Lightit\Users\Domain\Models\User` must extend')
-            ->toContain('\Lightit\Authentication\Domain\TwoFactorAuthenticatable`');
+        $todo = (string) file_get_contents($this->tempBase . '/AUTH-2FA-TODO.md');
+        $offset = 0;
+
+        expect($reporter->manualSteps)->toHaveCount(4);
+
+        foreach ($reporter->manualSteps as $step) {
+            $position = strpos($todo, '- [ ] **' . $step['title'] . '**', $offset);
+
+            expect($position)->not->toBeFalse("\"{$step['title']}\" is not a checklist item after the previous one");
+
+            $offset = (int) $position;
+
+            if ($step['file'] !== null) {
+                expect($todo)->toContain($step['file']);
+            }
+        }
     });
 
     it('reports Skipped instead of recreating any file on a second run', function (): void {
@@ -229,8 +249,8 @@ describe('Google2FAInstaller', function (): void {
     
             $this->artisan('google2fa-installer-fake')
                 ->expectsOutputToContain(
-                    'Could not find src/Authentication/Domain/Actions/LoginAction.php. Password login stays '
-                    . 'single-factor until LoginAction injects and calls IssueTwoFactorChallengeAction'
+                    '! src/Authentication/Domain/Actions/LoginAction.php not found — password login stays '
+                    . 'single-factor (step 1)'
                 )
                 ->assertSuccessful();
         }
@@ -249,8 +269,8 @@ describe('Google2FAInstaller', function (): void {
     
             $this->artisan('google2fa-installer-fake')
                 ->expectsOutputToContain(
-                    'src/Authentication/Domain/Actions/LoginAction.php does not reference '
-                    . 'IssueTwoFactorChallengeAction. Password login stays single-factor'
+                    '! LoginAction does not call IssueTwoFactorChallengeAction — password login stays '
+                    . 'single-factor (step 1)'
                 )
                 ->assertSuccessful();
         }
@@ -269,7 +289,7 @@ describe('Google2FAInstaller', function (): void {
         Artisan::registerCommand(new FakeGoogle2FAInstallerCommand());
 
         $this->artisan('google2fa-installer-fake')
-            ->doesntExpectOutputToContain('Password login stays single-factor')
+            ->doesntExpectOutputToContain('password login stays single-factor')
             ->assertSuccessful();
     });
 });

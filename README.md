@@ -84,10 +84,10 @@ fails the whole command even if Two-Factor Authentication is not selected.
 
 To skip the prompt, for example in CI, pass each feature with `--feature`:
 `php artisan auth:setup --feature=two-factor-authentication --feature=roles-and-permissions`.
-Add `-v` to list every file it writes or skips.
+Add `-v` to list every file it writes or skips and the full text of each manual step.
 
-For each feature that needs manual steps, `auth:setup` prints them in the summary at the
-end and leaves a short checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
+For each feature that needs manual steps, `auth:setup` lists them, one line each, in the
+summary at the end and leaves a short checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
 `AUTH-<FEATURE>-FRONTEND-TODO.md` in the frontend root. Tick the boxes, then delete the
 file: nothing reads it. The feature's page under `docs/` explains every step in full.
 
