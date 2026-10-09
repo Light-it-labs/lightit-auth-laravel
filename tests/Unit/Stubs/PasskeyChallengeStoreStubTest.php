@@ -81,4 +81,22 @@ describe('PasskeyChallengeStore stub', function (): void {
 
         expect($this->store->pullRegistration(passkeyUser(7)))->toBeNull();
     });
+
+    it('hands the sign-in options back once, under a fresh random ceremony id', function (): void {
+        $ceremonyId = $this->store->putLogin('{"challenge":"abc"}');
+
+        expect($ceremonyId)->toMatch('/^[a-f0-9]{32}$/')
+            ->toMatch(PasskeyChallengeStore::CEREMONY_ID_PATTERN)
+            ->and($this->store->putLogin('{"challenge":"def"}'))->not->toBe($ceremonyId)
+            ->and($this->store->pullLogin($ceremonyId))->toBe('{"challenge":"abc"}')
+            ->and($this->store->pullLogin($ceremonyId))->toBeNull();
+    });
+
+    it('never builds a cache key from a malformed ceremony id', function (): void {
+        Cache::put('passkeys:login:../registration:7', '{"challenge":"abc"}', 60);
+
+        expect($this->store->pullLogin('../registration:7'))->toBeNull()
+            ->and($this->store->pullLogin(str_repeat('a', 33)))->toBeNull()
+            ->and(Cache::get('passkeys:login:../registration:7'))->toBe('{"challenge":"abc"}');
+    });
 });

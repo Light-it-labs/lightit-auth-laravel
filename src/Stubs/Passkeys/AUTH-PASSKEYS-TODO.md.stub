@@ -4,6 +4,9 @@
 > package could not do for you, because it never edits your files. Tick each box,
 > then **delete this file**. How passkeys work:
 > https://github.com/Light-it-labs/lightit-auth-laravel/blob/main/docs/passkeys.md
+>
+> Signing in with a passkey skips the 2FA code: a passkey with user verification is already
+> multi-factor. Password and Google sign-in still ask for it.
 
 - [ ] **Run `php artisan migrate`** (creates the `passkeys` table).
 - [ ] **Set the relying party** in `.env` (read by `config/passkeys.php`). `PASSKEYS_RP_ID` is
@@ -21,6 +24,10 @@ PASSKEYS_ALLOWED_ORIGINS=http://localhost:5173
   `500` without it). Generate it once with `php -r 'echo bin2hex(random_bytes(32));'` and
   **never rotate it**: changing it invalidates every registered passkey.
 - [ ] **Use a shared cache store** in production (the boilerplate's `database` store is fine;
-  `array` is not): the registration challenge lives there.
+  `array` is not): the registration and sign-in challenges live there.
 
 Check it worked: as a signed-in user, `GET /api/passkeys` returns `200` with an empty list.
+
+If every passkey sign-in answers `429` in production: the app is behind a load balancer or proxy
+without trusted proxies, so all visitors share one per-IP bucket. Trust the proxy in
+`bootstrap/app.php` (`$middleware->trustProxies(at: [...])`); see "Endpoints" in `docs/passkeys.md`.

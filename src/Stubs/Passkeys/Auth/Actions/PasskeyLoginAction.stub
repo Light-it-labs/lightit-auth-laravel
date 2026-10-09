@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
+use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyAssertionDto;
+use Lightit\Authentication\Domain\Exceptions\PasskeyChallengeExpiredException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
+use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class PasskeyLoginAction
+{
+    private const int TRANSACTION_ATTEMPTS = 3;
+
+    public function __construct(
+        private Request $request,
+        private PasskeyCeremonyService $passkeyCeremonyService,
+        private PasskeyChallengeStore $passkeyChallengeStore,
+        private LoginByUserAction $loginByUserAction,
+    ) {}
+
+    /**
+     * @throws UnauthenticatedException
+     * @throws PasskeyChallengeExpiredException
+     * @throws PasskeyLoginFailedException
+     * @throws PasskeyNotRecognisedException
+     */
+    public function execute(PasskeyLoginDto $passkeyLoginDto): User
+    {
+        if (! $this->request->hasSession()) {
+            throw new UnauthenticatedException;
+        }
+
+        $options = $this->passkeyChallengeStore->pullLogin($passkeyLoginDto->ceremonyId)
+            ?? throw new PasskeyChallengeExpiredException;
+
+        $verified = DB::transaction(function () use ($options, $passkeyLoginDto): VerifiedPasskeyAssertionDto {
+            $verified = $this->passkeyCeremonyService->verifyAssertion($options, $passkeyLoginDto->credential);
+
+            $passkey = $verified->passkey;
+
+            $passkey->sign_count = $verified->signCount;
+            $passkey->backup_eligible = $verified->backupEligible;
+            $passkey->backup_status = $verified->backupStatus;
+            $passkey->last_used_at = CarbonImmutable::now();
+            $passkey->saveOrFail();
+
+            return $verified;
+        }, self::TRANSACTION_ATTEMPTS);
+
+        $user = $verified->passkey->user;
+
+        // A passkey verified with user verification is already multi-factor (device + biometric or PIN),
+        // so it skips the 2FA challenge, also when 2FA is mandatory and the user has no TOTP yet.
+        $this->loginByUserAction->executeAfterChallenge($user);
+
+        return $user;
+    }
+}

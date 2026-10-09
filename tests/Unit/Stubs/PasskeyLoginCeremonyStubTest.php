@@ -1,0 +1,292 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Contracts\Debug\ExceptionHandler;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\LockRecordingGrammar;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginFailedException;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginRequest;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyNotRecognisedException;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StartPasskeyRegistrationAction;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyAction;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyDto;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StubLoader;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\User;
+
+StubLoader::load(
+    'Models/Passkey.stub',
+    'DataTransferObjects/VerifiedPasskeyDto.stub',
+    'DataTransferObjects/VerifiedPasskeyAssertionDto.stub',
+    'DataTransferObjects/StorePasskeyDto.stub',
+    'DataTransferObjects/PasskeyLoginDto.stub',
+    'Exceptions/PasskeyRegistrationFailedException.stub',
+    'Exceptions/PasskeyChallengeExpiredException.stub',
+    'Exceptions/PasskeyAlreadyRegisteredException.stub',
+    'Exceptions/PasskeyLoginFailedException.stub',
+    'Exceptions/PasskeyNotRecognisedException.stub',
+    'Services/PasskeyCeremonyService.stub',
+    'PasskeyChallengeStore.stub',
+    'Actions/StartPasskeyRegistrationAction.stub',
+    'Actions/StorePasskeyAction.stub',
+    'Requests/PasskeyLoginRequest.stub',
+);
+
+const PASSKEY_LOGIN_TEST_ORIGIN = 'https://app.example.test';
+
+function rejectedLogin(callable $attempt): PasskeyLoginFailedException
+{
+    try {
+        $attempt();
+    } catch (PasskeyLoginFailedException $exception) {
+        return $exception;
+    }
+
+    test()->fail('Expected a PasskeyLoginFailedException to be thrown.');
+}
+
+describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
+    beforeEach(function (): void {
+        Config::set('passkeys.relying_party', ['id' => 'example.test', 'name' => 'Example App']);
+        Config::set('passkeys.allowed_origins', [PASSKEY_LOGIN_TEST_ORIGIN]);
+        Config::set('passkeys.user_handle_secret', 'test-user-handle-secret');
+        Config::set('passkeys.challenge_ttl_seconds', 300);
+
+        User::createTable();
+        StubLoader::migratePasskeysTable();
+
+        $this->user = User::make('jane.doe@example.test', 'Jane Doe');
+        $this->exceptionHandler = Mockery::spy(ExceptionHandler::class);
+        $this->service = new PasskeyCeremonyService($this->exceptionHandler);
+        $this->authenticator = new FakeAuthenticator();
+
+        $challengeStore = new PasskeyChallengeStore();
+        $creationOptions = (new StartPasskeyRegistrationAction($this->service, $challengeStore))->execute($this->user);
+        $this->passkey = (new StorePasskeyAction(
+            $this->service,
+            $challengeStore
+        ))->execute(
+            $this->user,
+            new StorePasskeyDto(
+                name: 'Laptop',
+                credential: $this->authenticator->attestation(
+                    json_decode($creationOptions, true, flags: \JSON_THROW_ON_ERROR),
+                    PASSKEY_LOGIN_TEST_ORIGIN,
+                ),
+            )
+        );
+
+        $this->requestOptions = $this->service->requestOptions();
+        $this->userHandle = hash_hmac('sha256', 'passkey-user:' . $this->user->id, 'test-user-handle-secret', true);
+        $this->signedAssertion = fn (int $counter): string => $this->authenticator->assertion(
+            json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+            PASSKEY_LOGIN_TEST_ORIGIN,
+            $this->userHandle,
+            $counter,
+        );
+        $this->assertionWith = fn (array $overrides): string => $this->authenticator->assertion(...[
+            'requestOptions' => json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+            'origin' => PASSKEY_LOGIN_TEST_ORIGIN,
+            'userHandle' => $this->userHandle,
+            'counter' => 1,
+            ...$overrides,
+        ]);
+    });
+
+    it('accepts the owner\'s signed assertion and reads the credential row under a row lock', function (): void {
+        $grammar = new LockRecordingGrammar(DB::connection());
+        DB::connection()->setQueryGrammar($grammar);
+
+        $verified = DB::transaction(
+            fn () => $this->service->verifyAssertion($this->requestOptions, ($this->signedAssertion)(1))
+        );
+
+        expect($verified->passkey->is($this->passkey))->toBeTrue()
+            ->and($verified->signCount)->toBe(1)
+            ->and($grammar->lockedForUpdate)->toBe(['passkeys']);
+    });
+
+    it(
+        'asks for user verification and rejects an assertion signed without it, so a passkey counts as multi-factor',
+        function (): void {
+            $unverified = $this->authenticator->assertion(
+                json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+                PASSKEY_LOGIN_TEST_ORIGIN,
+                $this->userHandle,
+                1,
+                userVerified: false,
+            );
+
+            $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $unverified));
+
+            expect(json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR)['userVerification'])
+                ->toBe('required')
+                ->and($exception->statusCode())->toBe(422)
+                ->and($exception->errorCode())->toBe('passkey_login_failed')
+                ->and($this->passkey->refresh()->sign_count)->toBe(0);
+        }
+    );
+
+    it('rejects an assertion whose counter does not move past the stored one', function (): void {
+        $this->passkey->sign_count = 5;
+        $this->passkey->saveOrFail();
+
+        $exception = rejectedLogin(
+            fn () => $this->service->verifyAssertion($this->requestOptions, ($this->signedAssertion)(5))
+        );
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('passkey_login_failed');
+    });
+
+    it('logs a rejected assertion as a warning with the reason and no credential data', function (): void {
+        $this->passkey->sign_count = 5;
+        $this->passkey->saveOrFail();
+        Log::spy();
+
+        rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, ($this->signedAssertion)(5)));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(
+            static fn (string $message, array $context): bool => $message === 'passkey sign-in rejected'
+                && array_keys($context) === ['reason', 'message']
+                && is_a($context['reason'], Throwable::class, true)
+                && is_string($context['message']),
+        );
+        $this->exceptionHandler->shouldNotHaveReceived('report');
+    });
+
+    it('turns a credential with malformed UTF-8 into the 422 ceremony rejection, not a 500', function (): void {
+        $credential = json_decode(($this->signedAssertion)(1), true, flags: \JSON_THROW_ON_ERROR);
+        $credential['response']['clientDataJSON'] .= "\xB1";
+
+        $dto = PasskeyLoginRequest::create('/api/auth/passkeys/login', 'POST', [
+            PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32),
+            PasskeyLoginRequest::CREDENTIAL => $credential,
+        ])->toDto();
+
+        $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $dto->credential));
+
+        expect($exception->statusCode())->toBe(422)
+            ->and($exception->errorCode())->toBe('passkey_login_failed');
+    });
+
+    it('answers a credential this app never registered with passkey_not_recognised', function (): void {
+        $stranger = (new FakeAuthenticator())->assertion(
+            json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+            PASSKEY_LOGIN_TEST_ORIGIN,
+            $this->userHandle,
+            1,
+        );
+
+        expect(fn () => $this->service->verifyAssertion($this->requestOptions, $stranger))
+            ->toThrow(function (PasskeyNotRecognisedException $exception): void {
+                expect($exception->statusCode())->toBe(422)
+                    ->and($exception->errorCode())->toBe('passkey_not_recognised');
+            });
+
+        expect($this->passkey->refresh()->sign_count)->toBe(0);
+    });
+
+    it(
+        'rejects a signed assertion that fails one of the ceremony checks, without touching the stored passkey',
+        function (string $credential): void {
+            $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $credential));
+
+            $passkey = $this->passkey->refresh();
+
+            expect($exception->statusCode())->toBe(422)
+                ->and($exception->errorCode())->toBe('passkey_login_failed')
+                ->and($passkey->sign_count)->toBe(0)
+                ->and($passkey->last_used_at)->toBeNull();
+        }
+    )->with([
+        'no user handle' => fn (): string => ($this->assertionWith)(['userHandle' => null]),
+        'another user\'s user handle' => fn (): string => ($this->assertionWith)([
+            'userHandle' => hash_hmac(
+                'sha256',
+                'passkey-user:' . ($this->user->id + 1),
+                'test-user-handle-secret',
+                true
+            ),
+        ]),
+        'an origin not in passkeys.allowed_origins' => fn (): string => ($this->assertionWith)([
+            'origin' => 'https://phishing.example.test',
+        ]),
+        'another RP ID' => fn (): string => ($this->assertionWith)([
+            'relyingPartyId' => 'other.example.test',
+        ]),
+        'another ceremony\'s challenge' => fn (): string => ($this->assertionWith)([
+            'requestOptions' => json_decode($this->service->requestOptions(), true, flags: \JSON_THROW_ON_ERROR),
+        ]),
+        'a registration attestation' => fn (): string => (new FakeAuthenticator())->attestation(
+            json_decode($this->service->creationOptions($this->user), true, flags: \JSON_THROW_ON_ERROR),
+            PASSKEY_LOGIN_TEST_ORIGIN,
+        ),
+    ]);
+});
+
+describe('PasskeyLoginRequest stub', function (): void {
+    beforeEach(function (): void {
+        $this->credential = [
+            ...json_decode((new FakeAuthenticator())->assertion(
+                ['challenge' => str_repeat('A', 43), 'rpId' => 'example.test'],
+                PASSKEY_LOGIN_TEST_ORIGIN,
+                random_bytes(32),
+                1,
+            ), true, flags: \JSON_THROW_ON_ERROR),
+            'authenticatorAttachment' => 'platform',
+            'clientExtensionResults' => [],
+        ];
+        $this->passes = fn (array $credential): bool => Validator::make(
+            [PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32), PasskeyLoginRequest::CREDENTIAL => $credential],
+            (new PasskeyLoginRequest())->rules(),
+        )->passes();
+    });
+
+    it('accepts the browser\'s authentication response as sent', function (): void {
+        expect(($this->passes)($this->credential))->toBeTrue();
+    });
+
+    it(
+        'rejects an oversized or incomplete credential before it reaches the ceremony',
+        function (string $path, mixed $value): void {
+            $credential = $this->credential;
+            data_set($credential, $path, $value);
+    
+            expect(($this->passes)($credential))->toBeFalse();
+        }
+    )->with([
+        'a credential id over the WebAuthn maximum' => ['id', str_repeat('A', 1365)],
+        'a raw id over the WebAuthn maximum' => ['rawId', str_repeat('A', 1365)],
+        'a huge clientDataJSON' => ['response.clientDataJSON', str_repeat('A', 4097)],
+        'a huge authenticatorData' => ['response.authenticatorData', str_repeat('A', 4097)],
+        'a huge signature' => ['response.signature', str_repeat('A', 1025)],
+        'a huge user handle' => ['response.userHandle', str_repeat('A', 129)],
+        'a nested signature' => ['response.signature', ['deeply' => ['nested' => 'x']]],
+        'another credential type' => ['type', 'password'],
+        'no signature' => ['response.signature', null],
+    ]);
+
+    it('hands the ceremony only the fields WebAuthn reads, dropping anything else', function (): void {
+        $credential = $this->credential;
+        $credential['padding'] = str_repeat('x', 10_000);
+        $credential['response']['attestationObject'] = str_repeat('x', 10_000);
+
+        $dto = PasskeyLoginRequest::create('/api/auth/passkeys/login', 'POST', [
+            PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32),
+            PasskeyLoginRequest::CREDENTIAL => $credential,
+        ])->toDto();
+
+        $sent = json_decode($dto->credential, true, flags: \JSON_THROW_ON_ERROR);
+
+        expect(array_keys($sent))->toBe(['id', 'rawId', 'type', 'response'])
+            ->and(array_keys($sent['response']))
+            ->toBe(['clientDataJSON', 'authenticatorData', 'signature', 'userHandle']);
+    });
+});

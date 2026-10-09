@@ -55,14 +55,17 @@ final class FrontendStubWriter
     /**
      * @param array<string, string> $tokens
      */
-    public function write(string $root, string $stubPath, string $relative, array $tokens): void
+    public function write(string $root, string $stubPath, string $relative, array $tokens): StubCopyOutcome
     {
         $destination = $this->locator->resolveDestination($root, $relative);
+        $outcome = $this->stubRenderer->renderTo($stubPath, $destination, $tokens);
 
-        match ($this->stubRenderer->renderTo($stubPath, $destination, $tokens)) {
+        match ($outcome) {
             StubCopyOutcome::Written => $this->command->line("Created: {$relative}"),
             StubCopyOutcome::Skipped => $this->printSkipped($relative),
         };
+
+        return $outcome;
     }
 
     /**

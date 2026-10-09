@@ -2,6 +2,11 @@
 
 declare(strict_types=1);
 
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\RateLimiter;
 use Lightitlabs\LightitServiceProvider;
 
@@ -41,8 +46,23 @@ describe('LightitServiceProvider 2fa rate limiter registration', function (): vo
     );
 });
 
+function loadPasskeyRateLimiterStub(): void
+{
+    if (class_exists('Lightit\Authentication\Domain\PasskeyRateLimiter', false)) {
+        return;
+    }
+
+    $tempFile = sys_get_temp_dir() . '/lightit-passkey-rate-limiter-' . bin2hex(random_bytes(6)) . '.php';
+    file_put_contents(
+        $tempFile,
+        (string) file_get_contents(__DIR__ . '/../../src/Stubs/Passkeys/Auth/PasskeyRateLimiter.stub')
+    );
+    require_once $tempFile;
+    unlink($tempFile);
+}
+
 describe('LightitServiceProvider passkeys rate limiter registration', function (): void {
-    it('registers the passkeys limiter once PasskeyRateLimiter is installed', function (): void {
+    it('registers the passkeys and passkey sign-in limiters once PasskeyRateLimiter is installed', function (): void {
         $provider = new LightitServiceProvider($this->app);
 
         if (! class_exists('Lightit\Authentication\Domain\PasskeyRateLimiter', false)) {
@@ -50,17 +70,45 @@ describe('LightitServiceProvider passkeys rate limiter registration', function (
 
             expect(RateLimiter::limiter('passkeys'))->toBeNull();
 
-            $tempFile = sys_get_temp_dir() . '/lightit-passkey-rate-limiter-' . bin2hex(random_bytes(6)) . '.php';
-            file_put_contents(
-                $tempFile,
-                (string) file_get_contents(__DIR__ . '/../../src/Stubs/Passkeys/Auth/PasskeyRateLimiter.stub')
-            );
-            require_once $tempFile;
-            unlink($tempFile);
+            loadPasskeyRateLimiterStub();
         }
 
         $provider->packageBooted();
 
         expect(RateLimiter::limiter('passkeys'))->not->toBeNull();
+
+        $signIn = RateLimiter::limiter('passkeys-sign-in');
+        $limit = $signIn === null ? null : $signIn(Request::create(
+            '/',
+            'POST',
+            server: ['REMOTE_ADDR' => '203.0.113.7']
+        ));
+
+        expect($limit)->toBeInstanceOf(Limit::class)
+            ->and($limit?->maxAttempts)->toBe(20)
+            ->and($limit?->key)->toBe('passkeys-sign-in|203.0.113.7')
+            ->and(RateLimiter::limiter('passkeys-sign-in-options'))->not->toBeNull();
     });
+
+    it(
+        'gives the sign-in options and the sign-in their own bucket, so spending one leaves the other',
+        function (): void {
+            loadPasskeyRateLimiterStub();
+            (new LightitServiceProvider($this->app))->packageBooted();
+    
+            $throttle = app(ThrottleRequests::class);
+            $send = static fn (string $limiter): Response => $throttle->handle(
+                Request::create('/', 'POST', server: ['REMOTE_ADDR' => '198.51.100.4']),
+                static fn (): Response => new Response('ok'),
+                $limiter,
+            );
+    
+            for ($attempt = 1; $attempt <= 20; $attempt++) {
+                $send('passkeys-sign-in-options');
+            }
+    
+            expect(fn () => $send('passkeys-sign-in-options'))->toThrow(ThrottleRequestsException::class)
+                ->and($send('passkeys-sign-in')->getStatusCode())->toBe(200);
+        }
+    );
 });
