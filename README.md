@@ -5,25 +5,22 @@
 Laravel Auth Package adds optional auth features - 2FA, roles and permissions, OTP,
 forgot password and social login - on top of the Light-it Laravel Boilerplate, which
 owns the base authentication.
-Supporting the following packages
 
-[//]: # (- [Google SSO]&#40;https://github.com/googleapis/google-api-php-client&#41;)
+## Quick start
 
-[//]: # (- [Google 2FA]&#40;https://github.com/antonioribeiro/google2fa-laravel&#41;)
+1. Add the repository to your `composer.json` and run
+   `composer require light-it-labs/lightit-auth-laravel` (see [Installation](#installation)).
+2. Run `php artisan auth:setup` and pick the features you want.
+3. Follow the `AUTH-*-TODO.md` checklists it leaves in your backend and frontend roots, then
+   delete them. Features without a checklist list their steps on their docs page.
 
-[//]: # (- [Laravel Permission By Spatie]&#40;https://github.com/spatie/laravel-permission&#41;)
-
-## Contents
-
-- [Installation](#installation)
-- [Google SSO](docs/google-sso.md)
-- [Google 2FA](docs/google-2fa.md)
-- [Roles & Permissions](docs/permission.md)
-- [OTP](docs/otp.md)
-- [Forgot Password](docs/forgot-password.md)
-
-- [Credits](#credits)
-
+| Feature | Offered by `auth:setup` | Docs |
+| --- | --- | --- |
+| Two-factor authentication (TOTP), backend + React screens | Yes | [docs/google-2fa.md](docs/google-2fa.md) |
+| Roles and permissions | Yes | [docs/permission.md](docs/permission.md) |
+| Forgot password | Yes | [docs/forgot-password.md](docs/forgot-password.md) |
+| OTP by email | Not yet | [docs/otp.md](docs/otp.md) |
+| Google SSO | Not yet | [docs/google-sso.md](docs/google-sso.md) |
 
 ## Installation
 
@@ -73,7 +70,7 @@ If you are using Laravel Sail, you can run:
 ```
 
 This command walks you through the optional features it can add on top of the
-boilerplate's own authentication. It no longer configures an authentication driver.
+boilerplate's own authentication.
 
 If the 2FA frontend layer can't find a React project next to your Laravel app (a
 sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
@@ -82,10 +79,13 @@ application root, not your shell's current directory. The frontend layer is only
 generated when Two-Factor Authentication is selected, but an invalid explicit path
 fails the whole command even if Two-Factor Authentication is not selected.
 
-For each feature that needs manual steps, `auth:setup` prints them and leaves a short
+For features that have one, `auth:setup` prints the manual steps and leaves a short
 checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
 `AUTH-<FEATURE>-FRONTEND-TODO.md` in the frontend root. Tick the boxes, then delete the
-file: nothing reads it. The feature's page under `docs/` explains every step in full.
+file: nothing reads it. The checklist is then the only place the steps live, and the
+feature's page under `docs/` explains how the feature works. Features without a checklist
+keep their steps on their docs page: Forgot password, and Roles and permissions until its
+checklist lands.
 
 ---
 
