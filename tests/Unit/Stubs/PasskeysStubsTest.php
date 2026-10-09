@@ -64,7 +64,7 @@ describe('Passkeys backend stubs', function (): void {
     });
 
     it(
-        'keeps the two sign-in routes public, on their own limiter, and the account routes behind auth:sanctum',
+        'keeps the two sign-in routes public, each on its own limiter, and the account routes behind auth:sanctum',
         function (): void {
             $namespace = 'Lightitlabs\\Tests\\Fixtures\\PasskeysRoutesStub';
             $routes = (string) file_get_contents(PasskeysInstaller::stubDirectory() . '/routes/passkeys.stub');
@@ -93,10 +93,8 @@ describe('Passkeys backend stubs', function (): void {
                 $middleware[$route->methods()[0] . ' ' . $route->uri()] = $route->middleware();
             }
     
-            foreach (['POST auth/passkeys/login-options', 'POST auth/passkeys/login'] as $signIn) {
-                expect($middleware[$signIn])->toContain('throttle:passkeys-sign-in')
-                    ->not->toContain('auth:sanctum');
-            }
+            expect($middleware['POST auth/passkeys/login-options'])->toBe(['throttle:passkeys-sign-in-options'])
+                ->and($middleware['POST auth/passkeys/login'])->toBe(['throttle:passkeys-sign-in']);
     
             expect($middleware['POST passkeys/registration-options'])->toContain('auth:sanctum')
                 ->toContain('throttle:passkeys');

@@ -22,6 +22,10 @@ final class PasskeyRateLimiter
             ];
         });
 
+        RateLimiter::for('passkeys-sign-in-options', static function (Request $request): Limit {
+            return Limit::perMinute(20)->by('passkeys-sign-in-options|' . $request->ip());
+        });
+
         RateLimiter::for('passkeys-sign-in', static function (Request $request): Limit {
             return Limit::perMinute(20)->by('passkeys-sign-in|' . $request->ip());
         });
