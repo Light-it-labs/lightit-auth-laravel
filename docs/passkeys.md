@@ -131,7 +131,9 @@ on and off; a wrong one is a `422` on `password`, not a `401`. Another user's pa
 `403`. `credential` is the browser's `RegistrationResponseJSON`, sent as is. The challenge is
 bound to the user, lives `passkeys.challenge_ttl_seconds` and is spent by the first
 `POST /passkeys` under a cache lock. There is one challenge per user: a second registration
-start replaces the first, so only the latest tab can finish and the other one gets a `410`.
+start replaces the first, so only one ceremony can succeed, and only if the newest tab submits
+first. Otherwise the older tab fails verification against the newer challenge (a `422`) and
+spends it, so the newer tab then gets a `410`.
 A rejected ceremony (the `422`) is logged at `warning` level as `passkey registration rejected`
 with the exception class and message, never the credential, so a wrong `PASSKEYS_RP_ID` or
 origin shows up in the logs.
