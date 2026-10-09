@@ -9,6 +9,7 @@ use Lightitlabs\Auth\Frontend\FrontendPackageManifest;
 use Lightitlabs\Auth\Frontend\FrontendProjectLocator;
 use Lightitlabs\Auth\Frontend\FrontendStubWriter;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\StubCopyOutcome;
 use Lightitlabs\Tools\StubRenderer;
 
 final class PasskeysFrontendInstaller implements AuthInstallerInterface
@@ -76,15 +77,22 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         $missing = $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES);
         $tokens = $this->writer->tokens($root, $missing);
 
+        $created = false;
+
         foreach ([...self::FILES, self::TODO_FILE . '.stub' => self::TODO_FILE] as $stub => $relative) {
-            $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
+            $outcome = $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
+            $created = $created || $outcome === StubCopyOutcome::Written;
+        }
+
+        if (! $created) {
+            $this->command->info('The passkeys frontend is already installed: every file exists, nothing was written.');
+            $this->printMissingDependencies($root, $missing);
+
+            return;
         }
 
         $this->command->info('Frontend passkey services, account page and sign-in button generated.');
-
-        if ($missing !== []) {
-            $this->command->warn('Manual step: ' . $this->writer->addCommand($root, $missing));
-        }
+        $this->printMissingDependencies($root, $missing);
 
         $this->printLoginFormManualStep();
 
@@ -93,6 +101,16 @@ final class PasskeysFrontendInstaller implements AuthInstallerInterface
         );
 
         $this->printSidebarManualStep();
+    }
+
+    /**
+     * @param list<string> $missing
+     */
+    private function printMissingDependencies(string $root, array $missing): void
+    {
+        if ($missing !== []) {
+            $this->command->warn('Manual step: ' . $this->writer->addCommand($root, $missing));
+        }
     }
 
     private function printSidebarManualStep(): void

@@ -79,6 +79,8 @@ describe('PasskeysFrontendInstaller', function (): void {
 
         $this->artisan('passkeys-frontend-fake')
             ->expectsOutputToContain('Skipped src/routes/_private/account/passkeys/page.tsx')
+            ->expectsOutputToContain('Frontend passkey services, account page and sign-in button generated.')
+            ->expectsOutputToContain('Manual step: link the passkeys page from the sidebar.')
             ->assertSuccessful();
 
         $before = file_get_contents($this->root . '/src/services/auth/passkeys/api.ts');
@@ -92,6 +94,25 @@ describe('PasskeysFrontendInstaller', function (): void {
             ->toBe('export {};' . PHP_EOL)
             ->and(file_get_contents($this->root . '/src/services/auth/passkeys/api.ts'))->toBe($before);
     });
+
+    it(
+        'says it is already installed on a re-run that writes nothing, without the manual steps already applied',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+            $this->artisan('passkeys-frontend-fake')
+                ->expectsOutputToContain(
+                    'The passkeys frontend is already installed: every file exists, nothing was written.'
+                )
+                ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')
+                ->doesntExpectOutputToContain('generated.')
+                ->doesntExpectOutputToContain('Manual step: link the passkeys page from the sidebar.')
+                ->doesntExpectOutputToContain('add at the end of the links array')
+                ->doesntExpectOutputToContain('Manual step: add the passkey sign-in button to the login form.')
+                ->doesntExpectOutputToContain('Manual step: add the passkeys i18n block')
+                ->assertSuccessful();
+        }
+    );
 
     it(
         'never adds a second HTTP client, a token or browser storage',
