@@ -12,6 +12,7 @@ use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginFailedException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginRequest;
+use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyNotRecognisedException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StartPasskeyRegistrationAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyDto;
@@ -88,6 +89,13 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
             $this->userHandle,
             $counter,
         );
+        $this->assertionWith = fn (array $overrides): string => $this->authenticator->assertion(...[
+            'requestOptions' => json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+            'origin' => PASSKEY_LOGIN_TEST_ORIGIN,
+            'userHandle' => $this->userHandle,
+            'counter' => 1,
+            ...$overrides,
+        ]);
     });
 
     it('accepts the owner\'s signed assertion and reads the credential row under a row lock', function (): void {
@@ -166,4 +174,58 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
         expect($exception->statusCode())->toBe(422)
             ->and($exception->errorCode())->toBe('passkey_login_failed');
     });
+
+    it('answers a credential this app never registered with passkey_not_recognised', function (): void {
+        $stranger = (new FakeAuthenticator())->assertion(
+            json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+            PASSKEY_LOGIN_TEST_ORIGIN,
+            $this->userHandle,
+            1,
+        );
+
+        expect(fn () => $this->service->verifyAssertion($this->requestOptions, $stranger))
+            ->toThrow(function (PasskeyNotRecognisedException $exception): void {
+                expect($exception->statusCode())->toBe(422)
+                    ->and($exception->errorCode())->toBe('passkey_not_recognised');
+            });
+
+        expect($this->passkey->refresh()->sign_count)->toBe(0);
+    });
+
+    it(
+        'rejects a signed assertion that fails one of the ceremony checks, without touching the stored passkey',
+        function (string $credential): void {
+            $exception = rejectedLogin(fn () => $this->service->verifyAssertion($this->requestOptions, $credential));
+
+            $passkey = $this->passkey->refresh();
+
+            expect($exception->statusCode())->toBe(422)
+                ->and($exception->errorCode())->toBe('passkey_login_failed')
+                ->and($passkey->sign_count)->toBe(0)
+                ->and($passkey->last_used_at)->toBeNull();
+        }
+    )->with([
+        'no user handle' => fn (): string => ($this->assertionWith)(['userHandle' => null]),
+        'another user\'s user handle' => fn (): string => ($this->assertionWith)([
+            'userHandle' => hash_hmac(
+                'sha256',
+                'passkey-user:' . ($this->user->id + 1),
+                'test-user-handle-secret',
+                true
+            ),
+        ]),
+        'an origin not in passkeys.allowed_origins' => fn (): string => ($this->assertionWith)([
+            'origin' => 'https://phishing.example.test',
+        ]),
+        'another RP ID' => fn (): string => ($this->assertionWith)([
+            'relyingPartyId' => 'other.example.test',
+        ]),
+        'another ceremony\'s challenge' => fn (): string => ($this->assertionWith)([
+            'requestOptions' => json_decode($this->service->requestOptions(), true, flags: \JSON_THROW_ON_ERROR),
+        ]),
+        'a registration attestation' => fn (): string => (new FakeAuthenticator())->attestation(
+            json_decode($this->service->creationOptions($this->user), true, flags: \JSON_THROW_ON_ERROR),
+            PASSKEY_LOGIN_TEST_ORIGIN,
+        ),
+    ]);
 });
