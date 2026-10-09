@@ -86,6 +86,7 @@ describe('PasskeyChallengeStore stub', function (): void {
         $ceremonyId = $this->store->putLogin('{"challenge":"abc"}');
 
         expect($ceremonyId)->toMatch('/^[a-f0-9]{32}$/')
+            ->toMatch(PasskeyChallengeStore::CEREMONY_ID_PATTERN)
             ->and($this->store->putLogin('{"challenge":"def"}'))->not->toBe($ceremonyId)
             ->and($this->store->pullLogin($ceremonyId))->toBe('{"challenge":"abc"}')
             ->and($this->store->pullLogin($ceremonyId))->toBeNull();
