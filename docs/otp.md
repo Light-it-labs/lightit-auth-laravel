@@ -1,65 +1,17 @@
 ## OTP (One-Time Password)
 
-Email-based one-time password delivery for identity verification.
+Passwordless login with a one-time code sent by email.
 
+> [!WARNING]
+> Not offered by `auth:setup` yet. The backend code exists, but the feature has no frontend,
+> no route file and no `AUTH-*-TODO.md` checklist; it is offered once those land.
 
-### Setup
+### API
 
-#### 1. Install the feature
+| Controller (suggested route) | Body | Response |
+| --- | --- | --- |
+| `OtpSendController` (`POST /otp/send`) | `email` | `204`. If a user has that email, deletes the previous codes for it, stores a new hashed code in the `otps` table and emails it (`OtpNotification`). Same answer when no user matches. |
+| `OtpVerifyController` (`POST /otp/verify`) | `email`, `code` | Marks the code as used and logs in through `LoginByUserAction::execute()`: `200` with the boilerplate's `UserResource` and a session cookie or, when 2FA applies to the user, the `200` challenge described in [google-2fa.md](google-2fa.md) and no session. `422` `invalid_otp` if the code is wrong, used or expired. |
 
-The OTP flow is automatically installed when selected during `auth:setup`.
-
- > [!WARNING]
- > Not offered by `auth:setup` yet. The generated `OtpVerifyController` still depends
- > on the login action of the removed Bearer driver; it is rewired before the feature
- > is exposed.
- 
-#### 2. Run the migration
-
-```bash
-php artisan migrate
-```
-
-This creates the `otps` table.
-
-#### 3. Define routes
-
-```php
-use Lightit\Authentication\App\Controllers\OtpSendController;
-use Lightit\Authentication\App\Controllers\OtpVerifyController;
-
-Route::prefix('otp')->group(static function () {
-    Route::post('send', OtpSendController::class);
-    Route::post('verify', OtpVerifyController::class);
-});
-```
-
----
-
-### Flow
-
-1. `POST /otp/send`
-   - Body: `{ "email": "..." }`
-   - Returns: `200` — generates a 6-digit code, stores it hashed in the `otps` table, and delivers it to the user via `OtpNotification`
-   - Any existing codes for the same destination are deleted before creating the new one
-
-2. User receives the code (via email by default)
-
-3. `POST /otp/verify`
-   - Body: `{ "email": "...", "code": "123456" }`
-   - Returns: `200` on success
-   - Returns: `422` if the code is invalid, already used, or expired
-
-```mermaid
-flowchart TD
-    Send[POST /otp/send] --> Generate[Generate 6-digit code]
-    Generate --> Store[Store hashed in otps table]
-    Store --> Deliver[Deliver to user via OtpNotification]
-    Deliver --> UserReceives[User receives code]
-    UserReceives --> Verify[POST /otp/verify]
-    Verify --> Valid{Valid, unused and not expired?}
-    Valid -- no --> E422[422 Unprocessable]
-    Valid -- yes --> MarkUsed[Mark code as used]
-    MarkUsed --> E200[200 OK]
-```
-
+Code length and lifetime come from `config/otp.php` (`OTP_LENGTH`, default 6;
+`OTP_EXPIRES_IN_MINUTES`, default 5).
