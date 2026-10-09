@@ -46,7 +46,8 @@ again never overwrites it, and warns you while `LoginAction` or `User` still mis
 3. The frontend keeps the token in memory (never in storage or the URL) and sends it as
    `Authorization: Bearer` to the challenge endpoints. It is not a session.
 4. A valid code (or recovery code) creates the cookie session and returns the boilerplate's
-   `UserResource`. Every other login path the package generates goes through the same action.
+   `UserResource`. Every other login path the package generates goes through the same action
+   unless its page says otherwise.
 
 ```mermaid
 sequenceDiagram
