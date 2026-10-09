@@ -1,0 +1,32 @@
+import type { FieldValues, UseFormSetError } from "react-hook-form";
+import { toast } from "sonner";
+
+import { useTranslation } from "@/i18n";
+import { getPasskeyFailure, type PasskeyFailure } from "@/services/auth/passkeys/types";
+import { handleAxiosFieldErrors } from "@/utils";
+
+export const usePasskeyErrors = () => {
+  const { t } = useTranslation();
+
+  const failureMessages: Record<PasskeyFailure, string> = {
+    cancelled: t("passkeys.errors.cancelled"),
+    unsupported: t("passkeys.errors.unsupported"),
+    misconfigured: t("passkeys.errors.misconfigured"),
+    alreadyRegistered: t("passkeys.errors.alreadyRegistered"),
+    challengeExpired: t("passkeys.errors.challengeExpired"),
+  };
+
+  const onPasskeyError = <T extends FieldValues>(error: unknown, setError: UseFormSetError<T>) => {
+    const failure = getPasskeyFailure(error);
+
+    if (failure) {
+      toast.error(failureMessages[failure]);
+
+      return;
+    }
+
+    handleAxiosFieldErrors(error, setError);
+  };
+
+  return { onPasskeyError };
+};

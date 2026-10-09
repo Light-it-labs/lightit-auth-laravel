@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+final class StartPasskeyRegistrationRequest extends FormRequest
+{
+    public const string PASSWORD = 'password';
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function rules(): array
+    {
+        return [
+            self::PASSWORD => ['required', 'string', 'current_password'],
+        ];
+    }
+}

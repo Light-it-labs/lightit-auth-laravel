@@ -7,6 +7,7 @@ namespace Lightitlabs\Auth\Installers;
 use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
 use Lightitlabs\Exceptions\SetupAbortedException;
+use Lightitlabs\Tools\MigrationLocator;
 use Lightitlabs\Tools\RouteFileRegistrar;
 use Lightitlabs\Tools\RouteRegistrationOutcome;
 use Lightitlabs\Tools\StubCopier;
@@ -72,6 +73,7 @@ final class Google2FAInstaller implements AuthInstallerInterface
         private readonly StubCopier $stubCopier,
         private readonly StubRenderer $stubRenderer = new StubRenderer(),
         private readonly RouteFileRegistrar $routeFileRegistrar = new RouteFileRegistrar(),
+        private readonly MigrationLocator $migrationLocator = new MigrationLocator(),
     ) {
     }
 
@@ -217,8 +219,17 @@ final class Google2FAInstaller implements AuthInstallerInterface
     {
         $this->composerInstaller->printStep(2, 6, 'Copying migration files');
 
+        $migrationName = 'add_two_factor_authentication_columns';
+        $existing = $this->migrationLocator->find(base_path('database/migrations'), $migrationName);
+
+        if ($existing !== null) {
+            $this->composerInstaller->printSkipped("database/migrations/{$existing}");
+
+            return;
+        }
+
         $stub = __DIR__ . '/../../../database/migrations/add_two_factor_authentication_columns.stub';
-        $destination = 'database/migrations/2024_03_18_220301_add_two_factor_authentication_columns.php';
+        $destination = "database/migrations/2024_03_18_220301_{$migrationName}.php";
 
         $outcome = $this->stubCopier->copy(
             $stub,
@@ -272,6 +283,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
         };
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     private function registerRoutes(): void
     {
         $this->composerInstaller->printStep(5, 6, 'Registering routes');
@@ -314,9 +328,9 @@ final class Google2FAInstaller implements AuthInstallerInterface
                 "Could not append {$requireStatement} to " . self::API_ROUTES_PATH . ' automatically. '
                 . 'Please add it manually.'
             ),
-            RouteRegistrationOutcome::Corrupted => $this->command->error(
-                self::API_ROUTES_PATH . " was left in an inconsistent state while adding {$requireStatement}. "
-                . 'Please inspect the file.'
+            RouteRegistrationOutcome::Corrupted => throw SetupAbortedException::corruptedRouteFile(
+                self::API_ROUTES_PATH,
+                $requireStatement,
             ),
         };
     }

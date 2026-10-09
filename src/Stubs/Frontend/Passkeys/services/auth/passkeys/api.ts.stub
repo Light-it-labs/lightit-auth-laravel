@@ -1,0 +1,35 @@
+import { startRegistration } from "@simplewebauthn/browser";
+import { z } from "zod";
+
+import { api } from "@/config/api";
+import { getPasskeySchema } from "./schemas";
+import type {
+  AddPasskeyPayload,
+  DeletePasskeyPayload,
+  Passkey,
+  RenamePasskeyPayload,
+} from "./types";
+
+export const getPasskeys = async (): Promise<Passkey[]> => {
+  const response = await api.get("passkeys");
+
+  return z.array(getPasskeySchema()).parse(response.data.data);
+};
+
+export const addPasskey = async ({ name, password }: AddPasskeyPayload): Promise<Passkey> => {
+  const options = await api.post("passkeys/registration-options", { password });
+  const credential = await startRegistration({ optionsJSON: options.data.data });
+  const response = await api.post("passkeys", { name, credential });
+
+  return getPasskeySchema().parse(response.data.data);
+};
+
+export const renamePasskey = async ({ id, name }: RenamePasskeyPayload): Promise<Passkey> => {
+  const response = await api.patch(`passkeys/${id}`, { name });
+
+  return getPasskeySchema().parse(response.data.data);
+};
+
+export const deletePasskey = async ({ id, password }: DeletePasskeyPayload) => {
+  await api.post(`passkeys/${id}/delete`, { password });
+};

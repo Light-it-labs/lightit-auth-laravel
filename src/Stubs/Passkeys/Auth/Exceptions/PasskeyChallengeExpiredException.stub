@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class PasskeyChallengeExpiredException extends HttpException
+{
+    #[\Override]
+    protected int $status = 410;
+
+    #[\Override]
+    protected string $errorCode = 'passkey_challenge_expired';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'The passkey request expired. Start again.';
+}

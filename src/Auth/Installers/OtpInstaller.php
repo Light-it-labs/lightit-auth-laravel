@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightitlabs\Auth\Installers;
 
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Tools\MigrationLocator;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubCopyOutcome;
 
@@ -24,6 +25,7 @@ final class OtpInstaller implements AuthInstallerInterface
     public function __construct(
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
+        private readonly MigrationLocator $migrationLocator = new MigrationLocator(),
     ) {
     }
 
@@ -116,7 +118,7 @@ final class OtpInstaller implements AuthInstallerInterface
         $migrationName = 'create_otps_table';
         $migrationsDirectory = base_path('database/migrations');
 
-        if ($this->migrationAlreadyExists($migrationsDirectory, $migrationName)) {
+        if ($this->migrationLocator->find($migrationsDirectory, $migrationName) !== null) {
             $this->composerInstaller->printSkipped("database/migrations/*_{$migrationName}.php");
 
             return;
@@ -135,18 +137,6 @@ final class OtpInstaller implements AuthInstallerInterface
             StubCopyOutcome::Written => $this->composerInstaller->printMigrationCreated("Created: {$destination}"),
             StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($destination),
         };
-    }
-
-    /**
-     * The migration file is timestamped at copy time, so the destination path is never stable
-     * enough for `StubCopier`'s own no-overwrite guard to catch a re-run. Glob for any existing
-     * migration ending in the same name instead of trusting the exact filename.
-     */
-    private function migrationAlreadyExists(string $migrationsDirectory, string $migrationName): bool
-    {
-        $matches = glob("{$migrationsDirectory}/*_{$migrationName}.php");
-
-        return $matches !== false && $matches !== [];
     }
 
     private function copyConfigFile(): void
