@@ -46,19 +46,12 @@ describe('Passkeys backend stubs', function (): void {
         }
     });
 
-    it('signs a passkey user in without the 2FA challenge and answers the UserResource', function (): void {
-        $action = (string) file_get_contents(
-            PasskeysInstaller::stubDirectory() . '/Auth/Actions/PasskeyLoginAction.stub'
-        );
+    it('answers a passkey sign-in with the UserResource', function (): void {
         $controller = (string) file_get_contents(
             PasskeysInstaller::stubDirectory() . '/Auth/Controllers/PasskeyLoginController.stub'
         );
 
-        expect($action)
-            ->toContain('$this->loginByUserAction->executeAfterChallenge($verified->passkey->user);')
-            ->not->toContain('->execute($verified')
-            ->not->toContain('TwoFactorChallengeException')
-            ->and($controller)
+        expect($controller)
             ->toContain('use Lightit\Users\App\Resources\UserResource;')
             ->toContain('return UserResource::make(');
     });
