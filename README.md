@@ -12,7 +12,7 @@ owns the base authentication.
    `composer require light-it-labs/lightit-auth-laravel` (see [Installation](#installation)).
 2. Run `php artisan auth:setup` and pick the features you want.
 3. Follow the `AUTH-*-TODO.md` checklists it leaves in your backend and frontend roots, then
-   delete them.
+   delete them. Features without a checklist list their steps on their docs page.
 
 | Feature | Offered by `auth:setup` | Docs |
 | --- | --- | --- |
@@ -70,7 +70,7 @@ If you are using Laravel Sail, you can run:
 ```
 
 This command walks you through the optional features it can add on top of the
-boilerplate's own authentication. It no longer configures an authentication driver.
+boilerplate's own authentication.
 
 If the 2FA frontend layer can't find a React project next to your Laravel app (a
 sibling directory named `frontend`, `front`, or `<app>-frontend`), pass its path
@@ -79,11 +79,13 @@ application root, not your shell's current directory. The frontend layer is only
 generated when Two-Factor Authentication is selected, but an invalid explicit path
 fails the whole command even if Two-Factor Authentication is not selected.
 
-For each feature that needs manual steps, `auth:setup` prints them and leaves a short
+For features that have one, `auth:setup` prints the manual steps and leaves a short
 checklist next to the code it wrote: `AUTH-<FEATURE>-TODO.md` in the backend root and
 `AUTH-<FEATURE>-FRONTEND-TODO.md` in the frontend root. Tick the boxes, then delete the
-file: nothing reads it. The checklist is the only place the steps live; the feature's page
-under `docs/` explains how the feature works.
+file: nothing reads it. The checklist is then the only place the steps live, and the
+feature's page under `docs/` explains how the feature works. Features without a checklist
+keep their steps on their docs page: Forgot password, and Roles and permissions until its
+checklist lands.
 
 ---
 
