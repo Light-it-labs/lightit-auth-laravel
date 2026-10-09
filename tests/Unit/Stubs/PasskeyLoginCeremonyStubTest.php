@@ -6,6 +6,7 @@ use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\FakeAuthenticator;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\LockRecordingGrammar;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
@@ -228,4 +229,64 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
             PASSKEY_LOGIN_TEST_ORIGIN,
         ),
     ]);
+});
+
+describe('PasskeyLoginRequest stub', function (): void {
+    beforeEach(function (): void {
+        $this->credential = [
+            ...json_decode((new FakeAuthenticator())->assertion(
+                ['challenge' => str_repeat('A', 43), 'rpId' => 'example.test'],
+                PASSKEY_LOGIN_TEST_ORIGIN,
+                random_bytes(32),
+                1,
+            ), true, flags: \JSON_THROW_ON_ERROR),
+            'authenticatorAttachment' => 'platform',
+            'clientExtensionResults' => [],
+        ];
+        $this->passes = fn (array $credential): bool => Validator::make(
+            [PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32), PasskeyLoginRequest::CREDENTIAL => $credential],
+            (new PasskeyLoginRequest())->rules(),
+        )->passes();
+    });
+
+    it('accepts the browser\'s authentication response as sent', function (): void {
+        expect(($this->passes)($this->credential))->toBeTrue();
+    });
+
+    it(
+        'rejects an oversized or incomplete credential before it reaches the ceremony',
+        function (string $path, mixed $value): void {
+            $credential = $this->credential;
+            data_set($credential, $path, $value);
+    
+            expect(($this->passes)($credential))->toBeFalse();
+        }
+    )->with([
+        'a credential id over the WebAuthn maximum' => ['id', str_repeat('A', 1365)],
+        'a raw id over the WebAuthn maximum' => ['rawId', str_repeat('A', 1365)],
+        'a huge clientDataJSON' => ['response.clientDataJSON', str_repeat('A', 4097)],
+        'a huge authenticatorData' => ['response.authenticatorData', str_repeat('A', 4097)],
+        'a huge signature' => ['response.signature', str_repeat('A', 1025)],
+        'a huge user handle' => ['response.userHandle', str_repeat('A', 129)],
+        'a nested signature' => ['response.signature', ['deeply' => ['nested' => 'x']]],
+        'another credential type' => ['type', 'password'],
+        'no signature' => ['response.signature', null],
+    ]);
+
+    it('hands the ceremony only the fields WebAuthn reads, dropping anything else', function (): void {
+        $credential = $this->credential;
+        $credential['padding'] = str_repeat('x', 10_000);
+        $credential['response']['attestationObject'] = str_repeat('x', 10_000);
+
+        $dto = PasskeyLoginRequest::create('/api/auth/passkeys/login', 'POST', [
+            PasskeyLoginRequest::CEREMONY_ID => str_repeat('a', 32),
+            PasskeyLoginRequest::CREDENTIAL => $credential,
+        ])->toDto();
+
+        $sent = json_decode($dto->credential, true, flags: \JSON_THROW_ON_ERROR);
+
+        expect(array_keys($sent))->toBe(['id', 'rawId', 'type', 'response'])
+            ->and(array_keys($sent['response']))
+            ->toBe(['clientDataJSON', 'authenticatorData', 'signature', 'userHandle']);
+    });
 });
