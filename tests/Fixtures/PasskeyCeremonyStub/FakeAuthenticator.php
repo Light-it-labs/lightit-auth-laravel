@@ -83,22 +83,25 @@ final class FakeAuthenticator
 
     /**
      * @param array<string, mixed> $requestOptions the decoded JSON the server handed the browser
+     * @param string|null          $userHandle     null leaves it out, like an authenticator that returns none
      */
     public function assertion(
         array $requestOptions,
         string $origin,
-        string $userHandle,
+        string|null $userHandle,
         int $counter,
         bool $userVerified = true,
+        string|null $challenge = null,
+        string|null $relyingPartyId = null,
     ): string {
         $clientDataJson = (string) json_encode([
             'type' => 'webauthn.get',
-            'challenge' => $requestOptions['challenge'],
+            'challenge' => $challenge ?? $requestOptions['challenge'],
             'origin' => $origin,
             'crossOrigin' => false,
         ], \JSON_UNESCAPED_SLASHES);
 
-        $authenticatorData = hash('sha256', $requestOptions['rpId'], true)
+        $authenticatorData = hash('sha256', $relyingPartyId ?? $requestOptions['rpId'], true)
             . \chr(self::FLAG_USER_PRESENT|($userVerified ? self::FLAG_USER_VERIFIED : 0))
             . pack('N', $counter);
 
@@ -113,12 +116,12 @@ final class FakeAuthenticator
             'id' => Base64UrlSafe::encodeUnpadded($this->credentialId),
             'rawId' => Base64UrlSafe::encodeUnpadded($this->credentialId),
             'type' => 'public-key',
-            'response' => [
+            'response' => array_filter([
                 'clientDataJSON' => Base64UrlSafe::encodeUnpadded($clientDataJson),
                 'authenticatorData' => Base64UrlSafe::encodeUnpadded($authenticatorData),
                 'signature' => Base64UrlSafe::encodeUnpadded((string) $signature),
-                'userHandle' => Base64UrlSafe::encodeUnpadded($userHandle),
-            ],
+                'userHandle' => $userHandle === null ? null : Base64UrlSafe::encodeUnpadded($userHandle),
+            ], static fn (string|null $value): bool => $value !== null),
         ]);
     }
 
