@@ -98,7 +98,7 @@ Its label is the short `navigation.links.passkeys` key from step 6, like the oth
 
 | File | Where | What it lists |
 | --- | --- | --- |
-| `AUTH-PASSKEYS-TODO.md` | backend root | Run `migrate`, set the relying party in `.env`, optionally set the user handle secret, use a shared cache store |
+| `AUTH-PASSKEYS-TODO.md` | backend root | Run `migrate`, set the relying party in `.env`, set the user handle secret (required, no fallback), use a shared cache store |
 | `AUTH-PASSKEYS-FRONTEND-TODO.md` | frontend root | Install dependencies, add the i18n keys, add the sidebar link |
 
 The command also prints the same steps when it finishes. Each checklist is generated
