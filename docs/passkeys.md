@@ -120,7 +120,9 @@ Its label is the short `navigation.links.passkeys` key from step 7, like the oth
 The command also prints the same steps when it finishes. Each checklist is generated
 for your install (your endpoints, your package manager). Work through it, tick the
 boxes, and **delete the file when every box is ticked** — it is not read by the app
-and nothing breaks without it. Running `auth:setup` again never overwrites it.
+and nothing breaks without it. Running `auth:setup` again never overwrites it. When every
+frontend file already exists, the command says the passkeys frontend is already installed and
+does not print the manual steps again.
 
 If you lose it, this page has every step in full (see Setup above).
 
