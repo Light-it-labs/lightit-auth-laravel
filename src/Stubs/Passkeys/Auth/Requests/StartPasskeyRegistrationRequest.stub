@@ -16,7 +16,7 @@ final class StartPasskeyRegistrationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            self::PASSWORD => ['required', 'string', 'current_password:web'],
+            self::PASSWORD => ['required', 'string', 'current_password'],
         ];
     }
 }
