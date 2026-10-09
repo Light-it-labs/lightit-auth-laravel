@@ -207,7 +207,8 @@ user handle equal to the owner's (a missing one fails), user verification is req
 signature counter that goes backwards fails the ceremony. A valid assertion stores the new
 counter and `last_used_at`. The counter is checked and saved in one transaction with the
 credential row locked; a deadlock (or a MySQL lock-wait timeout) there is retried, 3 attempts
-in all, with the same challenge.
+in all, with the same challenge. The request caps the size of every credential field and hands
+the ceremony only the fields WebAuthn reads.
 
 The user is then signed in through
 `\Lightit\Authentication\Domain\Actions\LoginByUserAction::executeAfterChallenge()`, with no

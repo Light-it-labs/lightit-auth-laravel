@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\App\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Arr;
 use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginDto;
 use Lightit\Authentication\Domain\PasskeyChallengeStore;
 
@@ -14,6 +15,10 @@ final class PasskeyLoginRequest extends FormRequest
 
     public const string CREDENTIAL = 'credential';
 
+    private const array CREDENTIAL_FIELDS = ['id', 'rawId', 'type', 'response'];
+
+    private const array RESPONSE_FIELDS = ['clientDataJSON', 'authenticatorData', 'signature', 'userHandle'];
+
     /**
      * @return array<string, array<int, string>>
      */
@@ -22,14 +27,26 @@ final class PasskeyLoginRequest extends FormRequest
         return [
             self::CEREMONY_ID => ['required', 'string', 'regex:' . PasskeyChallengeStore::CEREMONY_ID_PATTERN],
             self::CREDENTIAL => ['required', 'array'],
+            // WebAuthn caps a credential id at 1023 bytes: 1364 characters in base64url.
+            self::CREDENTIAL . '.id' => ['required', 'string', 'max:1364'],
+            self::CREDENTIAL . '.rawId' => ['required', 'string', 'max:1364'],
+            self::CREDENTIAL . '.type' => ['required', 'string', 'in:public-key'],
+            self::CREDENTIAL . '.response' => ['required', 'array'],
+            self::CREDENTIAL . '.response.clientDataJSON' => ['required', 'string', 'max:4096'],
+            self::CREDENTIAL . '.response.authenticatorData' => ['required', 'string', 'max:4096'],
+            self::CREDENTIAL . '.response.signature' => ['required', 'string', 'max:1024'],
+            self::CREDENTIAL . '.response.userHandle' => ['nullable', 'string', 'max:128'],
         ];
     }
 
     public function toDto(): PasskeyLoginDto
     {
+        $credential = Arr::only($this->array(self::CREDENTIAL), self::CREDENTIAL_FIELDS);
+        $credential['response'] = Arr::only((array) ($credential['response'] ?? []), self::RESPONSE_FIELDS);
+
         return new PasskeyLoginDto(
             ceremonyId: $this->string(self::CEREMONY_ID)->toString(),
-            credential: json_encode($this->array(self::CREDENTIAL), JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE),
+            credential: json_encode($credential, JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE),
         );
     }
 }
