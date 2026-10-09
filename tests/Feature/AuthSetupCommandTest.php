@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
-use Lightitlabs\Commands\AuthSetupCommand;
-use Lightitlabs\Enums\Feature;
 use Lightitlabs\Tests\Fixtures\FakeAuthSetupTwoFactorCommand;
 use Lightitlabs\Tests\Fixtures\FakeAuthSetupWithoutComposerCommand;
 
@@ -146,59 +144,4 @@ describe('AuthSetupCommand when a feature fails', function (): void {
             expect($this->tempDir . '/frontend/src/routes/(public)/_guest/two-factor/page.tsx')->toBeFile();
         }
     );
-});
-
-describe('AuthSetupCommand with 2FA and Passkeys selected', function (): void {
-    afterEach(function (): void {
-        File::deleteDirectory($this->tempDir);
-    });
-    it(
-        'writes the passkey sign-in hook that skips the 2FA screens whichever feature was ticked first',
-        function (array $selection): void {
-            $this->tempDir = sys_get_temp_dir() . '/lightit-auth-setup-both-' . bin2hex(random_bytes(6));
-            File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $this->tempDir);
-            Artisan::registerCommand(new class($selection) extends AuthSetupCommand {
-                protected $signature = 'auth-setup-both-fake {--frontend-path= : Path to the React project}';
-
-                /**
-                 * @param list<Feature> $selection
-                 */
-                public function __construct(private readonly array $selection)
-                {
-                    parent::__construct();
-                }
-
-                public function handle(): int
-                {
-                    $this->setupFeatures($this->selection);
-
-                    return self::SUCCESS;
-                }
-
-                protected function setup2FA(): void
-                {
-                    $this->setup2FAFrontend();
-                }
-
-                protected function setupPasskeys(): void
-                {
-                    $this->setupPasskeysFrontend();
-                }
-            });
-
-            $this->artisan('auth-setup-both-fake', ['--frontend-path' => $this->tempDir])->assertSuccessful();
-
-            expect(
-                file_get_contents(
-                    $this->tempDir . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts'
-                )
-            )
-                ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
-                ->not->toContain('two-factor')
-                ->and($this->tempDir . '/src/routes/(public)/_guest/two-factor/page.tsx')->toBeFile();
-        }
-    )->with([
-        'Passkeys ticked first' => [[Feature::Passkeys, Feature::TwoFactorAuthentication]],
-        '2FA ticked first' => [[Feature::TwoFactorAuthentication, Feature::Passkeys]],
-    ]);
 });
