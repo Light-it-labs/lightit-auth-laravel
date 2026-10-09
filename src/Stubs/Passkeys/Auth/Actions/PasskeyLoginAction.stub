@@ -19,6 +19,8 @@ use Lightit\Users\Domain\Models\User;
 
 final readonly class PasskeyLoginAction
 {
+    private const int TRANSACTION_ATTEMPTS = 3;
+
     public function __construct(
         private Request $request,
         private PasskeyCeremonyService $passkeyCeremonyService,
@@ -53,12 +55,14 @@ final readonly class PasskeyLoginAction
             $passkey->saveOrFail();
 
             return $verified;
-        });
+        }, self::TRANSACTION_ATTEMPTS);
+
+        $user = $verified->passkey->user;
 
         // A passkey verified with user verification is already multi-factor (device + biometric or PIN),
         // so it skips the 2FA challenge, also when 2FA is mandatory and the user has no TOTP yet.
-        $this->loginByUserAction->executeAfterChallenge($verified->passkey->user);
+        $this->loginByUserAction->executeAfterChallenge($user);
 
-        return $verified->passkey->user;
+        return $user;
     }
 }

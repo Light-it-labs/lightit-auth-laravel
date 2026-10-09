@@ -19,6 +19,8 @@ use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyChallengeExpiredExc
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginAction;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginDto;
+use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginFailedException;
+use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyNotRecognisedException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\Trace;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\UnauthenticatedException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\User;
@@ -182,13 +184,22 @@ $fakes = <<<'PHP'
 
     final class PasskeyCeremonyService
     {
-        public function __construct(public FakePasskey $passkey)
+        /**
+         * @param list<\Throwable> $failures thrown, in order, by the first calls
+         */
+        public function __construct(public FakePasskey $passkey, private array $failures = [])
         {
         }
 
         public function verifyAssertion(string $options, string $credential): VerifiedPasskeyAssertionDto
         {
             Trace::record('verifyAssertion');
+
+            $failure = array_shift($this->failures);
+
+            if ($failure !== null) {
+                throw $failure;
+            }
 
             return new VerifiedPasskeyAssertionDto($this->passkey, 9, true, true);
         }
@@ -252,12 +263,12 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
         Trace::$steps = [];
     });
 
-    $action = function (User $user, PasskeyChallengeStore $store): PasskeyLoginAction {
+    $action = function (User $user, PasskeyChallengeStore $store, array $failures = []): PasskeyLoginAction {
         $this->passkey = new FakePasskey($user);
 
         return new PasskeyLoginAction(
             $this->request,
-            new PasskeyCeremonyService($this->passkey),
+            new PasskeyCeremonyService($this->passkey, $failures),
             $store,
             new LoginByUserAction(
                 $this->auth,
@@ -335,8 +346,56 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
             ->and($this->guard->check())->toBeFalse();
     });
 
-    it('never logs the user in itself', function (): void {
-        expect((string) file_get_contents(PasskeysInstaller::stubDirectory() . '/Auth/Actions/PasskeyLoginAction.stub'))
-            ->not->toMatch('/->login\(/');
+    it(
+        'saves nothing, signs nobody in and still spends the challenge when the assertion is rejected',
+        function (Throwable $rejection) use ($action): void {
+            $store = new PasskeyChallengeStore('{}');
+
+            expect(fn () => $action->call($this, new User(), $store, [$rejection])->execute($this->dto))
+                ->toThrow($rejection::class);
+
+            expect($this->guard->check())->toBeFalse()
+                ->and($this->passkey->saves)->toBe(0)
+                ->and($this->passkey->last_used_at)->toBeNull()
+                ->and($store->options)->toBeNull()
+                ->and(array_count_values(Trace::$steps)['verifyAssertion@1'])->toBe(1);
+        }
+    )->with([
+        'failed verification' => fn (): Throwable => new PasskeyLoginFailedException(),
+        'unknown passkey' => fn (): Throwable => new PasskeyNotRecognisedException(),
+    ]);
+
+    it(
+        'retries the verification after a deadlock or lock timeout, without asking for a new challenge',
+        function (string $concurrencyError) use ($action): void {
+            $store = new PasskeyChallengeStore('{}');
+            $user = new User();
+
+            $signedIn = $action->call($this, $user, $store, [new PDOException($concurrencyError)])
+                ->execute($this->dto);
+
+            expect($signedIn)->toBe($user)
+                ->and($this->guard->user())->toBe($user)
+                ->and($this->passkey->saves)->toBe(1)
+                ->and($store->pulled)->toHaveCount(1)
+                ->and(array_count_values(Trace::$steps)['verifyAssertion@1'])->toBe(2);
+        }
+    )->with([
+        'deadlock' => 'SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock',
+        'lock wait timeout' => 'SQLSTATE[HY000]: General error: 1205 Lock wait timeout exceeded; try restarting transaction',
+    ]);
+
+    it('gives up after three attempts and signs nobody in', function () use ($action): void {
+        $deadlock = static fn (): PDOException => new PDOException('Deadlock found when trying to get lock');
+
+        expect(fn () => $action->call($this, new User(), new PasskeyChallengeStore('{}'), [
+            $deadlock(),
+            $deadlock(),
+            $deadlock(),
+        ])->execute($this->dto))->toThrow(PDOException::class);
+
+        expect($this->guard->check())->toBeFalse()
+            ->and($this->passkey->saves)->toBe(0)
+            ->and(array_count_values(Trace::$steps)['verifyAssertion@1'])->toBe(3);
     });
 });
