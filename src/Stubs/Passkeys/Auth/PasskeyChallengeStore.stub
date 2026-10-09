@@ -14,7 +14,9 @@ final readonly class PasskeyChallengeStore
 
     private const string LOGIN_KEY_PREFIX = 'passkeys:login:';
 
-    public const string CEREMONY_ID_PATTERN = '/^[a-f0-9]{32}$/';
+    public const int CEREMONY_ID_BYTES = 16;
+
+    public const string CEREMONY_ID_PATTERN = '/^[a-f0-9]{' . self::CEREMONY_ID_BYTES * 2 . '}$/';
 
     private const int LOCK_SECONDS = 3;
 
@@ -35,7 +37,7 @@ final readonly class PasskeyChallengeStore
 
     public function putLogin(string $options): string
     {
-        $ceremonyId = bin2hex(random_bytes(16));
+        $ceremonyId = bin2hex(random_bytes(self::CEREMONY_ID_BYTES));
 
         Cache::put(
             self::LOGIN_KEY_PREFIX . $ceremonyId,
