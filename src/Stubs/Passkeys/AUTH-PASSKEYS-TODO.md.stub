@@ -27,3 +27,7 @@ PASSKEYS_ALLOWED_ORIGINS=http://localhost:5173
   `array` is not): the registration and sign-in challenges live there.
 
 Check it worked: as a signed-in user, `GET /api/passkeys` returns `200` with an empty list.
+
+If every passkey sign-in answers `429` in production: the app is behind a load balancer or proxy
+without trusted proxies, so all visitors share one per-IP bucket. Trust the proxy in
+`bootstrap/app.php` (`$middleware->trustProxies(at: [...])`); see "Endpoints" in `docs/passkeys.md`.

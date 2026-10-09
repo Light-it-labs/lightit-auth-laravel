@@ -172,6 +172,8 @@ describe('PasskeysInstaller', function (): void {
             ->toContain('docs/passkeys.md')
             ->toContain("\n- [ ] **Run `php artisan migrate`**")
             ->toContain("\n- [ ] **Set the relying party**")
+            ->toContain('If every passkey sign-in answers `429` in production')
+            ->toContain('trustProxies(')
             ->not->toMatch('/\{\{\s*[a-zA-Z]+\s*\}\}/');
     });
 });

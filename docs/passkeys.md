@@ -131,12 +131,24 @@ If you lose it, this page has every step in full (see Setup above).
 ### Endpoints
 
 All in `routes/passkeys.php`, which `routes/api.php` requires. The two `auth/passkeys/*` sign-in
-routes are public and share `throttle:passkeys-sign-in` (20 a minute per IP, so a sign-in costs
-two). The `passkeys/*` routes are under `auth:sanctum`, and every one but the list uses
-`throttle:passkeys` (6 a minute per user, 30 per IP). Both limiters are registered by
+routes are public, each with its own per-IP bucket: `login-options` uses
+`throttle:passkeys-sign-in-options` and `login` uses `throttle:passkeys-sign-in`, 20 a minute
+each. The `passkeys/*` routes are under `auth:sanctum`, and every one but the list uses
+`throttle:passkeys` (6 a minute per user, 30 per IP). All three limiters are registered by
 `lightit-auth-laravel`'s own service provider when
 `\Lightit\Authentication\Domain\PasskeyRateLimiter` exists, so the package must stay a runtime
 dependency (`composer require`, never `--dev`).
+
+**Behind a load balancer or reverse proxy, configure trusted proxies.** The sign-in limiters key on
+`$request->ip()`. Without trusted proxies that is the proxy's address, so every visitor shares one
+bucket and 20 sign-ins a minute, from anyone, lock everybody out with `429`. Trust your proxy in
+`bootstrap/app.php` so Laravel reads the client IP from `X-Forwarded-For`:
+
+```php
+->withMiddleware(function (Middleware $middleware): void {
+    $middleware->trustProxies(at: ['10.0.0.0/8']); // your load balancer's addresses
+})
+```
 
 | Method | Path | Body | Answer |
 | --- | --- | --- | --- |
