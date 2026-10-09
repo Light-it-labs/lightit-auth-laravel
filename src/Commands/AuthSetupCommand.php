@@ -234,11 +234,6 @@ class AuthSetupCommand extends Command
         $passkeysInstaller->install();
         $this->printSectionSeparator();
 
-        $this->setupPasskeysFrontend();
-    }
-
-    protected function setupPasskeysFrontend(): void
-    {
         $this->printBoxedMessage('🛠 Setting up passkeys frontend...');
 
         $manifest = new FrontendPackageManifest();
