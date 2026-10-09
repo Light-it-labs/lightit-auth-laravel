@@ -1,0 +1,31 @@
+import { useMutation } from "@tanstack/react-query";
+
+import { signInWithSocialProvider } from "@/services/auth/social/api";
+import {
+  isTwoFactorChallenge,
+  type TwoFactorChallengeResult,
+} from "@/services/auth/two-factor/types";
+import type { UseMutationProps } from "@/services/types";
+import { useTwoFactorChallengeRouting } from "./use-two-factor-challenge-routing";
+
+const signInWithGoogle = async (credential: string): Promise<TwoFactorChallengeResult | null> => {
+  const body = await signInWithSocialProvider("google", credential);
+
+  return isTwoFactorChallenge(body) ? body : null;
+};
+
+export const useSignInWithGoogle = (props?: UseMutationProps<typeof signInWithGoogle>) => {
+  const routeChallenge = useTwoFactorChallengeRouting();
+
+  return useMutation({
+    mutationFn: signInWithGoogle,
+    ...props,
+    onSuccess: async (challenge, ...rest) => {
+      if (await routeChallenge(challenge)) {
+        return;
+      }
+
+      await props?.onSuccess?.(challenge, ...rest);
+    },
+  });
+};

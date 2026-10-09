@@ -10,14 +10,14 @@ enum Feature: string
     case RolesAndPermissions = 'roles-and-permissions';
     case Otp = 'otp';
     case ForgotPassword = 'forgot-password';
-    case GoogleSso = 'google-sso';
+    case SocialLogin = 'social-login';
     case Passkeys = 'passkeys';
 
     /**
      * The features `auth:setup` offers.
      *
-     * OTP and Google SSO still emit Bearer-shaped code whose driver this package no
-     * longer installs, so they are withheld until the session-based login rewires them.
+     * OTP still emits Bearer-shaped code whose driver this package no longer installs,
+     * so it is withheld until the session-based login rewires it.
      *
      * @return array<int, self>
      */
@@ -27,6 +27,7 @@ enum Feature: string
             self::TwoFactorAuthentication,
             self::RolesAndPermissions,
             self::ForgotPassword,
+            self::SocialLogin,
             self::Passkeys,
         ];
     }
@@ -38,7 +39,7 @@ enum Feature: string
             self::RolesAndPermissions => 'Roles and Permissions',
             self::Otp => 'OTP (one-time password)',
             self::ForgotPassword => 'Forgot Password',
-            self::GoogleSso => 'Google SSO',
+            self::SocialLogin => 'Social Login (Google)',
             self::Passkeys => 'Passkeys',
         };
     }

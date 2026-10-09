@@ -11,11 +11,12 @@ use Lightitlabs\Auth\Installers\ComposerInstaller;
 use Lightitlabs\Auth\Installers\ForgotPasswordInstaller;
 use Lightitlabs\Auth\Installers\Google2FAFrontendInstaller;
 use Lightitlabs\Auth\Installers\Google2FAInstaller;
-use Lightitlabs\Auth\Installers\GoogleSSOInstaller;
 use Lightitlabs\Auth\Installers\LaravelPermissionInstaller;
 use Lightitlabs\Auth\Installers\OtpInstaller;
 use Lightitlabs\Auth\Installers\PasskeysFrontendInstaller;
 use Lightitlabs\Auth\Installers\PasskeysInstaller;
+use Lightitlabs\Auth\Installers\SocialLoginFrontendInstaller;
+use Lightitlabs\Auth\Installers\SocialLoginInstaller;
 use Lightitlabs\Console\LightitConsoleOutput;
 use Lightitlabs\Enums\Feature;
 use Lightitlabs\Exceptions\SetupAbortedException;
@@ -36,7 +37,7 @@ class AuthSetupCommand extends Command
         $this->initializeOutput($this);
     }
 
-    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication or Passkeys is selected; an invalid path fails the whole command even if neither is selected}';
+    protected $signature = 'auth:setup {--frontend-path= : Path to the React project (defaults to a sibling directory named frontend, front or <app>-frontend), used when Two-Factor Authentication, Social Login or Passkeys is selected; an invalid path fails the whole command even if none is selected}';
 
     protected $description = 'Setup the authentication structure';
 
@@ -102,9 +103,16 @@ class AuthSetupCommand extends Command
      */
     protected function setupFeatures(array $features): array
     {
+        // Declaration order, not selection order: the social login frontend reads whether the
+        // 2FA frontend is already in place to pick its sign-in hook.
+        $ordered = array_filter(
+            Feature::cases(),
+            static fn (Feature $feature): bool => \in_array($feature, $features, true),
+        );
+
         $failedFeatures = [];
 
-        foreach ($features as $feature) {
+        foreach ($ordered as $feature) {
             try {
                 $this->setupFeature($feature);
             } catch (Throwable $exception) {
@@ -123,7 +131,7 @@ class AuthSetupCommand extends Command
             Feature::RolesAndPermissions => $this->setupRolesAndPermissions(),
             Feature::Otp => $this->setupOtp(),
             Feature::ForgotPassword => $this->setupForgotPassword(),
-            Feature::GoogleSso => $this->setupGoogleSSO(),
+            Feature::SocialLogin => $this->setupSocialLogin(),
             Feature::Passkeys => $this->setupPasskeys(),
         };
     }
@@ -154,14 +162,33 @@ class AuthSetupCommand extends Command
         );
     }
 
-    protected function setupGoogleSSO(): void
+    protected function setupSocialLogin(): void
     {
-        $this->printBoxedMessage('Setting up Google SSO...');
+        $this->printBoxedMessage('Setting up Social Login...');
 
         $composerInstaller = new ComposerInstaller($this);
         $stubCopier = new StubCopier(OriginMarker::resolved());
-        $googleSSOInstaller = new GoogleSSOInstaller($this, $composerInstaller, $stubCopier);
-        $googleSSOInstaller->install();
+        (new SocialLoginInstaller($this, $composerInstaller, $stubCopier))->install();
+        $this->printSectionSeparator();
+
+        $this->setupSocialLoginFrontend();
+    }
+
+    protected function setupSocialLoginFrontend(): void
+    {
+        $this->printBoxedMessage('🛠 Setting up social login frontend...');
+
+        $manifest = new FrontendPackageManifest();
+
+        (new SocialLoginFrontendInstaller(
+            $this,
+            new StubRenderer(),
+            new FrontendProjectLocator($manifest),
+            $manifest,
+            base_path(),
+            $this->frontendPathOption(),
+        ))->install();
+
         $this->printSectionSeparator();
     }
 

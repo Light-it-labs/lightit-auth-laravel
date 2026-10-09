@@ -1,0 +1,10 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Route;
+use Lightit\Authentication\App\Controllers\SocialLoginController;
+
+Route::post('auth/social/{provider}', SocialLoginController::class)
+    ->middleware('throttle:social-login')
+    ->where('provider', '[a-z0-9-]+');
