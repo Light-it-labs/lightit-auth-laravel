@@ -15,8 +15,8 @@ enum Feature: string
     /**
      * The features `auth:setup` offers.
      *
-     * OTP and Google SSO still emit Bearer-shaped code whose driver this package no
-     * longer installs, so they are withheld until the session-based login rewires them.
+     * OTP is withheld until it has a frontend, a route file and a checklist; Google SSO
+     * is being replaced by social login.
      *
      * @return array<int, self>
      */
