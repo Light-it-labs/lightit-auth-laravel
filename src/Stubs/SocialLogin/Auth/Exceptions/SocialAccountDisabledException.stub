@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class SocialAccountDisabledException extends HttpException
+{
+    #[\Override]
+    protected int $status = 403;
+
+    #[\Override]
+    protected string $errorCode = 'social_account_disabled';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'This account is no longer active.';
+}

@@ -40,6 +40,7 @@ final class SocialLoginInstaller implements AuthInstallerInterface
         'Contracts/SocialProvider.stub' => 'Domain/Contracts/SocialProvider.php',
         'DataTransferObjects/SocialIdentityDto.stub' => 'Domain/DataTransferObjects/SocialIdentityDto.php',
         'DataTransferObjects/SocialLoginDto.stub' => 'Domain/DataTransferObjects/SocialLoginDto.php',
+        'Exceptions/SocialAccountDisabledException.stub' => 'Domain/Exceptions/SocialAccountDisabledException.php',
         'Exceptions/InvalidSocialTokenException.stub' => 'Domain/Exceptions/InvalidSocialTokenException.php',
         'Exceptions/SocialEmailNotVerifiedException.stub' => 'Domain/Exceptions/SocialEmailNotVerifiedException.php',
         'Exceptions/SocialProviderUnknownException.stub' => 'Domain/Exceptions/SocialProviderUnknownException.php',

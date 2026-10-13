@@ -24,6 +24,7 @@ export const GoogleLoginButton = () => {
   const failureMessages: Record<SocialSignInFailure, string> = {
     invalidToken: t("socialLogin.errors.invalidToken"),
     emailNotVerified: t("socialLogin.errors.emailNotVerified"),
+    accountDisabled: t("socialLogin.errors.accountDisabled"),
     providerUnavailable: t("socialLogin.errors.providerUnavailable"),
   };
 

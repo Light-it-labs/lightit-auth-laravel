@@ -23,6 +23,7 @@
   "errors": {
     "invalidToken": "Google couldn't confirm it's you. Try again.",
     "emailNotVerified": "Verify your Google account's email address before using it to sign in here.",
+    "accountDisabled": "This account is no longer active. Contact support if you think this is a mistake.",
     "providerUnavailable": "Sign in with Google isn't available right now. Try again later."
   }
 }

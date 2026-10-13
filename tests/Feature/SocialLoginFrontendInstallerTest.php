@@ -185,9 +185,10 @@ describe('SocialLoginFrontendInstaller', function (): void {
         expect($types)
             ->toContain('invalid_social_token: "invalidToken"')
             ->toContain('social_email_not_verified: "emailNotVerified"')
+            ->toContain('social_account_disabled: "accountDisabled"')
             ->toContain('social_provider_unavailable: "providerUnavailable"')
             ->and(array_keys(($this->documentedKeys)()['socialLogin']['errors']))
-            ->toBe(['invalidToken', 'emailNotVerified', 'providerUnavailable']);
+            ->toBe(['invalidToken', 'emailNotVerified', 'accountDisabled', 'providerUnavailable']);
     });
 
     it('prints the client id, login form and i18n steps the TODO documents', function (): void {

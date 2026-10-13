@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Lightit\Authentication\Domain\Actions;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ use Illuminate\Support\Str;
 use Lightit\Authentication\Domain\DataTransferObjects\SocialIdentityDto;
 use Lightit\Authentication\Domain\DataTransferObjects\SocialLoginDto;
 use Lightit\Authentication\Domain\Exceptions\InvalidSocialTokenException;
+use Lightit\Authentication\Domain\Exceptions\SocialAccountDisabledException;
 use Lightit\Authentication\Domain\Exceptions\SocialEmailNotVerifiedException;
 use Lightit\Authentication\Domain\Exceptions\SocialProviderUnavailableException;
 use Lightit\Authentication\Domain\Exceptions\SocialProviderUnknownException;
@@ -37,6 +39,7 @@ final readonly class SocialLoginAction
      * @throws SocialProviderUnknownException
      * @throws SocialProviderUnavailableException
      * @throws InvalidSocialTokenException
+     * @throws SocialAccountDisabledException
      * @throws SocialEmailNotVerifiedException
      * @throws TwoFactorChallengeException
      */
@@ -77,13 +80,22 @@ final readonly class SocialLoginAction
         return $user;
     }
 
+    /**
+     * @throws SocialAccountDisabledException
+     */
     private function linkedUser(SocialIdentityDto $identity): User|null
     {
-        return SocialAccount::query()
+        $socialAccount = SocialAccount::query()
             ->where('provider', $identity->provider)
             ->where('provider_user_id', $identity->providerUserId)
-            ->first()
-            ?->user;
+            ->first();
+
+        if (! $socialAccount instanceof SocialAccount) {
+            return null;
+        }
+
+        // The link outlives a soft-deleted user: the foreign key only cascades on a hard delete.
+        return $socialAccount->user ?? throw new SocialAccountDisabledException;
     }
 
     private function normalizedEmail(SocialIdentityDto $identity): string
@@ -96,6 +108,9 @@ final readonly class SocialLoginAction
         return User::query()->where('email', $email)->first();
     }
 
+    /**
+     * @throws SocialAccountDisabledException
+     */
     private function createLinkedUser(SocialIdentityDto $identity, string $email): User
     {
         try {
@@ -113,8 +128,30 @@ final readonly class SocialLoginAction
             }, self::TRANSACTION_ATTEMPTS);
         } catch (UniqueConstraintViolationException $exception) {
             // A concurrent request took this provider account or this email first: sign in whoever holds it.
-            return $this->linkedUser($identity) ?? $this->userWithEmail($email) ?? throw $exception;
+            $holder = $this->linkedUser($identity) ?? $this->userWithEmail($email);
+
+            if ($holder instanceof User) {
+                return $holder;
+            }
+
+            if ($this->isEmailOfDeletedUser($email)) {
+                throw new SocialAccountDisabledException;
+            }
+
+            throw $exception;
         }
+    }
+
+    /**
+     * Called once no active user has the email: a soft-deleted one is the only user the default
+     * query hides. Without SoftDeletes on the model, removing its scope changes nothing.
+     */
+    private function isEmailOfDeletedUser(string $email): bool
+    {
+        return User::query()
+            ->withoutGlobalScope(SoftDeletingScope::class)
+            ->where('email', $email)
+            ->exists();
     }
 
     private function linkExistingUser(User $user, SocialIdentityDto $identity): void

@@ -142,7 +142,8 @@ If you lose it, this page has every step in full (see Setup above).
      reset). A new user is linked right away. An existing user is linked only after the 2FA gate
      in step 6 lets them in: a sign-in that gets the 2FA challenge links nothing, and the next
      one matches the verified email again. An unverified email is `social_email_not_verified`
-     and nothing is linked or created. If another request creates that link or registers that
+     and nothing is linked or created. If `User` uses `SoftDeletes`, a soft-deleted user, linked
+     or matched by email, is `social_account_disabled` and nothing is created for them. If another request creates that link or registers that
      email first (a double click, or a normal sign-up at the same moment), the sign-in carries on
      with the user that now holds it, under the same rules: through the 2FA gate, then linked.
 
@@ -186,6 +187,7 @@ Errors use the boilerplate's error body (`error.code`):
 | `404` | `social_provider_unknown` | `{provider}` is not in `social-login.providers` |
 | `422` | `invalid_social_token` | The token is malformed, expired, badly signed, or issued for another app or issuer |
 | `422` | `social_email_not_verified` | First sign-in with an email the provider has not verified |
+| `403` | `social_account_disabled` | The linked user, or the user with that email, is soft-deleted (`SoftDeletes` on `User`) |
 | `422` | - | `token` missing or not a string (validation error on `token`) |
 | `429` | - | More than 10 attempts a minute from the same IP |
 | `503` | `social_provider_unavailable` | Google's keys could not be fetched |

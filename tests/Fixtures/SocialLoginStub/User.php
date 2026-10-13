@@ -6,21 +6,26 @@ namespace Lightitlabs\Tests\Fixtures\SocialLoginStub;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
  * Stands in for the boilerplate's `Lightit\Users\Domain\Models\User`: the columns its
- * `users` table has, and its lower-casing email mutator.
+ * `users` table has, and its lower-casing email mutator. It also uses SoftDeletes, which apps
+ * often add to it, so the action's soft-deleted user cases run.
  *
  * @property int                  $id
  * @property string               $name
  * @property string               $email
  * @property CarbonImmutable|null $email_verified_at
  * @property string               $password
+ * @property CarbonImmutable|null $deleted_at
  */
 final class User extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'users';
 
     public $timestamps = false;
@@ -33,6 +38,7 @@ final class User extends Model
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->timestamp('deleted_at')->nullable();
         });
     }
 

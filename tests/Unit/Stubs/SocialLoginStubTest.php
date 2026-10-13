@@ -22,6 +22,7 @@ use Lightitlabs\Tests\Fixtures\SocialLoginStub\GoogleTokens;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\InvalidSocialTokenException;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\LoginByUserAction;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialAccount;
+use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialAccountDisabledException;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialEmailNotVerifiedException;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginAction;
 use Lightitlabs\Tests\Fixtures\SocialLoginStub\SocialLoginController;
@@ -40,6 +41,7 @@ StubLoader::load(
     'DataTransferObjects/SocialLoginDto.stub',
     'Contracts/SocialProvider.stub',
     'Exceptions/InvalidSocialTokenException.stub',
+    'Exceptions/SocialAccountDisabledException.stub',
     'Exceptions/SocialEmailNotVerifiedException.stub',
     'Exceptions/SocialProviderUnknownException.stub',
     'Exceptions/SocialProviderUnavailableException.stub',
@@ -451,6 +453,38 @@ describe('SocialLoginAction stub', function (): void {
     )->with([
         'without 2FA' => [false],
         'with 2FA' => [true],
+    ]);
+
+    it(
+        'answers social_account_disabled with a 403 for a soft-deleted user, creating and linking nothing',
+        function (bool $linked) use ($signIn): void {
+            $deleted = User::make('demo@example.com', 'Deleted Demo');
+
+            if ($linked) {
+                $account = new SocialAccount();
+                $account->user_id = $deleted->id;
+                $account->provider = 'google';
+                $account->provider_user_id = '100000000000000000001';
+                $account->saveOrFail();
+            }
+
+            $deleted->delete();
+            $login = new LoginByUserAction();
+
+            $exception = socialLoginFailure(
+                SocialAccountDisabledException::class,
+                fn () => $signIn->call($this, $this->tokens->sign(), $login),
+            );
+
+            expect($exception->statusCode())->toBe(403)
+                ->and($exception->errorCode())->toBe('social_account_disabled')
+                ->and(User::query()->withTrashed()->count())->toBe(1)
+                ->and(SocialAccount::query()->count())->toBe($linked ? 1 : 0)
+                ->and($login->gatedEmails)->toBe([]);
+        }
+    )->with([
+        'linked to the Google account' => [true],
+        'matched by email' => [false],
     ]);
 
     it(
