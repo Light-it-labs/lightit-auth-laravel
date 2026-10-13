@@ -28,12 +28,21 @@ export const RenamePasskeyDialog = ({ onOpenChange, passkey }: RenamePasskeyDial
     formState: { errors },
     handleSubmit,
     register,
+    reset,
     setError,
   } = useForm({
     mode: "onTouched",
     resolver: zodResolver(getRenamePasskeySchema()),
     values: { name: passkey?.name ?? "" },
   });
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      reset();
+    }
+
+    onOpenChange(open);
+  };
 
   const onSubmit = handleSubmit(({ name }) => {
     if (!passkey) {
@@ -45,7 +54,7 @@ export const RenamePasskeyDialog = ({ onOpenChange, passkey }: RenamePasskeyDial
       {
         onSuccess: () => {
           toast.success(t("passkeys.rename.success"));
-          onOpenChange(false);
+          handleOpenChange(false);
         },
         onError: (error) => {
           onPasskeyError(error, setError);
@@ -55,7 +64,7 @@ export const RenamePasskeyDialog = ({ onOpenChange, passkey }: RenamePasskeyDial
   });
 
   return (
-    <Dialog.Root open={passkey !== null} onOpenChange={onOpenChange}>
+    <Dialog.Root open={passkey !== null} onOpenChange={handleOpenChange}>
       <Dialog.Content isDismissible={!isPending}>
         <Dialog.Header>
           <Dialog.Title>{t("passkeys.rename.title")}</Dialog.Title>
