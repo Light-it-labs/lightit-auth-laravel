@@ -133,7 +133,7 @@ $fakes = <<<'PHP'
 
         public int $saves = 0;
 
-        public function __construct(public User $user)
+        public function __construct(public User|null $user)
         {
         }
 
@@ -258,7 +258,7 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
         Trace::$steps = [];
     });
 
-    $action = function (User $user, PasskeyChallengeStore $store, array $failures = []): PasskeyLoginAction {
+    $action = function (User|null $user, PasskeyChallengeStore $store, array $failures = []): PasskeyLoginAction {
         $this->passkey = new FakePasskey($user);
 
         return new PasskeyLoginAction(
@@ -358,6 +358,21 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
                 ->and($this->passkey->last_used_at)->toBeNull()
                 ->and($store->options)->toBeNull()
                 ->and(array_count_values(Trace::$steps)['verifyAssertion@1'])->toBe(1);
+        }
+    );
+
+    it(
+        'answers a passkey whose owner is gone (soft-deleted) like a failed sign-in, saving nothing',
+        function () use ($action): void {
+            $store = new PasskeyChallengeStore('{}');
+
+            expect(fn () => $action->call($this, null, $store)->execute($this->dto))
+                ->toThrow(PasskeyLoginFailedException::class);
+
+            expect($this->guard->check())->toBeFalse()
+                ->and($this->passkey->saves)->toBe(0)
+                ->and($this->passkey->last_used_at)->toBeNull()
+                ->and($store->options)->toBeNull();
         }
     );
 

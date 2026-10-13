@@ -24,7 +24,7 @@ use Lightit\Users\Domain\Models\User;
  * @property CarbonImmutable|null    $last_used_at
  * @property CarbonImmutable         $created_at
  * @property CarbonImmutable         $updated_at
- * @property-read User $user
+ * @property-read User|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Passkey newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Passkey newQuery()
