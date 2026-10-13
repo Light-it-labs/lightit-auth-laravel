@@ -18,6 +18,7 @@ Supporting the following packages
 - [Installation](#installation)
 - [Google SSO](docs/google-sso.md)
 - [Google 2FA](docs/google-2fa.md)
+- [Passkeys](docs/passkeys.md)
 - [Roles & Permissions](docs/permission.md)
 - [OTP](docs/otp.md)
 - [Forgot Password](docs/forgot-password.md)

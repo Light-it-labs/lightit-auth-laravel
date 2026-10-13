@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\Models\Passkey;
+
+final readonly class DeletePasskeyAction
+{
+    public function execute(Passkey $passkey): void
+    {
+        $passkey->deleteOrFail();
+    }
+}

@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Requests;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Container\Attributes\RouteParameter;
+use Illuminate\Foundation\Http\FormRequest;
+use Lightit\Authentication\Domain\Models\Passkey;
+use Lightit\Users\Domain\Models\User;
+
+final class RenamePasskeyRequest extends FormRequest
+{
+    public const string NAME = 'name';
+
+    public function authorize(
+        #[CurrentUser]
+        User $user,
+        #[RouteParameter('passkey')]
+        Passkey $passkey,
+    ): bool {
+        return $passkey->user_id === $user->id;
+    }
+
+    /**
+     * @return array<string, array<int, string>>
+     */
+    public function rules(): array
+    {
+        return [
+            self::NAME => ['required', 'string', 'max:100'],
+        ];
+    }
+
+    public function getName(): string
+    {
+        return $this->string(self::NAME)->toString();
+    }
+}

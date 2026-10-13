@@ -98,6 +98,21 @@ describe('AuthSetupCommand when a feature fails', function (): void {
         }
     );
 
+    it('exits non-zero and skips the passkeys frontend when composer cannot install webauthn-lib', function (): void {
+        file_put_contents($this->tempDir . '/composer.json', '{ not json');
+
+        $this->artisan('auth:setup', ['--frontend-path' => $this->tempDir . '/frontend'])
+            ->expectsQuestion('Select features', ['passkeys'])
+            ->expectsOutputToContain('Passkeys setup failed: Failed to install web-auth/webauthn-lib:^5.3')
+            ->expectsOutputToContain('Authentication setup did not complete: Passkeys failed.')
+            ->doesntExpectOutputToContain('Authentication setup completed!')
+            ->doesntExpectOutputToContain('Setting up passkeys frontend')
+            ->assertFailed();
+
+        expect($this->tempDir . '/frontend/src/services/auth/passkeys')->not->toBeDirectory()
+            ->and($this->tempDir . '/src')->not->toBeDirectory();
+    });
+
     it(
         'reports a failure mid-way through an installer, keeps what it wrote, and a re-run finishes it',
         function (): void {

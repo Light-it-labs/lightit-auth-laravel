@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\Models\Passkey;
+
+final readonly class RenamePasskeyAction
+{
+    public function execute(Passkey $passkey, string $name): Passkey
+    {
+        $passkey->name = $name;
+
+        $passkey->saveOrFail();
+
+        return $passkey;
+    }
+}

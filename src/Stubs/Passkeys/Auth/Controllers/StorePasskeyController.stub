@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\StorePasskeyRequest;
+use Lightit\Authentication\App\Resources\PasskeyResource;
+use Lightit\Authentication\Domain\Actions\StorePasskeyAction;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class StorePasskeyController
+{
+    public function __invoke(
+        #[CurrentUser]
+        User $user,
+        StorePasskeyRequest $request,
+        StorePasskeyAction $storePasskeyAction,
+    ): JsonResponse {
+        $passkey = $storePasskeyAction->execute($user, $request->toDto());
+
+        return PasskeyResource::make($passkey)
+            ->response()
+            ->setStatusCode(JsonResponse::HTTP_CREATED);
+    }
+}

@@ -1,0 +1,26 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Lightit\Authentication\Domain\PasskeyChallengeStore;
+use Lightit\Authentication\Domain\Services\PasskeyCeremonyService;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class StartPasskeyRegistrationAction
+{
+    public function __construct(
+        private PasskeyCeremonyService $passkeyCeremonyService,
+        private PasskeyChallengeStore $passkeyChallengeStore,
+    ) {}
+
+    public function execute(User $user): string
+    {
+        $options = $this->passkeyCeremonyService->creationOptions($user);
+
+        $this->passkeyChallengeStore->putRegistration($user, $options);
+
+        return $options;
+    }
+}

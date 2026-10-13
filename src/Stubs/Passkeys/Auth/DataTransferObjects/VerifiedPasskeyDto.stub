@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\DataTransferObjects;
+
+final readonly class VerifiedPasskeyDto
+{
+    /**
+     * @param list<string> $transports
+     */
+    public function __construct(
+        public string $credentialIdHash,
+        public string $credentialId,
+        public string $publicKey,
+        public int $signCount,
+        public array $transports,
+        public string $aaguid,
+        public bool $backupEligible,
+        public bool $backupStatus,
+    ) {}
+}

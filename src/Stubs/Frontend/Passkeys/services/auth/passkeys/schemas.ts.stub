@@ -1,0 +1,40 @@
+import { z } from "zod";
+
+import i18n from "@/i18n";
+
+export const PASSKEY_NAME_MAX_LENGTH = 100;
+
+export const getPasskeySchema = () => {
+  return z.object({
+    id: z.number(),
+    name: z.string(),
+    createdAt: z.string(),
+    lastUsedAt: z.string().nullable(),
+  });
+};
+
+const getPasskeyNameSchema = () => {
+  return z
+    .string()
+    .trim()
+    .min(1, { message: i18n.t("form.errors.required", { field: i18n.t("passkeys.form.name") }) })
+    .max(PASSKEY_NAME_MAX_LENGTH, { message: i18n.t("passkeys.form.nameTooLong") });
+};
+
+const getPasswordSchema = () => {
+  return z.string().min(1, {
+    message: i18n.t("form.errors.required", { field: i18n.t("form.password") }),
+  });
+};
+
+export const getAddPasskeySchema = () => {
+  return z.object({ name: getPasskeyNameSchema(), password: getPasswordSchema() });
+};
+
+export const getRenamePasskeySchema = () => {
+  return z.object({ name: getPasskeyNameSchema() });
+};
+
+export const getDeletePasskeySchema = () => {
+  return z.object({ password: getPasswordSchema() });
+};

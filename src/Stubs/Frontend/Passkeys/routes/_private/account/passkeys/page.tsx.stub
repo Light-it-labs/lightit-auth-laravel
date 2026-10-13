@@ -1,0 +1,120 @@
+import { useState } from "react";
+import { browserSupportsWebAuthn } from "@simplewebauthn/browser";
+import { createFileRoute } from "@tanstack/react-router";
+import { format, parseISO } from "date-fns";
+
+import { Button } from "@/components/ui/button";
+import { ErrorMessage } from "@/components/ui/error-message";
+import { dateLocale, useTranslation } from "@/i18n";
+import { usePasskeys } from "@/services/auth/passkeys/actions";
+import type { Passkey } from "@/services/auth/passkeys/types";
+import { AddPasskeyDialog } from "./-components/add-passkey-dialog";
+import { DeletePasskeyDialog } from "./-components/delete-passkey-dialog";
+import { RenamePasskeyDialog } from "./-components/rename-passkey-dialog";
+
+const PasskeysAccountPage = () => {
+  const { t } = useTranslation();
+
+  const { data: passkeys, isError, isPending } = usePasskeys();
+  const [isAdding, setIsAdding] = useState(false);
+  const [renaming, setRenaming] = useState<Passkey | null>(null);
+  const [deleting, setDeleting] = useState<Passkey | null>(null);
+
+  const isSupported = browserSupportsWebAuthn();
+
+  return (
+    <section className="flex max-w-xl flex-col gap-4">
+      <h1 className="text-xl font-semibold">{t("passkeys.title")}</h1>
+
+      <p className="text-sm">{t("passkeys.description")}</p>
+
+      {isSupported ? (
+        <Button
+          className="self-start"
+          onClick={() => {
+            setIsAdding(true);
+          }}
+        >
+          {t("passkeys.add.open")}
+        </Button>
+      ) : (
+        <p className="text-sm">{t("passkeys.errors.unsupported")}</p>
+      )}
+
+      {isPending ? <p className="text-sm">{t("passkeys.loading")}</p> : null}
+
+      {isError ? <ErrorMessage errorMessage={t("passkeys.loadError")} /> : null}
+
+      {passkeys?.length === 0 ? <p className="text-sm">{t("passkeys.empty")}</p> : null}
+
+      {passkeys?.length ? (
+        <ul className="flex flex-col divide-y divide-border-default-default rounded-md border border-border-default-default">
+          {passkeys.map((passkey) => {
+            return (
+              <li
+                key={passkey.id}
+                className="flex flex-wrap items-center justify-between gap-2 p-3"
+              >
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{passkey.name}</span>
+
+                  <span className="text-xs">
+                    {t("passkeys.createdAt", {
+                      date: format(parseISO(passkey.createdAt), "PP", { locale: dateLocale }),
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    onClick={() => {
+                      setRenaming(passkey);
+                    }}
+                  >
+                    {t("passkeys.rename.open")}
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    onClick={() => {
+                      setDeleting(passkey);
+                    }}
+                  >
+                    {t("passkeys.delete.open")}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+
+      <AddPasskeyDialog isOpen={isAdding} onOpenChange={setIsAdding} />
+
+      <RenamePasskeyDialog
+        passkey={renaming}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenaming(null);
+          }
+        }}
+      />
+
+      <DeletePasskeyDialog
+        passkey={deleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleting(null);
+          }
+        }}
+      />
+    </section>
+  );
+};
+
+export const Route = createFileRoute("/_private/account/passkeys/")({
+  component: PasskeysAccountPage,
+});
