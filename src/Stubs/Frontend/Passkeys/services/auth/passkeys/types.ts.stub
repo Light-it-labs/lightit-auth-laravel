@@ -1,5 +1,5 @@
 import { WebAuthnError } from "@simplewebauthn/browser";
-import { isAxiosError } from "axios";
+import { HttpStatusCode, isAxiosError } from "axios";
 
 export type Passkey = {
   id: number;
@@ -24,7 +24,9 @@ export type PasskeyFailure =
   | "unsupported"
   | "misconfigured"
   | "alreadyRegistered"
-  | "challengeExpired";
+  | "challengeExpired"
+  | "registrationFailed"
+  | "tooManyAttempts";
 
 const failureByErrorName: Partial<Record<string, PasskeyFailure>> = {
   AbortError: "cancelled",
@@ -37,6 +39,7 @@ const failureByErrorName: Partial<Record<string, PasskeyFailure>> = {
 const failureByApiErrorCode: Partial<Record<string, PasskeyFailure>> = {
   passkey_already_registered: "alreadyRegistered",
   passkey_challenge_expired: "challengeExpired",
+  passkey_registration_failed: "registrationFailed",
 };
 
 type PasskeyErrorBody = {
@@ -45,6 +48,10 @@ type PasskeyErrorBody = {
 
 export const getPasskeyFailure = (error: unknown): PasskeyFailure | null => {
   if (isAxiosError<PasskeyErrorBody>(error)) {
+    if (error.response?.status === HttpStatusCode.TooManyRequests) {
+      return "tooManyAttempts";
+    }
+
     return failureByApiErrorCode[error.response?.data.error?.code ?? ""] ?? null;
   }
 

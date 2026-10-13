@@ -14,6 +14,8 @@ export const usePasskeyErrors = () => {
     misconfigured: t("passkeys.errors.misconfigured"),
     alreadyRegistered: t("passkeys.errors.alreadyRegistered"),
     challengeExpired: t("passkeys.errors.challengeExpired"),
+    registrationFailed: t("passkeys.errors.registrationFailed"),
+    tooManyAttempts: t("passkeys.errors.tooManyAttempts"),
   };
 
   const onPasskeyError = <T extends FieldValues>(error: unknown, setError: UseFormSetError<T>) => {

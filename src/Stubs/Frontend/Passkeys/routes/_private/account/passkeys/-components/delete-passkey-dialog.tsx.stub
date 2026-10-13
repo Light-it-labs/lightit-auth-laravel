@@ -11,7 +11,7 @@ import { useTranslation } from "@/i18n";
 import { useDeletePasskey } from "@/services/auth/passkeys/actions";
 import { getDeletePasskeySchema } from "@/services/auth/passkeys/schemas";
 import type { Passkey } from "@/services/auth/passkeys/types";
-import { handleAxiosFieldErrors } from "@/utils";
+import { usePasskeyErrors } from "../-hooks/use-passkey-errors";
 
 type DeletePasskeyDialogProps = {
   passkey: Passkey | null;
@@ -22,6 +22,7 @@ export const DeletePasskeyDialog = ({ onOpenChange, passkey }: DeletePasskeyDial
   const { t } = useTranslation();
 
   const { isPending, mutate: deletePasskey } = useDeletePasskey();
+  const { onPasskeyError } = usePasskeyErrors();
 
   const {
     formState: { errors },
@@ -56,7 +57,7 @@ export const DeletePasskeyDialog = ({ onOpenChange, passkey }: DeletePasskeyDial
           handleOpenChange(false);
         },
         onError: (error) => {
-          handleAxiosFieldErrors(error, setError);
+          onPasskeyError(error, setError);
         },
       },
     );
