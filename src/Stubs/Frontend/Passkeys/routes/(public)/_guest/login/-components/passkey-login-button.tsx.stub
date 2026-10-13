@@ -19,7 +19,7 @@ export const PasskeyLoginButton = () => {
     cancelled: t("passkeys.errors.cancelled"),
     unsupported: t("passkeys.signIn.unsupported"),
     misconfigured: t("passkeys.errors.misconfigured"),
-    notRecognised: t("passkeys.errors.notRecognised"),
+    signInFailed: t("passkeys.errors.signInFailed"),
     challengeExpired: t("passkeys.errors.challengeExpired"),
   };
 

@@ -64,7 +64,7 @@ At the top level:
     "challengeExpired": "That took too long. Try again.",
     "registrationFailed": "We couldn't verify this passkey. Try again.",
     "tooManyAttempts": "Too many attempts. Wait a minute and try again.",
-    "notRecognised": "This passkey isn't registered. Sign in with your password and add it again."
+    "signInFailed": "We couldn't sign you in with this passkey. If you removed it from your account, sign in with your password and add it again."
   }
 }
 ```

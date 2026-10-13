@@ -153,7 +153,7 @@ bucket and 20 sign-ins a minute, from anyone, lock everybody out with `429`. Tru
 | Method | Path | Body | Answer |
 | --- | --- | --- | --- |
 | `POST` | `/auth/passkeys/login-options` | - | `200`: `ceremony_id` and the WebAuthn request options |
-| `POST` | `/auth/passkeys/login` | `{ ceremony_id, credential }` | `200`: the user (session created), never a 2FA challenge; `410` expired or replayed challenge, `422` unknown passkey (`passkey_not_recognised`) or failed verification (`passkey_login_failed`) |
+| `POST` | `/auth/passkeys/login` | `{ ceremony_id, credential }` | `200`: the user (session created), never a 2FA challenge; `410` expired or replayed challenge, `422` `passkey_login_failed`, the same for an unknown passkey and a failed verification so the endpoint can't tell which credential ids exist |
 | `GET` | `/passkeys` | - | `200`: `id`, `name`, `created_at`, `last_used_at` per passkey |
 | `POST` | `/passkeys/registration-options` | `{ password }` | `200`: WebAuthn creation options |
 | `POST` | `/passkeys` | `{ name, credential }` | `201`: the new passkey; `410` expired or replayed challenge, `422` failed verification, `409` already registered |
@@ -237,6 +237,6 @@ domain) is a `401`.
    login form.
 3. A user with 2FA signs in the same way: the backend never answers a passkey sign-in with a
    2FA challenge, so the hook never routes to `/two-factor`.
-4. A cancelled or timed-out prompt, a browser without WebAuthn, a passkey the backend doesn't
-   know (`422` `passkey_not_recognised`, e.g. deleted from the account) and an expired
-   challenge (`410`) get their own toast; anything else shows `common.requestError`.
+4. A cancelled or timed-out prompt, a browser without WebAuthn, a passkey the backend can't
+   verify or doesn't know (`422` `passkey_login_failed`, e.g. deleted from the account) and an
+   expired challenge (`410`) get their own toast; anything else shows `common.requestError`.

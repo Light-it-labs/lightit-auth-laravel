@@ -12,7 +12,6 @@ use InvalidArgumentException;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyAssertionDto;
 use Lightit\Authentication\Domain\DataTransferObjects\VerifiedPasskeyDto;
 use Lightit\Authentication\Domain\Exceptions\PasskeyLoginFailedException;
-use Lightit\Authentication\Domain\Exceptions\PasskeyNotRecognisedException;
 use Lightit\Authentication\Domain\Exceptions\PasskeyRegistrationFailedException;
 use Lightit\Authentication\Domain\Models\Passkey;
 use Lightit\Users\Domain\Models\User;
@@ -161,7 +160,6 @@ final readonly class PasskeyCeremonyService
      * concurrent assertion checks its counter against the value this one saves.
      *
      * @throws PasskeyLoginFailedException
-     * @throws PasskeyNotRecognisedException
      */
     public function verifyAssertion(string $options, string $credential): VerifiedPasskeyAssertionDto
     {
@@ -192,7 +190,7 @@ final readonly class PasskeyCeremonyService
         $passkey = Passkey::query()
             ->where('credential_id_hash', hash('sha256', $publicKeyCredential->rawId))
             ->lockForUpdate()
-            ->first() ?? throw new PasskeyNotRecognisedException;
+            ->first() ?? $this->rejectUnknownCredential();
 
         $ownerHandle = $this->userHandle($passkey->user_id);
 
@@ -255,6 +253,19 @@ final readonly class PasskeyCeremonyService
 
             throw new PasskeyLoginFailedException;
         }
+    }
+
+    /**
+     * An unknown credential gets the same answer as a failed signature, so the sign-in
+     * endpoint can't be used to find out which credential ids are registered.
+     *
+     * @throws PasskeyLoginFailedException
+     */
+    private function rejectUnknownCredential(): never
+    {
+        Log::warning('passkey sign-in rejected', ['reason' => 'unknown credential']);
+
+        throw new PasskeyLoginFailedException;
     }
 
     private function userHandle(int $userId): string

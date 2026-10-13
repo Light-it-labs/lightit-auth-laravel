@@ -13,12 +13,12 @@ use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyCeremonyService;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginFailedException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyLoginRequest;
-use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\PasskeyNotRecognisedException;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StartPasskeyRegistrationAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyAction;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StorePasskeyDto;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\StubLoader;
 use Lightitlabs\Tests\Fixtures\PasskeyCeremonyStub\User;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 
 StubLoader::load(
     'Models/Passkey.stub',
@@ -30,7 +30,6 @@ StubLoader::load(
     'Exceptions/PasskeyChallengeExpiredException.stub',
     'Exceptions/PasskeyAlreadyRegisteredException.stub',
     'Exceptions/PasskeyLoginFailedException.stub',
-    'Exceptions/PasskeyNotRecognisedException.stub',
     'Services/PasskeyCeremonyService.stub',
     'PasskeyChallengeStore.stub',
     'Actions/StartPasskeyRegistrationAction.stub',
@@ -176,22 +175,41 @@ describe('PasskeyCeremonyService::verifyAssertion() stub', function (): void {
             ->and($exception->errorCode())->toBe('passkey_login_failed');
     });
 
-    it('answers a credential this app never registered with passkey_not_recognised', function (): void {
-        $stranger = (new FakeAuthenticator())->assertion(
-            json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
-            PASSKEY_LOGIN_TEST_ORIGIN,
-            $this->userHandle,
-            1,
-        );
+    it(
+        'answers an unknown credential exactly like a registered one with a forged signature',
+        function (): void {
+            $stranger = new FakeAuthenticator();
+            $unknown = $stranger->assertion(
+                json_decode($this->requestOptions, true, flags: \JSON_THROW_ON_ERROR),
+                PASSKEY_LOGIN_TEST_ORIGIN,
+                $this->userHandle,
+                1,
+            );
+            $forged = json_decode($unknown, true, flags: \JSON_THROW_ON_ERROR);
+            $forged['id'] = Base64UrlSafe::encodeUnpadded($this->authenticator->credentialId);
+            $forged['rawId'] = $forged['id'];
+            Log::spy();
 
-        expect(fn () => $this->service->verifyAssertion($this->requestOptions, $stranger))
-            ->toThrow(function (PasskeyNotRecognisedException $exception): void {
-                expect($exception->statusCode())->toBe(422)
-                    ->and($exception->errorCode())->toBe('passkey_not_recognised');
-            });
+            $unknownRejection = rejectedLogin(
+                fn () => $this->service->verifyAssertion($this->requestOptions, $unknown)
+            );
+            $forgedRejection = rejectedLogin(
+                fn () => $this->service->verifyAssertion(
+                    $this->requestOptions,
+                    json_encode($forged, \JSON_THROW_ON_ERROR)
+                )
+            );
 
-        expect($this->passkey->refresh()->sign_count)->toBe(0);
-    });
+            expect([$unknownRejection->statusCode(), $unknownRejection->errorCode(), $unknownRejection->getMessage()])
+                ->toBe([422, 'passkey_login_failed', $forgedRejection->getMessage()])
+                ->and($forgedRejection->statusCode())->toBe(422)
+                ->and($forgedRejection->errorCode())->toBe('passkey_login_failed')
+                ->and($this->passkey->refresh()->sign_count)->toBe(0);
+            Log::shouldHaveReceived('warning')->twice()->withArgs(
+                static fn (string $message): bool => $message === 'passkey sign-in rejected',
+            );
+        }
+    );
 
     it(
         'rejects a signed assertion that fails one of the ceremony checks, without touching the stored passkey',

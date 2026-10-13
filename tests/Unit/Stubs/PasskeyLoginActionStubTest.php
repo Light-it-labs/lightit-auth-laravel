@@ -20,7 +20,6 @@ use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyChallengeStore;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginAction;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginDto;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyLoginFailedException;
-use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\PasskeyNotRecognisedException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\Trace;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\UnauthenticatedException;
 use Lightitlabs\Tests\Fixtures\PasskeyLoginActionStub\User;
@@ -115,10 +114,6 @@ $fakes = <<<'PHP'
     }
 
     final class PasskeyLoginFailedException extends \RuntimeException
-    {
-    }
-
-    final class PasskeyNotRecognisedException extends \RuntimeException
     {
     }
 
@@ -348,11 +343,15 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
 
     it(
         'saves nothing, signs nobody in and still spends the challenge when the assertion is rejected',
-        function (Throwable $rejection) use ($action): void {
+        function () use ($action): void {
             $store = new PasskeyChallengeStore('{}');
 
-            expect(fn () => $action->call($this, new User(), $store, [$rejection])->execute($this->dto))
-                ->toThrow($rejection::class);
+            expect(
+                fn () => $action->call($this, new User(), $store, [new PasskeyLoginFailedException()])->execute(
+                    $this->dto
+                )
+            )
+                ->toThrow(PasskeyLoginFailedException::class);
 
             expect($this->guard->check())->toBeFalse()
                 ->and($this->passkey->saves)->toBe(0)
@@ -360,10 +359,7 @@ describe('PasskeyLoginAction stub, with the real shared LoginByUserAction', func
                 ->and($store->options)->toBeNull()
                 ->and(array_count_values(Trace::$steps)['verifyAssertion@1'])->toBe(1);
         }
-    )->with([
-        'failed verification' => fn (): Throwable => new PasskeyLoginFailedException(),
-        'unknown passkey' => fn (): Throwable => new PasskeyNotRecognisedException(),
-    ]);
+    );
 
     it(
         'retries the verification after a deadlock or lock timeout, without asking for a new challenge',

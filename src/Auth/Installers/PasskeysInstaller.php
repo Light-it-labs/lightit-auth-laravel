@@ -50,7 +50,6 @@ final class PasskeysInstaller implements AuthInstallerInterface
         'Exceptions/PasskeyRegistrationFailedException.stub' => 'Domain/Exceptions/PasskeyRegistrationFailedException.php',
         'Exceptions/PasskeyAlreadyRegisteredException.stub' => 'Domain/Exceptions/PasskeyAlreadyRegisteredException.php',
         'Exceptions/PasskeyLoginFailedException.stub' => 'Domain/Exceptions/PasskeyLoginFailedException.php',
-        'Exceptions/PasskeyNotRecognisedException.stub' => 'Domain/Exceptions/PasskeyNotRecognisedException.php',
         'Actions/StartPasskeyRegistrationAction.stub' => 'Domain/Actions/StartPasskeyRegistrationAction.php',
         'Actions/StorePasskeyAction.stub' => 'Domain/Actions/StorePasskeyAction.php',
         'Actions/ListPasskeysAction.stub' => 'Domain/Actions/ListPasskeysAction.php',
