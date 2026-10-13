@@ -13,7 +13,7 @@ use Lightitlabs\Commands\AuthSetupCommand;
  */
 final class FakeAuthSetupWithoutComposerCommand extends AuthSetupCommand
 {
-    protected $signature = 'auth-setup-without-composer-fake {--frontend-path= : Path to the React project}';
+    protected $signature = 'auth-setup-without-composer-fake {--frontend-path= : Path to the React project} {--feature=*}';
 
     protected function setup2FA(): void
     {

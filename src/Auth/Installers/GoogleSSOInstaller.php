@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Lightitlabs\Auth\Installers;
 
-use Illuminate\Console\Command;
 use Lightitlabs\Contracts\AuthInstallerInterface;
+use Lightitlabs\Contracts\SetupReporter;
+use Lightitlabs\Exceptions\SetupAbortedException;
 use Lightitlabs\Tools\StubCopier;
 use Lightitlabs\Tools\StubCopyOutcome;
 
@@ -21,31 +22,28 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     ];
 
     public function __construct(
-        private readonly Command $command,
+        private readonly SetupReporter $reporter,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
     ) {
     }
 
+    /**
+     * @throws SetupAbortedException
+     */
     public function install(): void
     {
         if (! $this->composerInstaller->requirePackages(['google/apiclient'])) {
-            $this->command->error('Failed to install google/apiclient');
-
-            return;
+            throw new SetupAbortedException('Failed to install google/apiclient');
         }
 
         $this->createAuthFiles();
         $this->copySharedLoginFiles();
         $this->copySharedFiles();
-
-        $this->composerInstaller->printSuccess('Client library for Google APIs installed successfully!');
     }
 
     private function createAuthFiles(): void
     {
-        $this->composerInstaller->printStep(1, 3, 'Creating authentication files');
-
         foreach (self::AUTH_DIRECTORIES as $directory) {
             if (! is_dir($path = base_path("src/{$directory}"))) {
                 mkdir($path, 0755, true);
@@ -83,8 +81,6 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
      */
     private function copySharedLoginFiles(): void
     {
-        $this->composerInstaller->printStep(2, 3, 'Creating shared login primitives');
-
         foreach (SharedLoginFiles::FILES as $stub => $destination) {
             $outcome = $this->stubCopier->copy(
                 SharedLoginFiles::stubsPath() . $stub,
@@ -96,8 +92,6 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
 
     private function copySharedFiles(): void
     {
-        $this->composerInstaller->printStep(3, 3, 'Creating shared exception file');
-
         $sharedStubPath = __DIR__ . '/../../Stubs/Exceptions/InvalidGoogleTokenException.stub';
         $sharedDestPath = base_path('src/Shared/App/Exceptions/Http/InvalidGoogleTokenException.php');
 
@@ -114,8 +108,8 @@ final class GoogleSSOInstaller implements AuthInstallerInterface
     private function reportCopy(StubCopyOutcome $outcome, string $label): void
     {
         match ($outcome) {
-            StubCopyOutcome::Written => $this->composerInstaller->printFileCreated("Created: {$label}"),
-            StubCopyOutcome::Skipped => $this->composerInstaller->printSkipped($label),
+            StubCopyOutcome::Written => $this->reporter->written($label),
+            StubCopyOutcome::Skipped => $this->reporter->skipped($label),
         };
     }
 }
