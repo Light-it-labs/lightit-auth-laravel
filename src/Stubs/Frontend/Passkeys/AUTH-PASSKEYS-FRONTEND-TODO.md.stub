@@ -4,8 +4,15 @@
 > lists what the package could not do for you, because it never edits your files. Tick
 > each box, then **delete this file**. How passkeys work: `docs/passkeys.md` in the
 > package.
+>
+> Signing in with a passkey skips the 2FA code: a passkey with user verification is already
+> multi-factor. Password and Google sign-in still ask for it.
 
 - [ ] **Install dependencies** (`{{ packageManager }}`): {{ dependencyReport }}
+- [ ] **Add the "Sign in with passkey" button** in `src/routes/(public)/_guest/login/-components/login-form.tsx`:
+  1. Add as the last import: `import { PasskeyLoginButton } from "./passkey-login-button";`
+  2. Add `<PasskeyLoginButton />` on the line after the submit button's closing `</Button>` (the one
+     showing `{t("login.login")}`)
 - [ ] **Add the i18n keys** to `src/i18n/locales/en.json` (and translate them in `es.json`):
   the `passkeys` block at the top level and `navigation.links.passkeys` next to the existing
   `navigation.links` keys.
@@ -20,6 +27,10 @@ At the top level:
   "loadError": "We couldn't load your passkeys. Reload the page to retry.",
   "empty": "You haven't added a passkey yet.",
   "createdAt": "Added {date}",
+  "signIn": {
+    "submit": "Sign in with passkey",
+    "unsupported": "This browser or device can't sign in with a passkey."
+  },
   "form": {
     "name": "Passkey name",
     "nameTooLong": "Use 100 characters or fewer."
@@ -52,7 +63,8 @@ At the top level:
     "alreadyRegistered": "This device already has a passkey for your account.",
     "challengeExpired": "That took too long. Try again.",
     "registrationFailed": "We couldn't verify this passkey. Try again.",
-    "tooManyAttempts": "Too many attempts. Wait a minute and try again."
+    "tooManyAttempts": "Too many attempts. Wait a minute and try again.",
+    "signInFailed": "We couldn't sign you in with this passkey. If you removed it from your account, sign in with your password and add it again."
   }
 }
 ```
@@ -68,4 +80,5 @@ Next to the existing `navigation.links` keys:
   `{ path: "/account/passkeys", label: t("navigation.links.passkeys"), icon: <Icons.Lock /> },`
 
 Check it worked: run `vite` once (`dev` or `build`) so the router adds `/account/passkeys`,
-then `{{ packageManager }} exec tsc --noEmit` passes and **Passkeys** shows in the sidebar.
+then `{{ packageManager }} exec tsc --noEmit` passes, the login shows **Sign in with passkey**,
+and **Passkeys** shows in the sidebar.

@@ -1,0 +1,21 @@
+import { useMutation } from "@tanstack/react-query";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { authenticateWithPasskey } from "@/services/auth/passkeys/api";
+import type { UseMutationProps } from "@/services/types";
+
+const signInWithPasskey = async () => {
+  await authenticateWithPasskey();
+};
+
+export const useSignInWithPasskey = (props?: UseMutationProps<typeof signInWithPasskey>) => {
+  return useMutation({
+    mutationFn: signInWithPasskey,
+    ...props,
+    onSuccess: async (...args) => {
+      await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+      await props?.onSuccess?.(...args);
+    },
+  });
+};

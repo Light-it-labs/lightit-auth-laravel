@@ -25,6 +25,8 @@ describe('PasskeysFrontendInstaller', function (): void {
             'src/routes/_private/account/passkeys/-components/rename-passkey-dialog.tsx',
             'src/routes/_private/account/passkeys/-components/delete-passkey-dialog.tsx',
             'src/routes/_private/account/passkeys/page.tsx',
+            'src/routes/(public)/_guest/login/-components/passkey-login-button.tsx',
+            'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts',
         ];
 
         $root = $this->root;
@@ -63,6 +65,9 @@ describe('PasskeysFrontendInstaller', function (): void {
             ->toContain('then **delete this file**')
             ->toContain('`docs/passkeys.md`')
             ->toContain("\n- [ ] **Install dependencies** (`pnpm`): Missing dependencies. Run:\n")
+            ->toContain(
+                "\n- [ ] **Add the \"Sign in with passkey\" button** in `src/routes/(public)/_guest/login/-components/login-form.tsx`"
+            )
             ->toContain("\n- [ ] **Add the i18n keys**")
             ->toContain('Check it worked: ')
             ->not->toContain('lightit');
@@ -74,6 +79,8 @@ describe('PasskeysFrontendInstaller', function (): void {
 
         $this->artisan('passkeys-frontend-fake')
             ->expectsOutputToContain('Skipped src/routes/_private/account/passkeys/page.tsx')
+            ->expectsOutputToContain('Frontend passkey services, account page and sign-in button generated.')
+            ->expectsOutputToContain('Manual step: link the passkeys page from the sidebar.')
             ->assertSuccessful();
 
         $before = file_get_contents($this->root . '/src/services/auth/passkeys/api.ts');
@@ -87,6 +94,25 @@ describe('PasskeysFrontendInstaller', function (): void {
             ->toBe('export {};' . PHP_EOL)
             ->and(file_get_contents($this->root . '/src/services/auth/passkeys/api.ts'))->toBe($before);
     });
+
+    it(
+        'says it is already installed on a re-run that writes nothing, without the manual steps already applied',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+            $this->artisan('passkeys-frontend-fake')
+                ->expectsOutputToContain(
+                    'The passkeys frontend is already installed: every file exists, nothing was written.'
+                )
+                ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')
+                ->doesntExpectOutputToContain('generated.')
+                ->doesntExpectOutputToContain('Manual step: link the passkeys page from the sidebar.')
+                ->doesntExpectOutputToContain('add at the end of the links array')
+                ->doesntExpectOutputToContain('Manual step: add the passkey sign-in button to the login form.')
+                ->doesntExpectOutputToContain('Manual step: add the passkeys i18n block')
+                ->assertSuccessful();
+        }
+    );
 
     it(
         'never adds a second HTTP client, a token or browser storage',
@@ -193,6 +219,30 @@ describe('PasskeysFrontendInstaller', function (): void {
         }
     );
 
+    it(
+        'tells a browser without WebAuthn it cannot sign in with a passkey, not that it cannot create one',
+        function (): void {
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+    
+            preg_match(
+                '/```json\n(.*?)```/s',
+                (string) file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'),
+                $block
+            );
+            $documented = json_decode('{' . $block[1] . '}', true, flags: JSON_THROW_ON_ERROR);
+    
+            expect(
+                file_get_contents(
+                    $this->root . '/src/routes/(public)/_guest/login/-components/passkey-login-button.tsx'
+                )
+            )
+                ->toContain('t("passkeys.signIn.unsupported")')
+                ->not->toContain('t("passkeys.errors.unsupported")')
+                ->and($documented['passkeys']['signIn']['unsupported'])->toContain('sign in')
+                ->not->toContain('create');
+        }
+    );
+
     it('prints the missing browser WebAuthn dependency and the i18n step', function (): void {
         $this->artisan('passkeys-frontend-fake')
             ->expectsOutputToContain('Manual step: pnpm add @simplewebauthn/browser date-fns')
@@ -203,5 +253,63 @@ describe('PasskeysFrontendInstaller', function (): void {
 
         expect(file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'))
             ->toContain('pnpm add @simplewebauthn/browser date-fns');
+    });
+
+    it(
+        'writes a sign-in hook that refetches the user and never routes to the 2FA screens, even with the 2FA frontend there',
+        function (bool $withTwoFactorFrontend): void {
+            if ($withTwoFactorFrontend) {
+                foreach ([
+                    'src/stores/use-two-factor-challenge-store.ts',
+                    'src/services/auth/two-factor/types.ts',
+                    'src/routes/(public)/_guest/two-factor/page.tsx',
+                    'src/routes/(public)/_guest/two-factor/setup/page.tsx',
+                ] as $relative) {
+                    File::ensureDirectoryExists(\dirname($this->root . '/' . $relative));
+                    file_put_contents($this->root . '/' . $relative, 'export {};' . PHP_EOL);
+                }
+            }
+
+            $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+            expect(
+                file_get_contents($this->root . '/src/routes/(public)/_guest/login/-hooks/use-sign-in-with-passkey.ts')
+            )
+                ->toContain('await authenticateWithPasskey();')
+                ->not->toContain('.parse(')
+                ->toContain('queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey })')
+                ->not->toContain('two-factor')
+                ->not->toContain('TwoFactor');
+        }
+    )->with(['without the 2FA frontend' => [false], 'with the 2FA frontend' => [true]]);
+
+    it('prints the login form step with the exact import and JSX the TODO documents', function (): void {
+        $this->artisan('passkeys-frontend-fake')
+            ->expectsOutputToContain('Manual step: add the passkey sign-in button to the login form.')
+            ->expectsOutputToContain('In src/routes/(public)/_guest/login/-components/login-form.tsx:')
+            ->expectsOutputToContain('import { PasskeyLoginButton } from "./passkey-login-button";')
+            ->expectsOutputToContain('<PasskeyLoginButton />')
+            ->assertSuccessful();
+
+        expect(file_get_contents($this->root . '/AUTH-PASSKEYS-FRONTEND-TODO.md'))
+            ->toContain('import { PasskeyLoginButton } from "./passkey-login-button";')
+            ->toContain('<PasskeyLoginButton />')
+            ->and(
+                file_get_contents(
+                    $this->root . '/src/routes/(public)/_guest/login/-components/passkey-login-button.tsx'
+                )
+            )
+            ->toContain('export const PasskeyLoginButton = ')
+            ->toContain('type="button"')
+            ->toContain('navigate(redirectTarget(search.redirect))');
+    });
+
+    it('calls ensureCsrf before the public sign-in requests', function (): void {
+        $this->artisan('passkeys-frontend-fake')->assertSuccessful();
+
+        $api = (string) file_get_contents($this->root . '/src/services/auth/passkeys/api.ts');
+
+        expect(strpos($api, 'await ensureCsrf();'))->toBeLessThan(strpos($api, 'auth/passkeys/login-options'))
+            ->and(strpos($api, 'auth/passkeys/login-options'))->toBeLessThan(strpos($api, '"auth/passkeys/login"'));
     });
 });

@@ -12,8 +12,9 @@ use Lightit\Users\Domain\Models\User;
 /**
  * `execute()` gates $user for 2FA before establishing a session.
  * `executeAfterChallenge()` skips that gate and may only be called by an
- * action that just cleared the 2FA challenge itself - calling it any earlier
- * would let the challenge be bypassed.
+ * action that just cleared the 2FA challenge itself, or by a sign-in that is
+ * already multi-factor (a passkey verified with user verification) - calling
+ * it from any other sign-in would let the challenge be bypassed.
  */
 final class LoginByUserAction
 {

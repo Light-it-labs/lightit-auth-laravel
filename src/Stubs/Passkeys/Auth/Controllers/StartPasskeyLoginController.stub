@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Resources\PasskeyLoginOptionsResource;
+use Lightit\Authentication\Domain\Actions\StartPasskeyLoginAction;
+
+final readonly class StartPasskeyLoginController
+{
+    public function __invoke(StartPasskeyLoginAction $startPasskeyLoginAction): JsonResponse
+    {
+        return PasskeyLoginOptionsResource::make($startPasskeyLoginAction->execute())->response();
+    }
+}

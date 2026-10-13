@@ -1,0 +1,31 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Resources;
+
+use Dedoc\Scramble\Attributes\SchemaName;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+use Lightit\Authentication\Domain\DataTransferObjects\PasskeyLoginOptionsDto;
+
+/**
+ * @property PasskeyLoginOptionsDto $resource
+ */
+#[SchemaName('PasskeyLoginOptions')]
+final class PasskeyLoginOptionsResource extends JsonResource
+{
+    /**
+     * @return array{ceremony_id: string, options: array<string, mixed>}
+     */
+    public function toArray(Request $request): array
+    {
+        /** @var array<string, mixed> $options */
+        $options = json_decode($this->resource->options, true, flags: JSON_THROW_ON_ERROR);
+
+        return [
+            'ceremony_id' => $this->resource->ceremonyId,
+            'options' => $options,
+        ];
+    }
+}
