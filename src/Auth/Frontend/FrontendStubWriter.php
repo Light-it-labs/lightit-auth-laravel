@@ -17,13 +17,6 @@ final class FrontendStubWriter
 {
     use LightitConsoleOutput;
 
-    private const TWO_FACTOR_FRONTEND_FILES = [
-        'src/stores/use-two-factor-challenge-store.ts',
-        'src/services/auth/two-factor/types.ts',
-        'src/routes/(public)/_guest/two-factor/page.tsx',
-        'src/routes/(public)/_guest/two-factor/setup/page.tsx',
-    ];
-
     private const TWO_FACTOR_CHALLENGE_ROUTING_STUB = __DIR__
         . '/../../Stubs/Frontend/Google2FA/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts.stub';
 
@@ -128,24 +121,8 @@ final class FrontendStubWriter
     }
 
     /**
-     * Whether the 2FA challenge store, types and screens a sign-in hook needs to route a
-     * challenge are already in the project.
-     */
-    public function hasTwoFactorFrontend(string $root): bool
-    {
-        foreach (self::TWO_FACTOR_FRONTEND_FILES as $relative) {
-            if (! is_file($root . '/' . $relative)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Writes the hook that sends a 2FA challenge to the 2FA screens. The 2FA login hook and
-     * every 2FA-aware sign-in hook import it, so each installer writing one of them writes it
-     * too, never overwriting a copy the project already has.
+     * Writes the hook that sends a 2FA challenge to the 2FA screens. The 2FA login hook imports
+     * it, and the Google sign-in hook picks it up when it exists, whichever was installed first.
      *
      * @param array<string, string> $tokens
      */

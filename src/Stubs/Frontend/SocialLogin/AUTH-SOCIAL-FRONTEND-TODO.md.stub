@@ -31,6 +31,3 @@
 
 Check it worked: `{{ packageManager }} exec tsc --noEmit` passes, the login shows Google's
 **Sign in with Google** button, and signing in takes you to the page you came from.
-
-If you add 2FA later, delete `src/routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts`
-and rerun `auth:setup` with Social Login: it writes the 2FA-aware hook and skips every other file.

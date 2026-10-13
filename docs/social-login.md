@@ -161,11 +161,12 @@ If you lose it, this page has every step in full (see Setup above).
    `verification_required` or `setup_required`, `expires_in`) and no session: social login
    never skips the second factor.
 7. After a normal sign-in the hook fetches the current user again, like the template's
-   `useLogin`, and the button navigates to the `redirect` search param (or `/`). If the 2FA
-   frontend was already generated when the hook was, a challenge goes to the 2FA challenge store
-   and the user lands on `/two-factor` or `/two-factor/setup`, keeping `redirect`. If you add 2FA
-   later, delete `-hooks/use-sign-in-with-google.ts` and run `auth:setup` with Social Login
-   again: it writes the 2FA-aware hook and skips every other file.
+   `useLogin`, and the button navigates to the `redirect` search param (or `/`). When the 2FA
+   frontend is installed, before or after social login, a challenge goes to the 2FA challenge
+   store and the user lands on `/two-factor` or `/two-factor/setup`, keeping `redirect`: the hook
+   loads the 2FA feature's `use-two-factor-challenge-routing.ts` from the same folder through
+   Vite's `import.meta.glob`, so it builds and type-checks with or without 2FA and needs no
+   change when 2FA is added later.
 
 ### API
 

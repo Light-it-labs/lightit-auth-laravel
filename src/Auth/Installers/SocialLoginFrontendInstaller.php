@@ -17,10 +17,6 @@ final class SocialLoginFrontendInstaller implements AuthInstallerInterface
 
     private const LOGIN_FORM_FILE = 'src/routes/(public)/_guest/login/-components/login-form.tsx';
 
-    private const SIGN_IN_HOOK_STUB = 'routes/(public)/_guest/login/-hooks/use-sign-in-with-google';
-
-    private const SIGN_IN_HOOK_FILE = 'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts';
-
     private const REQUIRED_DEPENDENCIES = [
         '@tanstack/react-query',
         '@tanstack/react-router',
@@ -33,6 +29,7 @@ final class SocialLoginFrontendInstaller implements AuthInstallerInterface
         'services/auth/social/api.ts.stub' => 'src/services/auth/social/api.ts',
         'services/auth/social/google-identity.ts.stub' => 'src/services/auth/social/google-identity.ts',
         'routes/(public)/_guest/login/-components/google-login-button.tsx.stub' => 'src/routes/(public)/_guest/login/-components/google-login-button.tsx',
+        'routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts.stub' => 'src/routes/(public)/_guest/login/-hooks/use-sign-in-with-google.ts',
     ];
 
     private readonly FrontendStubWriter $writer;
@@ -64,23 +61,8 @@ final class SocialLoginFrontendInstaller implements AuthInstallerInterface
         $missing = $this->writer->missingDependencies($root, self::REQUIRED_DEPENDENCIES);
         $tokens = $this->writer->tokens($root, $missing);
 
-        $hasTwoFactorFrontend = $this->writer->hasTwoFactorFrontend($root);
-        $signInHookStub = $hasTwoFactorFrontend
-            ? self::SIGN_IN_HOOK_STUB . '.two-factor.ts.stub'
-            : self::SIGN_IN_HOOK_STUB . '.ts.stub';
-
-        $files = [
-            ...self::FILES,
-            $signInHookStub => self::SIGN_IN_HOOK_FILE,
-            self::TODO_FILE . '.stub' => self::TODO_FILE,
-        ];
-
-        foreach ($files as $stub => $relative) {
+        foreach ([...self::FILES, self::TODO_FILE . '.stub' => self::TODO_FILE] as $stub => $relative) {
             $this->writer->write($root, self::stubDirectory() . '/' . $stub, $relative, $tokens);
-        }
-
-        if ($hasTwoFactorFrontend) {
-            $this->writer->writeTwoFactorChallengeRouting($root, $tokens);
         }
 
         $this->command->info('Frontend social login service and "Sign in with Google" button generated.');
