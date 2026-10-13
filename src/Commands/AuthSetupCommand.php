@@ -36,6 +36,8 @@ class AuthSetupCommand extends Command
 
     public function handle(): int
     {
+        $this->setupOutput = SetupOutput::for($this->output);
+
         return SetupTheme::during($this->output->isDecorated(), function (): int {
             if (! $this->frontendPathIsValid()) {
                 return self::FAILURE;

@@ -136,4 +136,28 @@ describe('AuthSetupCommand when a feature fails', function (): void {
             expect($this->tempDir . '/frontend/src/routes/(public)/_guest/two-factor/page.tsx')->toBeFile();
         }
     );
+
+    it('starts every run of the same command instance with a clean summary', function (): void {
+        $blockedDirectory = $this->tempDir . '/frontend/src/routes/(public)/_guest/two-factor';
+        File::ensureDirectoryExists(\dirname($blockedDirectory));
+        file_put_contents($blockedDirectory, 'a file where the screens directory goes');
+
+        Artisan::registerCommand(new FakeAuthSetupWithoutComposerCommand());
+        $arguments = [
+            '--frontend-path' => $this->tempDir . '/frontend',
+            '--feature' => ['two-factor-authentication'],
+            '--no-interaction' => true,
+        ];
+
+        expect(Artisan::call('auth-setup-without-composer-fake', $arguments))->toBe(1);
+
+        unlink($blockedDirectory);
+
+        $exitCode = Artisan::call('auth-setup-without-composer-fake', $arguments);
+        $output = Artisan::output();
+
+        expect($exitCode)->toBe(0)
+            ->and($output)->toContain('Authentication setup completed!')
+            ->and($output)->not->toContain('failed');
+    });
 });
