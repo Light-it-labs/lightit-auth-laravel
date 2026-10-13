@@ -276,6 +276,23 @@ describe('SocialLoginAction stub', function (): void {
         }
     );
 
+    it(
+        'stores and matches the email trimmed and lowercased, whatever case and spacing Google sends',
+        function () use ($signIn): void {
+            $created = $signIn->call($this, $this->tokens->sign(['email' => '  Demo@Example.COM ', 'name' => null]));
+            $existing = User::make('existing@example.com', 'Existing Demo');
+            $linked = $signIn->call($this, $this->tokens->sign([
+                'sub' => '100000000000000000002',
+                'email' => ' EXISTING@example.com',
+            ]));
+
+            expect($created->refresh()->email)->toBe('demo@example.com')
+                ->and($created->name)->toBe('demo')
+                ->and($linked->is($existing))->toBeTrue()
+                ->and(User::query()->count())->toBe(2);
+        }
+    );
+
     it('names a new user after the email when Google sends no name', function () use ($signIn): void {
         $user = $signIn->call($this, $this->tokens->sign(['name' => null]));
 

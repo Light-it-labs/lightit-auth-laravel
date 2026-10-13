@@ -62,7 +62,9 @@ final readonly class SocialLoginAction
             throw new SocialEmailNotVerifiedException;
         }
 
-        $user = $this->userWithEmail($identity) ?? $this->createLinkedUser($identity);
+        $email = $this->normalizedEmail($identity);
+
+        $user = $this->userWithEmail($email) ?? $this->createLinkedUser($identity, $email);
 
         // Linked only once the 2FA gate lets the user in: a challenged sign-in leaves no link,
         // and the next one matches the verified email again.
@@ -84,18 +86,23 @@ final readonly class SocialLoginAction
             ?->user;
     }
 
-    private function userWithEmail(SocialIdentityDto $identity): User|null
+    private function normalizedEmail(SocialIdentityDto $identity): string
     {
-        return User::query()->where('email', Str::lower($identity->email))->first();
+        return Str::lower(trim($identity->email));
     }
 
-    private function createLinkedUser(SocialIdentityDto $identity): User
+    private function userWithEmail(string $email): User|null
+    {
+        return User::query()->where('email', $email)->first();
+    }
+
+    private function createLinkedUser(SocialIdentityDto $identity, string $email): User
     {
         try {
-            return DB::transaction(function () use ($identity): User {
+            return DB::transaction(function () use ($identity, $email): User {
                 $user = new User;
-                $user->name = $identity->name !== '' ? $identity->name : Str::before($identity->email, '@');
-                $user->email = $identity->email;
+                $user->name = $identity->name !== '' ? $identity->name : Str::before($email, '@');
+                $user->email = $email;
                 $user->email_verified_at = CarbonImmutable::now();
                 $user->password = Hash::make(Str::password(64));
                 $user->saveOrFail();
@@ -106,7 +113,7 @@ final readonly class SocialLoginAction
             }, self::TRANSACTION_ATTEMPTS);
         } catch (UniqueConstraintViolationException $exception) {
             // A concurrent request took this provider account or this email first: sign in whoever holds it.
-            return $this->linkedUser($identity) ?? $this->userWithEmail($identity) ?? throw $exception;
+            return $this->linkedUser($identity) ?? $this->userWithEmail($email) ?? throw $exception;
         }
     }
 
