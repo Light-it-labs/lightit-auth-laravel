@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Lightitlabs\Commands\AuthSetupCommand;
+use Lightitlabs\Enums\Feature;
 use Lightitlabs\Tests\Fixtures\FakeAuthSetupTwoFactorCommand;
 use Lightitlabs\Tests\Fixtures\FakeAuthSetupWithoutComposerCommand;
 
@@ -142,6 +144,76 @@ describe('AuthSetupCommand when a feature fails', function (): void {
                 ->assertSuccessful();
     
             expect($this->tempDir . '/frontend/src/routes/(public)/_guest/two-factor/page.tsx')->toBeFile();
+        }
+    );
+});
+
+describe('AuthSetupCommand with 2FA and Social Login selected', function (): void {
+    afterEach(function (): void {
+        foreach ($this->tempDirs as $tempDir) {
+            File::deleteDirectory($tempDir);
+        }
+    });
+
+    it(
+        'writes the same Google sign-in hook whichever feature runs first, next to the 2FA routing hook it loads',
+        function (): void {
+            $this->tempDirs = [];
+            $install = function (array $selection): string {
+                $tempDir = sys_get_temp_dir() . '/lightit-auth-setup-social-' . bin2hex(random_bytes(6));
+                $this->tempDirs[] = $tempDir;
+                File::copyDirectory(__DIR__ . '/../Fixtures/frontend/react-project', $tempDir);
+                $name = 'auth-setup-social-fake-' . bin2hex(random_bytes(4));
+                Artisan::registerCommand(new class($selection, $name) extends AuthSetupCommand {
+                    /**
+                     * @param list<Feature> $selection
+                     */
+                    public function __construct(private readonly array $selection, string $name)
+                    {
+                        $this->signature = $name . ' {--frontend-path= : Path to the React project}';
+
+                        parent::__construct();
+                    }
+
+                    public function handle(): int
+                    {
+                        foreach ($this->selection as $feature) {
+                            $this->setupFeatures([$feature]);
+                        }
+
+                        return self::SUCCESS;
+                    }
+
+                    protected function setup2FA(): void
+                    {
+                        $this->setup2FAFrontend();
+                    }
+
+                    protected function setupSocialLogin(): void
+                    {
+                        $this->setupSocialLoginFrontend();
+                    }
+                });
+
+                $this->artisan($name, ['--frontend-path' => $tempDir])->assertSuccessful();
+
+                return $tempDir . '/src/routes/(public)/_guest/login/-hooks';
+            };
+
+            $socialFirst = $install([Feature::SocialLogin, Feature::TwoFactorAuthentication]);
+            $twoFactorFirst = $install([Feature::TwoFactorAuthentication, Feature::SocialLogin]);
+
+            $hook = (string) file_get_contents($socialFirst . '/use-sign-in-with-google.ts');
+            preg_match('/import\.meta\.glob<\w+>\("\.\/([\w-]+\.ts)"/', $hook, $globbed);
+
+            expect(file_get_contents($twoFactorFirst . '/use-sign-in-with-google.ts'))->toBe($hook)
+                ->and($globbed[1] ?? null)->toBe('use-two-factor-challenge-routing.ts');
+
+            foreach ([$socialFirst, $twoFactorFirst] as $hooks) {
+                expect(file_get_contents($hooks . '/' . $globbed[1]))
+                    ->toContain('export const useTwoFactorChallengeRouting = () => {')
+                    ->toContain('startChallenge(challenge);');
+            }
         }
     );
 });

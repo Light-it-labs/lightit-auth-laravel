@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\App\Controllers;
+
+use Illuminate\Http\JsonResponse;
+use Lightit\Authentication\App\Requests\SocialLoginRequest;
+use Lightit\Authentication\Domain\Actions\SocialLoginAction;
+use Lightit\Users\App\Resources\UserResource;
+
+final readonly class SocialLoginController
+{
+    public function __invoke(SocialLoginRequest $request, SocialLoginAction $socialLoginAction): JsonResponse
+    {
+        $user = $socialLoginAction->execute($request->toDto());
+
+        return UserResource::make($user)
+            ->response()
+            ->setStatusCode($user->wasRecentlyCreated ? JsonResponse::HTTP_CREATED : JsonResponse::HTTP_OK);
+    }
+}

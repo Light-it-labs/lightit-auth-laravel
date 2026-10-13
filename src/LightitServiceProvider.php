@@ -26,6 +26,12 @@ class LightitServiceProvider extends PackageServiceProvider
      */
     private const PASSKEY_RATE_LIMITER = 'Lightit\Authentication\Domain\PasskeyRateLimiter';
 
+    /**
+     * FQCN of the stub the consuming app gets once it installs social login, for
+     * the same reason as TWO_FACTOR_RATE_LIMITER.
+     */
+    private const SOCIAL_LOGIN_RATE_LIMITER = 'Lightit\Authentication\Domain\SocialLoginRateLimiter';
+
     public function configurePackage(Package $package): void
     {
         /*
@@ -57,6 +63,10 @@ class LightitServiceProvider extends PackageServiceProvider
 
         if (class_exists(self::PASSKEY_RATE_LIMITER)) {
             self::PASSKEY_RATE_LIMITER::register();
+        }
+
+        if (class_exists(self::SOCIAL_LOGIN_RATE_LIMITER)) {
+            self::SOCIAL_LOGIN_RATE_LIMITER::register();
         }
     }
 }

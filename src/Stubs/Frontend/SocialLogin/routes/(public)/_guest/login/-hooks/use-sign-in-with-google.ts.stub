@@ -1,0 +1,64 @@
+import { useMutation } from "@tanstack/react-query";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { signInWithSocialProvider } from "@/services/auth/social/api";
+import type { UseMutationProps } from "@/services/types";
+
+type TwoFactorChallenge = {
+  tokenType: "setup_required" | "verification_required";
+};
+
+type RouteChallenge = (challenge: TwoFactorChallenge | null) => Promise<boolean>;
+
+type TwoFactorChallengeRoutingModule = {
+  useTwoFactorChallengeRouting: () => RouteChallenge;
+};
+
+const twoFactorChallengeRouting = Object.values(
+  import.meta.glob<TwoFactorChallengeRoutingModule>("./use-two-factor-challenge-routing.ts", {
+    eager: true,
+  }),
+).at(0);
+
+const useSessionRouting = (): RouteChallenge => {
+  return async () => {
+    await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+
+    return false;
+  };
+};
+
+const useChallengeRouting =
+  twoFactorChallengeRouting?.useTwoFactorChallengeRouting ?? useSessionRouting;
+
+const isTwoFactorChallenge = (body: unknown): body is TwoFactorChallenge => {
+  return (
+    typeof body === "object" &&
+    body !== null &&
+    "tokenType" in body &&
+    (body.tokenType === "setup_required" || body.tokenType === "verification_required")
+  );
+};
+
+const signInWithGoogle = async (credential: string) => {
+  const body = await signInWithSocialProvider("google", credential);
+
+  return isTwoFactorChallenge(body) ? body : null;
+};
+
+export const useSignInWithGoogle = (props?: UseMutationProps<typeof signInWithGoogle>) => {
+  const routeChallenge = useChallengeRouting();
+
+  return useMutation({
+    mutationFn: signInWithGoogle,
+    ...props,
+    onSuccess: async (challenge, ...rest) => {
+      if (await routeChallenge(challenge)) {
+        return;
+      }
+
+      await props?.onSuccess?.(challenge, ...rest);
+    },
+  });
+};

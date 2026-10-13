@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class InvalidSocialTokenException extends HttpException
+{
+    #[\Override]
+    protected int $status = 422;
+
+    #[\Override]
+    protected string $errorCode = 'invalid_social_token';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'The sign-in token could not be verified.';
+}

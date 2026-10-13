@@ -1,0 +1,78 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\SocialProviders;
+
+use Firebase\JWT\JWT;
+use Illuminate\Support\Facades\Config;
+use Lightit\Authentication\Domain\Contracts\SocialProvider;
+use Lightit\Authentication\Domain\DataTransferObjects\SocialIdentityDto;
+use Lightit\Authentication\Domain\Exceptions\InvalidSocialTokenException;
+use LogicException;
+use Throwable;
+
+final readonly class GoogleProvider implements SocialProvider
+{
+    public const string NAME = 'google';
+
+    private const array ISSUERS = ['accounts.google.com', 'https://accounts.google.com'];
+
+    private const int CLOCK_SKEW_SECONDS = 60;
+
+    public function __construct(
+        private GoogleSigningKeys $googleSigningKeys,
+    ) {}
+
+    /**
+     * @throws LogicException when GOOGLE_CLIENT_ID is not set
+     */
+    public function verify(string $token): SocialIdentityDto
+    {
+        $clientId = Config::get('social-login.google.client_id');
+
+        if (! \is_string($clientId) || $clientId === '') {
+            throw new LogicException(
+                'Set GOOGLE_CLIENT_ID (social-login.google.client_id) before signing in with Google: '
+                . 'without it the token audience cannot be checked.',
+            );
+        }
+
+        $keys = $this->googleSigningKeys->keys();
+
+        // php-jwt's leeway is a global static: widen it for this decode only, for clock skew with Google.
+        $previousLeeway = JWT::$leeway;
+        JWT::$leeway = self::CLOCK_SKEW_SECONDS;
+
+        // php-jwt does not type-check the header, so a malformed one can raise any error: all mean a bad token.
+        try {
+            $claims = (array) JWT::decode($token, $keys);
+        } catch (Throwable) {
+            throw new InvalidSocialTokenException;
+        } finally {
+            JWT::$leeway = $previousLeeway;
+        }
+
+        $subject = $claims['sub'] ?? null;
+        $email = $claims['email'] ?? null;
+        $name = $claims['name'] ?? null;
+
+        if (
+            ! \in_array($claims['iss'] ?? null, self::ISSUERS, true)
+            || ($claims['aud'] ?? null) !== $clientId
+            || ! is_numeric($claims['exp'] ?? null)
+            || ! \is_string($subject) || $subject === ''
+            || ! \is_string($email) || $email === ''
+        ) {
+            throw new InvalidSocialTokenException;
+        }
+
+        return new SocialIdentityDto(
+            provider: self::NAME,
+            providerUserId: $subject,
+            email: $email,
+            emailVerified: ($claims['email_verified'] ?? false) === true,
+            name: \is_string($name) ? $name : '',
+        );
+    }
+}

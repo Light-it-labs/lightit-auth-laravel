@@ -54,9 +54,9 @@ challenge, so the call point only has to be after `attempt()`/`regenerate()` com
 session and before the user is returned. A user with 2FA configured then gets a `200` with
 `token_type: "verification_required"` (or `"setup_required"`) instead of a session on login.
 
-Every other login path this package generates (OTP today; Google SSO as it lands) already goes
-through the same challenge action via `LoginByUserAction::execute()`. Passkey sign-in is the
-exception: a passkey with user verification is already multi-factor, so it skips the code (see
+Every other login path this package generates (OTP and social login) already goes through the
+same challenge action via `LoginByUserAction::execute()`. Passkey sign-in is the exception: a
+passkey with user verification is already multi-factor, so it skips the code (see
 [Passkeys](passkeys.md#signing-in-with-a-passkey)). This is the only manual step that puts your
 own password login through it.
 

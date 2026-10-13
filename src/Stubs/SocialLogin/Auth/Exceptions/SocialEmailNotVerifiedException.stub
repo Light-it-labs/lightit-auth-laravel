@@ -1,0 +1,22 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Exceptions;
+
+use Lightit\Shared\App\Exceptions\Http\HttpException;
+
+final class SocialEmailNotVerifiedException extends HttpException
+{
+    #[\Override]
+    protected int $status = 422;
+
+    #[\Override]
+    protected string $errorCode = 'social_email_not_verified';
+
+    /**
+     * @var string
+     */
+    #[\Override]
+    protected $message = 'The provider has not verified this email address.';
+}

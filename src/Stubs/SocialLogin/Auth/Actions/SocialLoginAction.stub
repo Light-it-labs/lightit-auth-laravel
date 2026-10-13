@@ -1,0 +1,176 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Lightit\Authentication\Domain\Actions;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Lightit\Authentication\Domain\DataTransferObjects\SocialIdentityDto;
+use Lightit\Authentication\Domain\DataTransferObjects\SocialLoginDto;
+use Lightit\Authentication\Domain\Exceptions\InvalidSocialTokenException;
+use Lightit\Authentication\Domain\Exceptions\SocialAccountDisabledException;
+use Lightit\Authentication\Domain\Exceptions\SocialEmailNotVerifiedException;
+use Lightit\Authentication\Domain\Exceptions\SocialProviderUnavailableException;
+use Lightit\Authentication\Domain\Exceptions\SocialProviderUnknownException;
+use Lightit\Authentication\Domain\Exceptions\TwoFactorChallengeException;
+use Lightit\Authentication\Domain\Models\SocialAccount;
+use Lightit\Authentication\Domain\SocialProviderRegistry;
+use Lightit\Shared\App\Exceptions\Http\UnauthenticatedException;
+use Lightit\Users\Domain\Models\User;
+
+final readonly class SocialLoginAction
+{
+    private const int TRANSACTION_ATTEMPTS = 3;
+
+    public function __construct(
+        private Request $request,
+        private SocialProviderRegistry $socialProviderRegistry,
+        private LoginByUserAction $loginByUserAction,
+    ) {}
+
+    /**
+     * @throws UnauthenticatedException
+     * @throws SocialProviderUnknownException
+     * @throws SocialProviderUnavailableException
+     * @throws InvalidSocialTokenException
+     * @throws SocialAccountDisabledException
+     * @throws SocialEmailNotVerifiedException
+     * @throws TwoFactorChallengeException
+     */
+    public function execute(SocialLoginDto $socialLoginDto): User
+    {
+        if (! $this->request->hasSession()) {
+            throw new UnauthenticatedException;
+        }
+
+        $identity = $this->socialProviderRegistry
+            ->resolve($socialLoginDto->provider)
+            ->verify($socialLoginDto->token);
+
+        $linkedUser = $this->linkedUser($identity);
+
+        if ($linkedUser instanceof User) {
+            $this->loginByUserAction->execute($linkedUser);
+
+            return $linkedUser;
+        }
+
+        if (! $identity->emailVerified) {
+            throw new SocialEmailNotVerifiedException;
+        }
+
+        $email = $this->normalizedEmail($identity);
+
+        $user = $this->userWithEmail($email) ?? $this->createLinkedUser($identity, $email);
+
+        // Linked only once the 2FA gate lets the user in: a challenged sign-in leaves no link,
+        // and the next one matches the verified email again.
+        $this->loginByUserAction->execute($user);
+
+        if (! $user->wasRecentlyCreated) {
+            $this->linkExistingUser($user, $identity);
+        }
+
+        return $user;
+    }
+
+    /**
+     * @throws SocialAccountDisabledException
+     */
+    private function linkedUser(SocialIdentityDto $identity): User|null
+    {
+        $socialAccount = SocialAccount::query()
+            ->where('provider', $identity->provider)
+            ->where('provider_user_id', $identity->providerUserId)
+            ->first();
+
+        if (! $socialAccount instanceof SocialAccount) {
+            return null;
+        }
+
+        // The link outlives a soft-deleted user: the foreign key only cascades on a hard delete.
+        return $socialAccount->user ?? throw new SocialAccountDisabledException;
+    }
+
+    private function normalizedEmail(SocialIdentityDto $identity): string
+    {
+        return Str::lower(trim($identity->email));
+    }
+
+    private function userWithEmail(string $email): User|null
+    {
+        return User::query()->where('email', $email)->first();
+    }
+
+    /**
+     * @throws SocialAccountDisabledException
+     */
+    private function createLinkedUser(SocialIdentityDto $identity, string $email): User
+    {
+        try {
+            return DB::transaction(function () use ($identity, $email): User {
+                $user = new User;
+                $user->name = $identity->name !== '' ? $identity->name : Str::before($email, '@');
+                $user->email = $email;
+                $user->email_verified_at = CarbonImmutable::now();
+                $user->password = Hash::make(Str::password(64));
+                $user->saveOrFail();
+
+                $this->link($user, $identity);
+
+                return $user;
+            }, self::TRANSACTION_ATTEMPTS);
+        } catch (UniqueConstraintViolationException $exception) {
+            // A concurrent request took this provider account or this email first: sign in whoever holds it.
+            $holder = $this->linkedUser($identity) ?? $this->userWithEmail($email);
+
+            if ($holder instanceof User) {
+                return $holder;
+            }
+
+            if ($this->isEmailOfDeletedUser($email)) {
+                throw new SocialAccountDisabledException;
+            }
+
+            throw $exception;
+        }
+    }
+
+    /**
+     * Called once no active user has the email: a soft-deleted one is the only user the default
+     * query hides. Without SoftDeletes on the model, removing its scope changes nothing.
+     */
+    private function isEmailOfDeletedUser(string $email): bool
+    {
+        return User::query()
+            ->withoutGlobalScope(SoftDeletingScope::class)
+            ->where('email', $email)
+            ->exists();
+    }
+
+    private function linkExistingUser(User $user, SocialIdentityDto $identity): void
+    {
+        try {
+            $this->link($user, $identity);
+        } catch (UniqueConstraintViolationException $exception) {
+            if ($this->linkedUser($identity)?->is($user) !== true) {
+                throw $exception;
+            }
+        }
+    }
+
+    private function link(User $user, SocialIdentityDto $identity): void
+    {
+        $socialAccount = new SocialAccount;
+        $socialAccount->user_id = $user->id;
+        $socialAccount->provider = $identity->provider;
+        $socialAccount->provider_user_id = $identity->providerUserId;
+        $socialAccount->saveOrFail();
+    }
+}

@@ -1,0 +1,34 @@
+import { useCallback } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
+
+import { queryClient } from "@/config/query-client";
+import { currentUserQuery } from "@/services/auth/actions";
+import { isSetupRequired, type TwoFactorChallengeResult } from "@/services/auth/two-factor/types";
+import { useTwoFactorChallengeStore } from "@/stores/use-two-factor-challenge-store";
+
+export const useTwoFactorChallengeRouting = () => {
+  const navigate = useNavigate();
+  const search = useSearch({ from: "/(public)/_guest" });
+  const startChallenge = useTwoFactorChallengeStore.use.startChallenge();
+  const clearChallenge = useTwoFactorChallengeStore.use.clearChallenge();
+
+  return useCallback(
+    async (challenge: TwoFactorChallengeResult | null) => {
+      if (challenge) {
+        startChallenge(challenge);
+        await navigate({
+          to: isSetupRequired(challenge) ? "/two-factor/setup" : "/two-factor",
+          search: { redirect: search.redirect },
+        });
+
+        return true;
+      }
+
+      clearChallenge();
+      await queryClient.refetchQueries({ queryKey: currentUserQuery.queryKey });
+
+      return false;
+    },
+    [clearChallenge, navigate, search.redirect, startChallenge],
+  );
+};

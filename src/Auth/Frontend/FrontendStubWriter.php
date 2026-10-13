@@ -17,6 +17,11 @@ final class FrontendStubWriter
 {
     use LightitConsoleOutput;
 
+    private const TWO_FACTOR_CHALLENGE_ROUTING_STUB = __DIR__
+        . '/../../Stubs/Frontend/Google2FA/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts.stub';
+
+    private const TWO_FACTOR_CHALLENGE_ROUTING_FILE = 'src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts';
+
     public function __construct(
         protected Command $command,
         private readonly StubRenderer $stubRenderer,
@@ -113,5 +118,16 @@ final class FrontendStubWriter
     public function addCommand(string $root, array $missingDependencies): string
     {
         return $this->manifest->addCommand($root) . ' ' . implode(' ', $missingDependencies);
+    }
+
+    /**
+     * Writes the hook that sends a 2FA challenge to the 2FA screens. The 2FA login hook imports
+     * it, and the Google sign-in hook picks it up when it exists, whichever was installed first.
+     *
+     * @param array<string, string> $tokens
+     */
+    public function writeTwoFactorChallengeRouting(string $root, array $tokens): void
+    {
+        $this->write($root, self::TWO_FACTOR_CHALLENGE_ROUTING_STUB, self::TWO_FACTOR_CHALLENGE_ROUTING_FILE, $tokens);
     }
 }

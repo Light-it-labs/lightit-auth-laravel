@@ -26,6 +26,7 @@ describe('Google2FAFrontendInstaller', function (): void {
         $this->screenFiles = [
             'src/stores/use-two-factor-challenge-store.ts',
             'src/routes/(public)/_guest/login/-hooks/use-two-factor-login.ts',
+            'src/routes/(public)/_guest/login/-hooks/use-two-factor-challenge-routing.ts',
             'src/routes/(public)/_guest/two-factor/-hooks/use-two-factor-completion.ts',
             'src/routes/(public)/_guest/two-factor/-components/one-time-password-form.tsx',
             'src/routes/(public)/_guest/two-factor/-components/recovery-code-form.tsx',
