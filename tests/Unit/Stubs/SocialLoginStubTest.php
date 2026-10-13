@@ -437,6 +437,29 @@ describe('SocialLoginAction stub', function (): void {
     ]);
 
     it(
+        'retries creating the user after a deadlock instead of failing the first sign-in',
+        function () use ($signIn): void {
+            $deadlocks = 0;
+
+            DB::listen(static function (QueryExecuted $query) use (&$deadlocks): void {
+                if ($deadlocks === 0 && str_starts_with($query->sql, 'insert into "users"')) {
+                    ++$deadlocks;
+
+                    throw new PDOException(
+                        'SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock'
+                    );
+                }
+            });
+
+            $user = $signIn->call($this, $this->tokens->sign());
+
+            expect($deadlocks)->toBe(1)
+                ->and(User::query()->sole()->is($user))->toBeTrue()
+                ->and(SocialAccount::query()->sole()->user_id)->toBe($user->id);
+        }
+    );
+
+    it(
         'answers 201 with the user when the sign-in created them, and 200 for a returning or linked user',
         function (): void {
             $respond = function (array $claims): JsonResponse {

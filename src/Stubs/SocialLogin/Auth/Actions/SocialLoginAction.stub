@@ -24,6 +24,8 @@ use Lightit\Users\Domain\Models\User;
 
 final readonly class SocialLoginAction
 {
+    private const int TRANSACTION_ATTEMPTS = 3;
+
     public function __construct(
         private Request $request,
         private SocialProviderRegistry $socialProviderRegistry,
@@ -101,7 +103,7 @@ final readonly class SocialLoginAction
                 $this->link($user, $identity);
 
                 return $user;
-            });
+            }, self::TRANSACTION_ATTEMPTS);
         } catch (UniqueConstraintViolationException $exception) {
             // A concurrent request took this provider account or this email first: sign in whoever holds it.
             return $this->linkedUser($identity) ?? $this->userWithEmail($identity) ?? throw $exception;
