@@ -34,4 +34,31 @@ describe('LaravelPermissionInstaller', function (): void {
             ->and($this->root . '/database/seeders/RoleSeeder.php')->toBeFile()
             ->and($this->root . '/database/seeders/PermissionSeeder.php')->toBeFile();
     });
+
+    it('skips the permission tables migration on a later re-run instead of writing a second one', function (): void {
+        $spatie = $this->root . '/vendor/spatie/laravel-permission';
+        File::ensureDirectoryExists($spatie . '/config');
+        File::ensureDirectoryExists($this->root . '/config');
+        File::ensureDirectoryExists($spatie . '/database/migrations');
+        file_put_contents($spatie . '/config/permission.php', "<?php\n\nreturn [];\n");
+        file_put_contents(
+            $spatie . '/database/migrations/create_permission_tables.php.stub',
+            "<?php\n\nreturn new class {};\n"
+        );
+        Artisan::registerCommand(new FakeLaravelPermissionCommand());
+
+        $this->artisan('laravel-permission-fake')->assertSuccessful();
+
+        $written = glob($this->root . '/database/migrations/*_create_permission_tables.php');
+        expect($written)->toHaveCount(1);
+        $migration = 'database/migrations/2020_01_01_000000_create_permission_tables.php';
+        rename($written[0], $this->root . '/' . $migration);
+
+        $this->artisan('laravel-permission-fake')
+            ->expectsOutputToContain("Skipped {$migration}")
+            ->assertSuccessful();
+
+        expect(glob($this->root . '/database/migrations/*_create_permission_tables.php'))
+            ->toBe([$this->root . '/' . $migration]);
+    });
 });

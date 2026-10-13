@@ -13,12 +13,15 @@ use Lightitlabs\Tools\StubCopyOutcome;
 
 final class LaravelPermissionInstaller implements AuthInstallerInterface
 {
+    private const MIGRATION_NAME = 'create_permission_tables';
+
     public function __construct(
         private readonly Command $command,
         private readonly SetupReporter $reporter,
         private readonly ComposerInstaller $composerInstaller,
         private readonly StubCopier $stubCopier,
-    ) {}
+    ) {
+    }
 
     /**
      * @throws SetupAbortedException
@@ -63,6 +66,14 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function copyMigration(): void
     {
+        $existing = glob(base_path('database/migrations/*_' . self::MIGRATION_NAME . '.php'));
+
+        if ($existing !== false && $existing !== []) {
+            $this->reporter->skipped('database/migrations/' . basename($existing[0]));
+
+            return;
+        }
+
         $source = base_path('vendor/spatie/laravel-permission/database/migrations/create_permission_tables.php.stub');
 
         if (! file_exists($source)) {
@@ -72,7 +83,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
         }
 
         $timestamp = date('Y_m_d_His');
-        $filename = "{$timestamp}_create_permission_tables.php";
+        $filename = "{$timestamp}_" . self::MIGRATION_NAME . '.php';
         $relativePath = "database/migrations/{$filename}";
         $destination = base_path($relativePath);
 
@@ -86,7 +97,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
 
     private function copyPackageFiles(): void
     {
-        $stubsPath = __DIR__.'/../../Stubs/LaravelPermissions';
+        $stubsPath = __DIR__ . '/../../Stubs/LaravelPermissions';
         $srcBase = base_path('src');
         $seederBase = base_path('database/seeders');
 
@@ -105,7 +116,7 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             $this->ensureDirectoryExists(dirname($targetPath));
 
             $outcome = $this->stubCopier->copy(
-                $stubsPath.$stub,
+                $stubsPath . $stub,
                 $targetPath
             );
 
