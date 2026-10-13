@@ -26,7 +26,10 @@ describe('LaravelPermissionInstaller', function (): void {
             ->expectsOutputToContain('✘ Fixture · failed')
             ->expectsOutputToContain('✘ Spatie config file not found at: ')
             ->expectsOutputToContain('✘ Spatie migration file not found at: ')
-            ->expectsOutputToContain('Wrote /Shared/Roles/RoleManagement.php')
+            ->expectsOutputToContain('Wrote src/Shared/Roles/RoleManagement.php')
+            ->expectsOutputToContain('Wrote src/Shared/Permissions/UserPermissions.php')
+            ->expectsOutputToContain('Wrote database/seeders/RoleSeeder.php')
+            ->expectsOutputToContain('Wrote database/seeders/PermissionSeeder.php')
             ->assertFailed();
 
         expect($this->root . '/src/Shared/Roles/RoleManagement.php')->toBeFile()

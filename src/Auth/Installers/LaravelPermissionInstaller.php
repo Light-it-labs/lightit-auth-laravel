@@ -98,20 +98,18 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
     private function copyPackageFiles(): void
     {
         $stubsPath = __DIR__ . '/../../Stubs/LaravelPermissions';
-        $srcBase = base_path('src');
-        $seederBase = base_path('database/seeders');
 
         $files = [
-            '/Permissions/UserPermissions.stub' => [$srcBase, '/Shared/Permissions/UserPermissions.php'],
-            '/Permissions/PermissionManagement.stub' => [$srcBase, '/Shared/Permissions/PermissionManagement.php'],
-            '/Roles/RoleManagement.stub' => [$srcBase, '/Shared/Roles/RoleManagement.php'],
+            '/Permissions/UserPermissions.stub' => 'src/Shared/Permissions/UserPermissions.php',
+            '/Permissions/PermissionManagement.stub' => 'src/Shared/Permissions/PermissionManagement.php',
+            '/Roles/RoleManagement.stub' => 'src/Shared/Roles/RoleManagement.php',
 
-            '/Database/Seeders/PermissionSeeder.stub' => [$seederBase, '/PermissionSeeder.php'],
-            '/Database/Seeders/RoleSeeder.stub' => [$seederBase, '/RoleSeeder.php'],
+            '/Database/Seeders/PermissionSeeder.stub' => 'database/seeders/PermissionSeeder.php',
+            '/Database/Seeders/RoleSeeder.stub' => 'database/seeders/RoleSeeder.php',
         ];
 
-        foreach ($files as $stub => [$basePath, $relativeTarget]) {
-            $targetPath = "{$basePath}/{$relativeTarget}";
+        foreach ($files as $stub => $destination) {
+            $targetPath = base_path($destination);
 
             $this->ensureDirectoryExists(dirname($targetPath));
 
@@ -121,8 +119,8 @@ final class LaravelPermissionInstaller implements AuthInstallerInterface
             );
 
             match ($outcome) {
-                StubCopyOutcome::Written => $this->reporter->written($relativeTarget),
-                StubCopyOutcome::Skipped => $this->reporter->skipped($relativeTarget),
+                StubCopyOutcome::Written => $this->reporter->written($destination),
+                StubCopyOutcome::Skipped => $this->reporter->skipped($destination),
             };
         }
     }
